@@ -4,6 +4,7 @@ import { CodeEditor } from './CodeEditor'
 import { ConfirmDialogBox } from '../UI/ConfirmDialogBox'
 import { BackgroundFormEditor } from './BackgroundFormEditor'
 import { CharacterFormEditor } from './CharacterFormEditor'
+import { EffectFormEditor } from './EffectFormEditor'
 
 interface TabData {
   content: string
@@ -198,7 +199,8 @@ export function EditorArea() {
       const currentActive = useProjectStore.getState().activeFile
       if (currentActive === tab) {
         const fallback = newTabs.length > 0 ? newTabs[newTabs.length - 1] : null
-        useProjectStore.getState().setActiveFile(fallback)
+        // updater 밖에서 호출해야 "render 중 setState" 에러를 방지할 수 있음
+        queueMicrotask(() => useProjectStore.getState().setActiveFile(fallback))
       }
       return newTabs
     })
@@ -434,6 +436,7 @@ export function EditorArea() {
           const isEditable = activeFile.endsWith('.ts') || activeFile.endsWith('.json') || activeFile.endsWith('.md')
           const isBackground = activeFile.includes('/backgrounds/') || activeFile.includes('\\backgrounds\\')
           const isCharacter = activeFile.includes('/characters/') || activeFile.includes('\\characters\\')
+          const isEffect = activeFile.includes('/effects/') || activeFile.includes('\\effects\\')
           
           if (isBackground && !data.isLoading) {
             return (
@@ -450,6 +453,18 @@ export function EditorArea() {
             return (
               <div className="absolute inset-0">
                 <CharacterFormEditor 
+                  content={data.content} 
+                  onChange={(val) => handleContentChange(activeFile, val)} 
+                  filePath={activeFile}
+                />
+              </div>
+            )
+          }
+
+          if (isEffect && !data.isLoading) {
+            return (
+              <div className="absolute inset-0">
+                <EffectFormEditor 
                   content={data.content} 
                   onChange={(val) => handleContentChange(activeFile, val)} 
                   filePath={activeFile}
