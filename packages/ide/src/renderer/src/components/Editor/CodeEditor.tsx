@@ -263,20 +263,26 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
     return unsubscribe
   }, [monacoInstance])
 
-  // 현재 에디터의 변경사항을 가상 파일시스템에 동기화 (디바운스)
-  // 원본이 아닌 에디터의 최신 상태(임시저장본 포함)를 타입 추론에 반영
+  // 현재 에디터가 열린 파일의 extraLib을 제거하여 model/extraLib 충돌 방지
+  // Monaco는 같은 URI에 model과 extraLib이 동시 존재하면
+  // TS worker가 두 소스를 모두 인식 → 중복 선언/타입 충돌 발생
   useEffect(() => {
-    if (!monacoInstance || !filePath || code === undefined) return
+    if (!monacoInstance || !filePath) return
     const ts = (monacoInstance.languages as any).typescript
     if (!ts) return
 
-    const timer = setTimeout(() => {
-      const libUri = toFileUri(filePath)
-      ts.typescriptDefaults.addExtraLib(code, libUri)
-    }, 500)
+    const libUri = toFileUri(filePath)
+    // model이 활성화되면 extraLib 제거 (model이 TS worker에 우선)
+    ts.typescriptDefaults.addExtraLib('', libUri)
 
-    return () => clearTimeout(timer)
-  }, [monacoInstance, filePath, code])
+    return () => {
+      // 에디터가 닫히면 최종 코드로 extraLib 복원
+      // 다른 파일에서 이 파일을 참조할 때 타입 정보 유지
+      if (code !== undefined) {
+        ts.typescriptDefaults.addExtraLib(code, libUri)
+      }
+    }
+  }, [monacoInstance, filePath])
 
   const fileUri = filePath ? toFileUri(filePath) : undefined
 
