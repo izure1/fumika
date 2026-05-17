@@ -330,7 +330,6 @@ dialogBoxModule.defineView((ctx, data, setState) => {
   let _currentPanelH = 0
 
   overlayObj.on('click', (e: MouseEvent) => {
-    console.log(1)
     e.stopPropagation()
     e.stopImmediatePropagation()
 
@@ -514,7 +513,6 @@ dialogBoxModule.defineView((ctx, data, setState) => {
           txtObj.animate({ style: normalTxtProps as any }, 150)
         })
         btnObj.on('click', (e: MouseEvent) => {
-          console.log(2)
           e.stopPropagation()
           e.stopImmediatePropagation()
           resolve(i)
