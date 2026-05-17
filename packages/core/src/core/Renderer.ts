@@ -68,6 +68,9 @@ export class Renderer {
 
   private _isSkipping: boolean = false
 
+  /** 카메라 동기화 루프 RAF ID */
+  private _syncLoopId: number | null = null
+
   /** 관리형 타이머 ID 저장소. clear() 시 일괄 취소됩니다. */
   private _timers: Set<ReturnType<typeof setTimeout>> = new Set()
 
@@ -113,9 +116,9 @@ export class Renderer {
           this.world.camera.transform.rotation.z = this.camBaseObj.transform.rotation.z + this.camOffsetObj.transform.rotation.z
         }
       }
-      requestAnimationFrame(syncLoop)
+      this._syncLoopId = requestAnimationFrame(syncLoop)
     }
-    requestAnimationFrame(syncLoop)
+    this._syncLoopId = requestAnimationFrame(syncLoop)
   }
 
   /**
@@ -316,6 +319,17 @@ export class Renderer {
       this.camOffsetObj.transform.position.y = 0
       this.camOffsetObj.transform.position.z = 0
       if (this.camOffsetObj.transform.rotation) this.camOffsetObj.transform.rotation.z = 0
+    }
+  }
+
+  /**
+   * 카메라 동기화 RAF 루프를 취소합니다.
+   * Novel.destroy() 시 호출하여 orphaned RAF가 남지 않도록 합니다.
+   */
+  cancelSyncLoop(): void {
+    if (this._syncLoopId !== null) {
+      cancelAnimationFrame(this._syncLoopId)
+      this._syncLoopId = null
     }
   }
 }

@@ -105,7 +105,12 @@ backgroundModule.defineView((ctx, data, setState) => {
     })
 
     if (fit === 'cover' || fit === 'contain') {
+      // cancelled 플래그로 onCleanup 이후의 댕글링 RAF를 방어합니다.
+      let cancelled = false
+      ;(obj as any).__cancelCheckFit = () => { cancelled = true }
+
       const checkFit = () => {
+        if (cancelled) return
         const rw = (obj as any).__renderedSize?.w
         const rh = (obj as any).__renderedSize?.h
         if (rw > 0 && rh > 0) {
@@ -156,7 +161,19 @@ backgroundModule.defineView((ctx, data, setState) => {
     show: () => { },
     hide: () => { },
     onCleanup: () => {
-      if (_bgObj) { _bgObj.remove({ child: true }); _bgObj = null }
+      if (_bgObj) {
+        // checkFit RAF를 즉시 취소합니다.
+        if (typeof (_bgObj as any).__cancelCheckFit === 'function') {
+          ;(_bgObj as any).__cancelCheckFit()
+        }
+        // LeviarVideo는 remove()만으로 내부 <video> 요소가 정지되지 않으므로
+        // 반드시 stop()을 먼저 호출합니다.
+        if (typeof (_bgObj as any).stop === 'function') {
+          ;(_bgObj as any).stop()
+        }
+        _bgObj.remove({ child: true })
+        _bgObj = null
+      }
     },
     onUpdate: (_ctx, state, _setState) => {
       if (!state._key) return

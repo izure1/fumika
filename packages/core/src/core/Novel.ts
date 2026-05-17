@@ -1286,7 +1286,9 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
    *
    * 1. 오디오 풀 즉시 정지
    * 2. UI 레지스트리 및 씬 훅 해제
-   * 3. Leviar World 렌더링 루프 정지
+   * 3. Leviar World 오브젝트 전체 정리 (비디오 stop 포함)
+   * 4. 카메라 동기화 RAF 루프 취소
+   * 5. Leviar World 렌더링 루프 정지
    *
    * 프리뷰 컴포넌트처럼 단기 수명의 Novel 인스턴스를 사용할 때
    * 언마운트 시 반드시 호출하여 메모리 누수를 방지하십시오.
@@ -1296,6 +1298,19 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     this._currentSceneDef?.hooks?._unregister(this)
     this._cleanupUI()
     this._renderer.clear()
+
+    // 월드에 남아 있는 모든 Leviar 오브젝트를 정리합니다.
+    // LeviarVideo는 remove()만으로 내부 <video> 요소가 정지되지 않으므로
+    // 반드시 stop()을 먼저 호출해야 합니다.
+    for (const obj of Array.from((this._world as any).objects)) {
+      if (typeof (obj as any).stop === 'function') {
+        (obj as any).stop()
+      }
+      this._world.removeObject(obj as any)
+    }
+
+    // 카메라 동기화 RAF 루프를 취소합니다.
+    this._renderer.cancelSyncLoop()
     this._world.stop()
   }
 }
