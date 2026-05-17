@@ -3290,7 +3290,6 @@
     let _currentPanelW = INIT_PANEL_W;
     let _currentPanelH = 0;
     overlayObj.on("click", (e) => {
-      console.log(1);
       e.stopPropagation();
       e.stopImmediatePropagation();
       if (!_currentPersist && _currentResolve) {
@@ -3427,7 +3426,6 @@
             txtObj.animate({ style: normalTxtProps }, 150);
           });
           btnObj.on("click", (e) => {
-            console.log(2);
             e.stopPropagation();
             e.stopImmediatePropagation();
             resolve(i);
