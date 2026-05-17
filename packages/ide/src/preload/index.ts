@@ -37,6 +37,7 @@ const api = {
   fs: {
     checkExists: (path: string) => ipcRenderer.invoke('fs:checkExists', path),
     readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
+    readFiles: (paths: string[]) => ipcRenderer.invoke('fs:readFiles', paths),
     writeFile: (path: string, content: string) => ipcRenderer.invoke('fs:writeFile', path, content),
     formatCode: (code: string) => ipcRenderer.invoke('fs:formatCode', code),
     copyFile: (src: string, dest: string) => ipcRenderer.invoke('fs:copyFile', src, dest),

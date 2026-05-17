@@ -207,29 +207,37 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
         }
 
         const srcPaths = collectTsPaths(res.files as DirEntry[], true)
-        for (const relPath of srcPaths) {
-          const absPath = projectPath + '\\' + relPath.replace(/\//g, '\\')
-          
-          const draftPath = absPath.replace(/([^/\\]+)$/, '.$1.draft')
-          let fileRes = await window.api.fs.readFile(draftPath)
-          
-          if (!fileRes.success || fileRes.content === undefined) {
-            fileRes = await window.api.fs.readFile(absPath)
-          }
 
-          if (!fileRes.success || fileRes.content === undefined) continue
+        // 모든 파일 경로 수집 (draft + original)
+        const absPaths = srcPaths.map(
+          (rel) => projectPath + '\\' + rel.replace(/\//g, '\\')
+        )
+        const draftPaths = absPaths.map(
+          (abs) => abs.replace(/([^/\\]+)$/, '.$1.draft')
+        )
 
-          const libUri = toFileUri(absPath)
-          ts.typescriptDefaults.addExtraLib(fileRes.content, libUri)
+        // 배치 IPC: draft와 원본을 한 번에 읽음 + fumika 타입도 병렬 요청
+        const [draftRes, originalRes, typesRes] = await Promise.all([
+          window.api.fs.readFiles(draftPaths),
+          window.api.fs.readFiles(absPaths),
+          window.api.project.getTypes(projectPath),
+        ])
+
+        const draftFiles = draftRes.success ? draftRes.files ?? [] : []
+        const originalFiles = originalRes.success ? originalRes.files ?? [] : []
+
+        // draft 우선, 없으면 original로 폴백
+        for (let i = 0; i < absPaths.length; i++) {
+          const content = draftFiles[i]?.content ?? originalFiles[i]?.content
+          if (content == null) continue
+          ts.typescriptDefaults.addExtraLib(content, toFileUri(absPaths[i]))
         }
 
-        // ── 2. fumika 타입 파일 ──
-        const typesRes = await window.api.project.getTypes(projectPath)
+        // ── 2. fumika 타입 파일 (이미 병렬로 가져옴) ──
         if (typesRes.success && typesRes.types) {
           for (const type of typesRes.types) {
             const absPath = projectPath + '\\node_modules\\fumika\\dist\\types\\' + type.path.replace(/\//g, '\\')
-            const libUri = toFileUri(absPath)
-            ts.typescriptDefaults.addExtraLib(type.content, libUri)
+            ts.typescriptDefaults.addExtraLib(type.content, toFileUri(absPath))
           }
 
           // fumika 진입점

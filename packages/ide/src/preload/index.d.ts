@@ -38,6 +38,7 @@ declare global {
       fs: {
         checkExists: (path: string) => Promise<{ success: boolean; exists?: boolean; error?: string }>
         readFile: (path: string) => Promise<{ success: boolean; content?: string; error?: string }>
+        readFiles: (paths: string[]) => Promise<{ success: boolean; files?: { path: string; content: string | null }[]; error?: string }>
         writeFile: (path: string, content: string) => Promise<{ success: boolean; error?: string }>
         formatCode: (code: string) => Promise<{ success: boolean; content?: string; error?: string }>
         copyFile: (src: string, dest: string) => Promise<{ success: boolean; error?: string }>

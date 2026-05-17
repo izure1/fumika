@@ -278,6 +278,26 @@ app.whenReady().then(() => {
     }
   })
 
+  // 여러 파일을 한 번에 읽는 배치 API (IPC 왕복 최소화)
+  ipcMain.handle('fs:readFiles', async (_, filePaths: string[]) => {
+    try {
+      const fs = require('fs/promises')
+      const results = await Promise.all(
+        filePaths.map(async (filePath) => {
+          try {
+            const content = await fs.readFile(filePath, 'utf-8')
+            return { path: filePath, content }
+          } catch {
+            return { path: filePath, content: null }
+          }
+        })
+      )
+      return { success: true, files: results }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle('fs:writeFile', async (_, filePath: string, content: string) => {
     try {
       const fs = require('fs/promises')
