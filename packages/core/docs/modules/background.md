@@ -42,8 +42,11 @@ export default defineScene({ config })(() => [
 
   { type: 'dialogue', text: '여기는 교실입니다.' },
 
-  // 2. 비디오 영상을 배경으로 화면 꽉 차게 출력
-  { type: 'background', name: 'opening', isVideo: true, fit: 'cover' }
+  // 2. 비디오 영상을 배경으로 화면 꽉 차게 출력 (기본적으로 자동 재생됨)
+  { type: 'background', name: 'opening', isVideo: true, fit: 'cover' },
+
+  // 3. 비디오 배경이지만 자동 재생하지 않고 수동 제어용으로 로드할 때
+  { type: 'background', name: 'opening', isVideo: true, autoplay: false }
 ])
 ```
 
@@ -59,6 +62,7 @@ export default defineScene({ config })(() => [
 | **`duration`** | `number` | `1000` | 다른 배경에서 전환 시 페이드 효과에 걸리는 시간(ms) |
 | **`ease`** | `string` | `'easeInOutQuad'` | 애니메이션의 [이징 함수 목록](../easing.md) 이름 |
 | **`isVideo`** | `boolean` | `false` | 대상 에셋이 비디오 파일(.mp4 등)인 경우 `true`로 명시 |
+| **`autoplay`** | `boolean` | `true` | `isVideo`가 `true`일 경우, 표시됨과 동시에 비디오를 자동 재생할지 여부 |
 
 ## 주의 사항 (Edge Cases)
 

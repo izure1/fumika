@@ -14,6 +14,7 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
   const { projectPath } = useProjectStore()
   const [src, setSrc] = useState('')
   const [parallax, setParallax] = useState(false)
+  const [fit, setFit] = useState<'cover' | 'contain' | 'inherit' | 'stretch'>('cover')
   const [previewAbsPath, setPreviewAbsPath] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'gui' | 'code'>('gui')
 
@@ -34,14 +35,24 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
 
       const parallaxMatch = content.match(/parallax(?:\s*:\s*boolean)?\s*=\s*(true|false)/)
       if (parallaxMatch && parallaxMatch[1]) setParallax(parallaxMatch[1] === 'true')
+
+      const fitMatch = content.match(/fit(?:\s*:\s*[^=]+)?\s*=\s*['"]([^'"]+)['"]/)
+      if (fitMatch && fitMatch[1]) {
+        setFit(fitMatch[1] as any)
+      } else {
+        // 기본값 복구
+        setFit('cover')
+      }
     } catch (e) {
       // 파싱 실패 시 무시
     }
   }, [content, projectPath])
 
   // 값이 바뀔 때마다 템플릿 문자열 재생성하여 부모에게 전달
-  const updateTemplate = (s: string, p: boolean) => {
-    onChange(getBackgroundContent(s, p))
+  const updateTemplate = (s: string, p: boolean, f: string) => {
+    // 비디오가 아니면 fit 옵션 제거
+    const finalFit = (s && /\.(mp4|webm|mov)$/i.test(s)) ? f : undefined
+    onChange(getBackgroundContent(s, p, finalFit))
   }
 
   const handleBrowseImage = async () => {
@@ -153,7 +164,7 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
                 value={src}
                 onChange={(e) => {
                   setSrc(e.target.value)
-                  updateTemplate(e.target.value, parallax)
+                  updateTemplate(e.target.value, parallax, fit)
                 }}
                 className="flex-1 bg-surface-900 border border-surface-700 rounded p-2 text-sm text-white focus:border-primary-500 focus:outline-none"
                 placeholder="예: backgrounds/bg_room.png"
@@ -168,20 +179,40 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
-            <button 
-              onClick={() => {
-                const newVal = !parallax
-                setParallax(newVal)
-                updateTemplate(src, newVal)
-              }}
-              className={`w-12 h-6 rounded-full transition-colors relative ${parallax ? 'bg-primary-500' : 'bg-surface-700'}`}
-            >
-              <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${parallax ? 'transurface-x-6' : ''}`} />
-            </button>
-            <label className="text-sm font-medium text-surface-300">
-              패럴랙스(Parallax) 효과 활성화
-            </label>
+          <div className="flex items-center gap-6 pt-2">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => {
+                  const newVal = !parallax
+                  setParallax(newVal)
+                  updateTemplate(src, newVal, fit)
+                }}
+                className={`w-12 h-6 rounded-full transition-colors relative ${parallax ? 'bg-primary-500' : 'bg-surface-700'}`}
+              >
+                <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${parallax ? 'translate-x-6' : ''}`} />
+              </button>
+              <label className="text-sm font-medium text-surface-300">
+                패럴랙스(Parallax) 효과 활성화
+              </label>
+            </div>
+
+            {previewIsVideo && (
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    const newVal = fit === 'cover' ? 'contain' : 'cover'
+                    setFit(newVal)
+                    updateTemplate(src, parallax, newVal)
+                  }}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${fit === 'cover' ? 'bg-primary-500' : 'bg-surface-700'}`}
+                >
+                  <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${fit === 'cover' ? 'translate-x-6' : ''}`} />
+                </button>
+                <label className="text-sm font-medium text-surface-300">
+                  화면 꽉 채우기 (Cover)
+                </label>
+              </div>
+            )}
           </div>
         </div>
         
@@ -210,10 +241,11 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
                 name: src,
                 duration: 0,
                 isVideo: previewIsVideo,
+                autoplay: true,
               }]}
               configOverride={{
                 backgrounds: {
-                  [src]: { src, parallax }
+                  [src]: { src, parallax, fit }
                 }
               }}
             />

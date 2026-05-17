@@ -22,6 +22,8 @@ export interface BackgroundCmd<TConfig = any> {
   isVideo?: boolean
   /** 애니메이션의 이징 함수 이름입니다. */
   ease?: EasingType
+  /** 대상 에셋이 비디오인 경우 자동재생 여부입니다. (기본값: true) */
+  autoplay?: boolean
 }
 
 // ─── 스키마 ──────────────────────────────────────────────────
@@ -39,6 +41,8 @@ export interface BackgroundSchema {
   _isVideo: boolean
   /** @internal 최근 이징 함수 */
   _lastEase?: string
+  /** @internal 자동재생 여부 */
+  _autoplay: boolean
 }
 
 // ─── 모듈 정의 ───────────────────────────────────────────────
@@ -53,6 +57,7 @@ const backgroundModule = define<BackgroundCmd<any>, BackgroundSchema>({
   _parallax: true,
   _isVideo: false,
   _lastEase: undefined,
+  _autoplay: true,
 })
 
 backgroundModule.defineView((ctx, data, setState) => {
@@ -60,7 +65,7 @@ backgroundModule.defineView((ctx, data, setState) => {
   let _bgObj: any = null
   let _bgParallax: boolean | null = null
 
-  const _createBg = (key: string, fit: string, parallax: boolean, isVideo: boolean, opacity = 1) => {
+  const _createBg = (key: string, fit: string, parallax: boolean, isVideo: boolean, autoplay: boolean, opacity = 1) => {
     const bgDefs = ctx.renderer.config.backgrounds as BgDefs
     const def = bgDefs[key]
     if (!def) return null
@@ -133,12 +138,17 @@ backgroundModule.defineView((ctx, data, setState) => {
     if (!parallax) {
       ctx.renderer.world.camera?.addChild(obj)
     }
+
+    if (isVideo && autoplay && typeof (obj as any).play === 'function') {
+      (obj as any).play()
+    }
+
     return obj
   }
 
   // 복원: 저장된 배경이 있으면 즉시 렌더
   if (data._key) {
-    _bgObj = _createBg(data._key, data._fit, data._parallax, data._isVideo)
+    _bgObj = _createBg(data._key, data._fit, data._parallax, data._isVideo, data._autoplay ?? false)
     _bgParallax = data._parallax
   }
 
@@ -179,7 +189,7 @@ backgroundModule.defineView((ctx, data, setState) => {
       }
 
       _bgParallax = useParallax
-      _bgObj = _createBg(state._key, state._fit, useParallax, state._isVideo, dur > 0 ? 0 : 1)
+      _bgObj = _createBg(state._key, state._fit, useParallax, state._isVideo, state._autoplay, dur > 0 ? 0 : 1)
       if (dur > 0 && _bgObj) {
         ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, ease)
       }
@@ -200,6 +210,7 @@ backgroundModule.defineCommand(function* (cmd, ctx, state, setState) {
     _lastDuration: cmd.duration ?? 1000,
     _parallax: def.parallax ?? true,
     _isVideo: cmd.isVideo ?? false,
+    _autoplay: cmd.autoplay ?? true, // 기본값으로 자동재생
     _lastEase: cmd.ease
   })
 
