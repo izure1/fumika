@@ -122,12 +122,8 @@ export function getInitialEffectContent(effectType: EffectType): string {
   return `import type { EffectDef } from 'fumika'\n\nconst effectDef: EffectDef = {\n  particle: ${particlePreset.replace(/"([^"]+)":/g, '$1:')},\n  clip: ${clipPreset.replace(/"([^"]+)":/g, '$1:')}\n}\n\nexport default effectDef\n`
 }
 
-export function getBackgroundContent(srcVal: string, parallaxVal: boolean, fitVal?: string): string {
-  let content = `import type Assets from '@/declarations/assets'\n\nexport const src: keyof typeof Assets = '${srcVal}'\nexport const parallax: boolean = ${parallaxVal}\n`
-  if (fitVal) {
-    content += `export const fit: 'cover' | 'contain' | 'inherit' | 'stretch' = '${fitVal}'\n`
-  }
-  return content
+export function getBackgroundContent(srcVal: string, parallaxVal: boolean): string {
+  return `import type Assets from '@/declarations/assets'\n\nexport const src: keyof typeof Assets = '${srcVal}'\nexport const parallax: boolean = ${parallaxVal}\n`
 }
 
 // ─── 최상위 설정 파일 ─────────────────────────────────────────
