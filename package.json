@@ -5,6 +5,7 @@
     "packages/*"
   ],
   "scripts": {
+    "build:ide": "npm run build:win -w packages/ide",
     "build:core": "npm run build -w packages/core",
     "build:playground": "npm run build -w packages/playground",
     "dev:ide": "npm run dev -w packages/ide",
