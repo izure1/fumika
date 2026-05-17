@@ -174,9 +174,11 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
     })
   }, [monacoInstance, projectPath])
 
+  // filePath ref for onFileChanged filtering (avoid re-subscribe on file switch)
+  const filePathRef = useRef(filePath)
+  useEffect(() => { filePathRef.current = filePath }, [filePath])
+
   // 프로젝트 파일 + fumika 타입을 addExtraLib으로 주입
-  // addExtraLib은 TS 워커의 별도 가상 파일시스템을 사용하므로
-  // createModel/program 동기화 문제를 회피한다.
   useEffect(() => {
     if (!monacoInstance || !projectPath) return
     if (injectedProjectRef.current === projectPath) return
@@ -187,60 +189,26 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
 
     const injectAll = async () => {
       try {
-        // ── 1. 프로젝트 소스 파일 (node_modules 제외) ──
-        const res = await window.api.fs.readDir(projectPath, true)
-        if (!res.success || !res.files) return
-
-        type DirEntry = { name: string; isDirectory: boolean; path: string; children: DirEntry[] }
-
-        const collectTsPaths = (entries: DirEntry[], skipNodeModules = true): string[] => {
-          const result: string[] = []
-          for (const entry of entries) {
-            if (entry.isDirectory) {
-              if (skipNodeModules && entry.name === 'node_modules') continue
-              result.push(...collectTsPaths(entry.children ?? [], skipNodeModules))
-            } else if (entry.name.endsWith('.ts') || entry.name.endsWith('.d.ts')) {
-              result.push(entry.path)
-            }
-          }
-          return result
-        }
-
-        const srcPaths = collectTsPaths(res.files as DirEntry[], true)
-
-        // 모든 파일 경로 수집 (draft + original)
-        const absPaths = srcPaths.map(
-          (rel) => projectPath + '\\' + rel.replace(/\//g, '\\')
-        )
-        const draftPaths = absPaths.map(
-          (abs) => abs.replace(/([^/\\]+)$/, '.$1.draft')
-        )
-
-        // 배치 IPC: draft와 원본을 한 번에 읽음 + fumika 타입도 병렬 요청
-        const [draftRes, originalRes, typesRes] = await Promise.all([
-          window.api.fs.readFiles(draftPaths),
-          window.api.fs.readFiles(absPaths),
+        // 캐시 + fumika 타입을 병렬 요청 (디스크 I/O 없음, 메모리 캐시)
+        const [cacheRes, typesRes] = await Promise.all([
+          window.api.project.getTsFileCache(),
           window.api.project.getTypes(projectPath),
         ])
 
-        const draftFiles = draftRes.success ? draftRes.files ?? [] : []
-        const originalFiles = originalRes.success ? originalRes.files ?? [] : []
-
-        // draft 우선, 없으면 original로 폴백
-        for (let i = 0; i < absPaths.length; i++) {
-          const content = draftFiles[i]?.content ?? originalFiles[i]?.content
-          if (content == null) continue
-          ts.typescriptDefaults.addExtraLib(content, toFileUri(absPaths[i]))
+        // ── 1. 프로젝트 소스 파일 (캐시에서 즉시 주입) ──
+        if (cacheRes.success && cacheRes.files) {
+          for (const file of cacheRes.files) {
+            ts.typescriptDefaults.addExtraLib(file.content, toFileUri(file.path))
+          }
         }
 
-        // ── 2. fumika 타입 파일 (이미 병렬로 가져옴) ──
+        // ── 2. fumika 타입 파일 ──
         if (typesRes.success && typesRes.types) {
           for (const type of typesRes.types) {
             const absPath = projectPath + '\\node_modules\\fumika\\dist\\types\\' + type.path.replace(/\//g, '\\')
             ts.typescriptDefaults.addExtraLib(type.content, toFileUri(absPath))
           }
 
-          // fumika 진입점
           const fumikaIndexUri = toFileUri(projectPath + '\\node_modules\\fumika\\index.d.ts')
           ts.typescriptDefaults.addExtraLib(
             `export * from './dist/types/index'`,
@@ -255,7 +223,8 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
     injectAll()
   }, [monacoInstance, projectPath])
 
-  // watcher 선언 파일 갱신 → addExtraLib 업데이트
+  // watcher 파일 변경 → addExtraLib 실시간 업데이트
+  // 현재 에디터가 열린 파일은 제외 (model/extraLib 충돌 방지)
   useEffect(() => {
     if (!monacoInstance) return
 
@@ -263,9 +232,11 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
     if (!ts) return
 
     const unsubscribe = window.api.fs.onFileChanged(({ path: changedPath, content }) => {
-      const libUri = toFileUri(changedPath)
-      // addExtraLib은 같은 URI로 호출 시 자동 교체
-      ts.typescriptDefaults.addExtraLib(content, libUri)
+      const normalized = changedPath.replace(/\\/g, '/')
+      const currentFile = filePathRef.current?.replace(/\\/g, '/')
+      if (normalized === currentFile) return
+
+      ts.typescriptDefaults.addExtraLib(content, toFileUri(changedPath))
     })
 
     return unsubscribe

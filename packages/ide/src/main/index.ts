@@ -185,6 +185,15 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('project:getTsFileCache', async () => {
+    try {
+      const files = await watcher.getCachedFiles()
+      return { success: true, files }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle('preview:start', async (_, projectPath: string, targetScene?: string) => {
     try {
       const url = await previewService.start(projectPath, targetScene)

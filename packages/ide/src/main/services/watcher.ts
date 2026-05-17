@@ -18,9 +18,16 @@ const WATCH_FOLDERS = [
 
 export class ProjectWatcher {
   private watcher: FSWatcher | null = null
+  private cacheWatcher: FSWatcher | null = null
   private projectPath: string = ''
   private win: BrowserWindow | null = null
   private debounceMap: Map<string, NodeJS.Timeout> = new Map()
+
+  // TS 파일 내용 캐시 (IPC 왕복 없이 메모리에서 즉시 제공)
+  private fileCache: Map<string, string> = new Map()
+  private cacheReady = false
+  private cacheReadyResolve: (() => void) | null = null
+  private cacheReadyPromise: Promise<void> | null = null
 
   /**
    * 프로젝트 디렉토리 감시를 시작합니다.
@@ -30,6 +37,7 @@ export class ProjectWatcher {
     this.projectPath = projectPath
     this.win = win ?? null
 
+    // ── 1. 기존 watcher: WATCH_FOLDERS 선언 파일 자동 생성 ──
     const watchPaths = WATCH_FOLDERS.map((folder) => path.join(projectPath, folder))
 
     this.watcher = watch(watchPaths, {
@@ -48,6 +56,27 @@ export class ProjectWatcher {
         this.notifyDirDeleted(dirPath)
       })
     // 'change'는 export 구조가 바뀌지 않으면 선언 재생성 불필요
+
+    // ── 2. 캐시 watcher: 모든 .ts 파일 내용을 메모리에 유지 ──
+    this.cacheReadyPromise = new Promise((resolve) => {
+      this.cacheReadyResolve = resolve
+    })
+
+    this.cacheWatcher = watch(projectPath, {
+      ignored: [/(^|[\\\/])\../, /node_modules/],
+      persistent: true,
+      ignoreInitial: false,
+    })
+
+    this.cacheWatcher
+      .on('add', (filePath) => this.cacheFile(filePath))
+      .on('change', (filePath) => this.cacheFile(filePath))
+      .on('unlink', (filePath) => this.uncacheFile(filePath))
+      .on('ready', () => {
+        this.cacheReady = true
+        this.cacheReadyResolve?.()
+        console.log(`[IDE] File cache ready: ${this.fileCache.size} files`)
+      })
   }
 
   /**
@@ -58,11 +87,51 @@ export class ProjectWatcher {
       this.watcher.close()
       this.watcher = null
     }
+    if (this.cacheWatcher) {
+      this.cacheWatcher.close()
+      this.cacheWatcher = null
+    }
     for (const timeout of this.debounceMap.values()) {
       clearTimeout(timeout)
     }
     this.debounceMap.clear()
+    this.fileCache.clear()
+    this.cacheReady = false
+    this.cacheReadyPromise = null
+    this.cacheReadyResolve = null
     this.win = null
+  }
+
+  /**
+   * 캐시된 모든 TS 파일 내용을 반환합니다.
+   * 초기 스캔이 완료될 때까지 대기합니다.
+   */
+  public async getCachedFiles(): Promise<{ path: string; content: string }[]> {
+    if (this.cacheReadyPromise) {
+      await this.cacheReadyPromise
+    }
+    const result: { path: string; content: string }[] = []
+    for (const [filePath, content] of this.fileCache) {
+      result.push({ path: filePath, content })
+    }
+    return result
+  }
+
+  private async cacheFile(filePath: string) {
+    if (!filePath.endsWith('.ts')) return
+    try {
+      const content = await fs.readFile(filePath, 'utf-8')
+      this.fileCache.set(filePath.replace(/\\/g, '/'), content)
+      // 초기 스캔 중에는 개별 알림 불필요 (getCachedFiles로 일괄 제공)
+      if (this.cacheReady) {
+        this.notifyFileChanged(filePath, content)
+      }
+    } catch { /* 파일 읽기 실패 무시 (삭제 중일 수 있음) */ }
+  }
+
+  private uncacheFile(filePath: string) {
+    if (!filePath.endsWith('.ts')) return
+    this.fileCache.delete(filePath.replace(/\\/g, '/'))
   }
 
   private handleFileChange(filePath: string) {

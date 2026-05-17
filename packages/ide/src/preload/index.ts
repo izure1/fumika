@@ -12,7 +12,8 @@ const api = {
     load: (projectPath: string) => ipcRenderer.invoke('project:load', projectPath),
     update: (projectPath: string) => ipcRenderer.invoke('project:update', projectPath),
     getTypes: (projectPath: string) => ipcRenderer.invoke('project:getTypes', projectPath),
-    checkTypes: (projectPath: string) => ipcRenderer.invoke('project:checkTypes', projectPath)
+    checkTypes: (projectPath: string) => ipcRenderer.invoke('project:checkTypes', projectPath),
+    getTsFileCache: () => ipcRenderer.invoke('project:getTsFileCache'),
   },
   preview: {
     start: (projectPath: string, targetScene?: string) => ipcRenderer.invoke('preview:start', projectPath, targetScene),
