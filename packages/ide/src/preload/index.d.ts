@@ -6,7 +6,7 @@ declare global {
     api: {
       dialog: {
         openDirectory: () => Promise<string | null>
-        openFile: () => Promise<string[] | null>
+        openFile: (options?: any) => Promise<string[] | null>
       }
       project: {
         scaffold: (targetDir: string, options: { folderName: string, gameName: string, projectId: string, processName: string, width: number, height: number }) => Promise<{ success: boolean; error?: string }>

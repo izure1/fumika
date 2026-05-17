@@ -5,7 +5,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   dialog: {
     openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
-    openFile: () => ipcRenderer.invoke('dialog:openFile')
+    openFile: (options?: any) => ipcRenderer.invoke('dialog:openFile', options)
   },
   project: {
     scaffold: (targetDir: string, options: { folderName: string, gameName: string, projectId: string, processName: string, width: number, height: number }) => ipcRenderer.invoke('project:scaffold', targetDir, options),

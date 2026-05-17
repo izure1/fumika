@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useProjectStore } from '../../store/useProjectStore'
 import { CodeEditor } from './CodeEditor'
 import { ConfirmDialogBox } from '../UI/ConfirmDialogBox'
+import { BackgroundFormEditor } from './BackgroundFormEditor'
+import { CharacterFormEditor } from './CharacterFormEditor'
 
 interface TabData {
   content: string
@@ -430,7 +432,31 @@ export function EditorArea() {
           if (!data) return null
           
           const isEditable = activeFile.endsWith('.ts') || activeFile.endsWith('.json') || activeFile.endsWith('.md')
+          const isBackground = activeFile.includes('/backgrounds/') || activeFile.includes('\\backgrounds\\')
+          const isCharacter = activeFile.includes('/characters/') || activeFile.includes('\\characters\\')
           
+          if (isBackground && !data.isLoading) {
+            return (
+              <div className="absolute inset-0">
+                <BackgroundFormEditor 
+                  content={data.content} 
+                  onChange={(val) => handleContentChange(activeFile, val)} 
+                />
+              </div>
+            )
+          }
+
+          if (isCharacter && !data.isLoading) {
+            return (
+              <div className="absolute inset-0">
+                <CharacterFormEditor 
+                  content={data.content} 
+                  onChange={(val) => handleContentChange(activeFile, val)} 
+                  filePath={activeFile}
+                />
+              </div>
+            )
+          }
           if (data.isLoading) {
             return (
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10">

@@ -127,8 +127,8 @@ app.whenReady().then(() => {
     return canceled ? null : filePaths[0]
   })
 
-  ipcMain.handle('dialog:openFile', async () => {
-    const options: Electron.OpenDialogOptions = { properties: ['openFile', 'multiSelections'] }
+  ipcMain.handle('dialog:openFile', async (_, customOptions?: any) => {
+    const options: Electron.OpenDialogOptions = { properties: ['openFile', 'multiSelections'], ...customOptions }
     const { canceled, filePaths } = mainWindow
       ? await dialog.showOpenDialog(mainWindow, options)
       : await dialog.showOpenDialog(options)
