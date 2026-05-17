@@ -11,7 +11,8 @@ const api = {
     scaffold: (targetDir: string, options: { folderName: string, gameName: string, projectId: string, processName: string, width: number, height: number }) => ipcRenderer.invoke('project:scaffold', targetDir, options),
     load: (projectPath: string) => ipcRenderer.invoke('project:load', projectPath),
     update: (projectPath: string) => ipcRenderer.invoke('project:update', projectPath),
-    getTypes: (projectPath: string) => ipcRenderer.invoke('project:getTypes', projectPath)
+    getTypes: (projectPath: string) => ipcRenderer.invoke('project:getTypes', projectPath),
+    checkTypes: (projectPath: string) => ipcRenderer.invoke('project:checkTypes', projectPath)
   },
   preview: {
     start: (projectPath: string, targetScene?: string) => ipcRenderer.invoke('preview:start', projectPath, targetScene),

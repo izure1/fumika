@@ -52,7 +52,7 @@ interface PromptData {
   options?: { label: string; value: string }[]
 }
 export function ProjectSidebar({ width = 256 }: { width?: number }) {
-  const { projectPath, activeFile, setActiveFile, setGlobalLoading, setProjectPath } = useProjectStore()
+  const { projectPath, activeFile, setActiveFile, setGlobalLoading, setProjectPath, tsErrors } = useProjectStore()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     scenes: true,
     assets: true,
@@ -466,6 +466,28 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
   // 렌더링
   // ==============================
 
+  const getErrorCount = (nodePath: string): number => {
+    if (!projectPath) return 0
+    
+    const normNode = nodePath.replace(/\\/g, '/')
+    const normProj = projectPath.replace(/\\/g, '/')
+    
+    let relPath = normNode
+    if (normNode.toLowerCase().startsWith(normProj.toLowerCase())) {
+      relPath = normNode.slice(normProj.length).replace(/^[/\\]/, '')
+    }
+
+    let count = 0
+    const lowerRelPath = relPath.toLowerCase()
+    for (const [key, errors] of Object.entries(tsErrors)) {
+      const lowerKey = key.toLowerCase()
+      if (lowerKey === lowerRelPath || lowerKey.startsWith(lowerRelPath + '/')) {
+        count += errors.length
+      }
+    }
+    return count
+  }
+
   const renderTree = (nodes: FileNode[], folderPath: string) => {
     return (
       <ul className="pl-3 mt-1 space-y-0.5 border-l border-surface-700/50 ml-2">
@@ -478,6 +500,18 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
           const isExpanded = expanded[fullPath]
           const isSelected = selectedFiles.has(fullPath)
           const isActive = !isDir && activeFile === fullPath
+          const errorCount = getErrorCount(fullPath)
+          
+          const normNode = fullPath.replace(/\\/g, '/')
+          const normProj = projectPath!.replace(/\\/g, '/')
+          const nodeRelPath = normNode.toLowerCase().startsWith(normProj.toLowerCase()) 
+            ? normNode.slice(normProj.length).replace(/^[/\\]/, '') 
+            : normNode
+
+          const matchingKey = Object.keys(tsErrors).find(k => k.toLowerCase() === nodeRelPath.toLowerCase())
+          const errorTooltip = !isDir && errorCount > 0 && matchingKey
+            ? tsErrors[matchingKey]?.map(e => `[Line ${e.line}] ${e.message}`).join('\n')
+            : ''
 
           return (
             <li key={node.path}>
@@ -491,11 +525,13 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                     ? 'bg-primary-600/40 text-primary-200 font-medium' 
                     : isActive 
                       ? 'bg-primary-600/20 text-primary-300 font-medium' 
-                      : 'text-surface-400 hover:bg-surface-800 hover:text-surface-200'
+                      : errorCount > 0
+                        ? 'text-red-400 hover:bg-surface-800'
+                        : 'text-surface-400 hover:bg-surface-800 hover:text-surface-200'
                 }`}
                 onClick={(e) => handleNodeClick(e, fullPath, isDir, fullPath)}
                 onDoubleClick={(e) => handleNodeDoubleClick(e, fullPath, isDir)}
-                title={node.name}
+                title={errorTooltip || node.name}
               >
                 <div className="flex items-center truncate max-w-[140px]">
                   {isDir && (
@@ -506,6 +542,12 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                   {!isDir && <span className="mr-1 opacity-40 w-3 inline-block text-center text-[10px]">•</span>}
                   <span className="truncate">{node.name}</span>
                 </div>
+                
+                {errorCount > 0 && (
+                  <div className="ml-2 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[9px] font-bold shrink-0">
+                    {errorCount > 99 ? '99+' : errorCount}
+                  </div>
+                )}
                 
                 <div className="absolute -right-2 -top-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-105 bg-surface-800 shadow-xl border border-surface-700/80 rounded-md z-50 px-1 py-1 gap-1">
                   {isDir && folderPath !== 'effects' && (
@@ -583,22 +625,35 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                 const filePath = `${projectPath}/${file}`
                 const isSelected = selectedFiles.has(filePath)
                 const isActive = activeFile === filePath
+                const errorCount = getErrorCount(filePath)
+                const errorTooltip = errorCount > 0 
+                  ? tsErrors[file]?.map(e => `[Line ${e.line}] ${e.message}`).join('\n')
+                  : ''
                 return (
                   <li 
                     key={file} 
-                    className={`cursor-pointer rounded px-2 py-1.5 text-xs truncate transition-colors select-none ${
+                    className={`flex items-center justify-between cursor-pointer rounded px-2 py-1.5 text-xs truncate transition-colors select-none ${
                       isSelected 
                         ? 'bg-primary-600/40 text-primary-200 font-medium' 
                         : isActive 
                           ? 'bg-primary-600/20 text-primary-300 font-medium' 
-                          : 'text-surface-400 hover:bg-surface-800 hover:text-surface-200'
+                          : errorCount > 0
+                            ? 'text-red-400 hover:bg-surface-800'
+                            : 'text-surface-400 hover:bg-surface-800 hover:text-surface-200'
                     }`}
                     onClick={(e) => handleNodeClick(e, filePath, false)}
                     onDoubleClick={(e) => handleNodeDoubleClick(e, filePath, false)}
-                    title={file}
+                    title={errorTooltip || file}
                   >
-                    <span className="mr-1 opacity-40 w-3 inline-block text-center text-[10px]">•</span>
-                    <span className="truncate">{file}</span>
+                    <div className="flex items-center truncate">
+                      <span className="mr-1 opacity-40 w-3 inline-block text-center text-[10px]">•</span>
+                      <span className="truncate">{file}</span>
+                    </div>
+                    {errorCount > 0 && (
+                      <div className="ml-2 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[9px] font-bold shrink-0">
+                        {errorCount > 99 ? '99+' : errorCount}
+                      </div>
+                    )}
                   </li>
                 )
               })}
@@ -609,13 +664,18 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
           {WATCH_FOLDERS.map((folder) => {
             const rootPath = `${projectPath}/${folder}`
             const isSelected = selectedFiles.has(rootPath)
+            const errorCount = getErrorCount(rootPath)
             return (
             <div key={folder} className="mb-2">
               <div 
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, rootPath, true)}
                 className={`relative flex items-center justify-between cursor-pointer py-1.5 select-none transition-colors group rounded px-2 ${
-                  isSelected ? 'bg-primary-600/40 text-primary-200' : 'text-surface-400 hover:bg-surface-800 hover:text-white'
+                  isSelected 
+                    ? 'bg-primary-600/40 text-primary-200' 
+                    : errorCount > 0
+                      ? 'text-red-400 hover:bg-surface-800'
+                      : 'text-surface-400 hover:bg-surface-800 hover:text-white'
                 }`}
                 onClick={(e) => handleNodeClick(e, rootPath, true, folder)}
               >
@@ -625,6 +685,11 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                   </span>
                   <span className="font-semibold capitalize">{folder}</span>
                 </div>
+                {errorCount > 0 && (
+                  <div className="ml-2 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[9px] font-bold shrink-0">
+                    {errorCount > 99 ? '99+' : errorCount}
+                  </div>
+                )}
                 <div className="absolute -right-2 -top-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-105 bg-surface-800 shadow-xl border border-surface-700/80 rounded-md z-50 px-1 py-1 gap-1">
                   {folder !== 'effects' && (
                     <>

@@ -39,6 +39,27 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
     editorRef.current = editor
   }, [])
 
+  const handleValidate = useCallback((markers: monaco.editor.IMarker[]) => {
+    if (!filePath || !projectPath) return
+    const errors = markers
+      .filter(m => m.severity === monaco.MarkerSeverity.Error)
+      .map(m => ({ line: m.startLineNumber, message: m.message }))
+    
+    const normFile = filePath.replace(/\\/g, '/')
+    const normProj = projectPath.replace(/\\/g, '/')
+    
+    let relPath = normFile
+    if (normFile.toLowerCase().startsWith(normProj.toLowerCase())) {
+      relPath = normFile.slice(normProj.length).replace(/^[/\\]/, '')
+    }
+
+    const store = useProjectStore.getState()
+    store.setTsErrors({
+      ...store.tsErrors,
+      [relPath]: errors
+    })
+  }, [filePath, projectPath])
+
   // pendingLine 감지 → 해당 라인으로 커서 이동
   useEffect(() => {
     if (pendingLine == null || !editorRef.current) return
@@ -268,6 +289,7 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
         value={code}
         onChange={onChange}
         onMount={handleEditorMount}
+        onValidate={handleValidate}
         theme="vs-dark"
         options={{
           minimap: { enabled: false },

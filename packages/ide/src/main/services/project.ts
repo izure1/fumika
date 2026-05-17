@@ -14,7 +14,7 @@ const DEFAULT_FOLDERS = [
   'fallbacks'
 ]
 
-import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, getDeclarationTemplate } from '../../shared/templates'
+import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, getDeclarationTemplate, EFFECT_TYPES, getInitialEffectContent } from '../../shared/templates'
 
 export interface ProjectOptions {
   gameName: string
@@ -22,31 +22,6 @@ export interface ProjectOptions {
   processName: string
   width: number
   height: number
-}
-
-const EFFECT_TYPES = ['dust', 'rain', 'snow', 'sakura', 'sparkle', 'fog', 'leaves', 'fireflies'] as const;
-type EffectType = typeof EFFECT_TYPES[number];
-
-const EFFECT_PARTICLE_PRESETS: Record<EffectType, Record<string, any>> = {
-  dust: { attribute: { frictionAir: 0, gravityScale: 0.001 }, style: { width: 10, height: 10, blendMode: 'lighter' } },
-  rain: { attribute: { gravityScale: 1.5 }, style: { width: 25, height: 100, opacity: 1, blendMode: 'screen' } },
-  snow: { attribute: { gravityScale: 0.01, frictionAir: 0 }, style: { width: 15, height: 15, blendMode: 'lighter' } },
-  sakura: { attribute: { gravityScale: 0.02, frictionAir: 0 }, style: { width: 16, height: 20, opacity: 0.8 } },
-  sparkle: { attribute: { gravityScale: 0.1 }, style: { width: 16, height: 16, opacity: 0.8 } },
-  fog: { attribute: { frictionAir: 0, gravityScale: 0.003 }, style: { width: 120, height: 120, blendMode: 'screen' } },
-  leaves: { attribute: { gravityScale: 0.1, frictionAir: 0.05, strictPhysics: true }, style: { width: 20, height: 20, opacity: 0.9 } },
-  fireflies: { attribute: { gravityScale: -0.02, frictionAir: 0.05, strictPhysics: true }, style: { width: 8, height: 8, opacity: 0.8, blendMode: 'lighter' } },
-}
-
-const EFFECT_CLIP_PRESETS: Record<EffectType, Record<string, any>> = {
-  dust: { impulse: 0.05, lifespan: 10000, interval: 250, size: [[0.5, 1], [0, 0.5]], opacity: [[0, 0], [1, 1], [0, 0]], loop: true },
-  rain: { impulse: 0, lifespan: 3000, interval: 40, size: [[0.1, 0.3], [0.1, 0.3]], opacity: [[1, 1], [1, 1]], loop: true },
-  snow: { impulse: 0.01, lifespan: 10000, interval: 100, size: [[0.3, 0.8], [0, 0]], opacity: [[1, 1], [0, 0]], loop: true, angularImpulse: 0.001 },
-  sakura: { impulse: 0.02, lifespan: 6000, interval: 300, size: [[0.5, 0.8], [0.3, 0.5]], loop: true, angularImpulse: 0.001 },
-  sparkle: { impulse: 0.02, lifespan: 1500, interval: 150, size: [[0.5, 1], [0, 0.1]], loop: true },
-  fog: { impulse: 0.01, lifespan: 15000, interval: 800, size: [[2, 2], [5, 10]], opacity: [[0, 0], [0.1, 0.2], [0, 0]], loop: true, angularImpulse: 0.0001 },
-  leaves: { impulse: 0.08, lifespan: 7000, interval: 350, size: [[0.8, 1.2], [0.8, 1.2]], loop: true, angularImpulse: 0.05 },
-  fireflies: { impulse: 0.03, lifespan: 5000, interval: 300, size: [[0.5, 1.5], [0, 0.5]], loop: true },
 }
 
 export async function ensureEffectsFiles(targetDir: string) {
@@ -62,10 +37,7 @@ export async function ensureEffectsFiles(targetDir: string) {
     try {
       await fs.access(filePath)
     } catch {
-      const particlePreset = JSON.stringify(EFFECT_PARTICLE_PRESETS[effectType], null, 2)
-      const clipPreset = JSON.stringify(EFFECT_CLIP_PRESETS[effectType], null, 2)
-      
-      let content = `import type { EffectDef } from 'fumika'\n\nexport const effectDef: EffectDef = {\n  particle: ${particlePreset.replace(/"([^"]+)":/g, '$1:')},\n  clip: ${clipPreset.replace(/"([^"]+)":/g, '$1:')}\n}\n`
+      let content = getInitialEffectContent(effectType)
       try {
         content = await prettier.format(content, {
           parser: 'typescript',
@@ -145,7 +117,7 @@ export async function ensureProjectDependencies(targetDir: string, processName?:
           console.error('[IDE] npm install fumika failed:', stderr)
           reject(err)
         } else {
-          execFile(npmCmd, ['install', '--save-dev', 'vite'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
+          execFile(npmCmd, ['install', '--save-dev', 'vite', 'typescript@6'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
             if (err) {
               console.error('[IDE] npm install vite failed:', stderr)
               reject(err)

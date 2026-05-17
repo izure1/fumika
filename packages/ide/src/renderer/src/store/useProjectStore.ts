@@ -3,6 +3,11 @@ import { create } from 'zustand'
 export type ThemeColor = 'indigo' | 'rose' | 'emerald' | 'amber' | 'sky' | 'violet'
 export type ThemeBg = 'slate' | 'zinc' | 'neutral' | 'stone' | 'gray'
 
+export interface TsError {
+  line: number;
+  message: string;
+}
+
 interface ProjectState {
   projectPath: string | null
   activeFile: string | null
@@ -16,6 +21,8 @@ interface ProjectState {
   isSettingsOpen: boolean
   isGraphOpen: boolean
   pendingLine: number | null
+  tsErrors: Record<string, TsError[]>
+  isTsChecking: boolean
   setProjectPath: (path: string | null) => void
   setActiveFile: (file: string | null) => void
   setGlobalLoading: (loading: boolean) => void
@@ -28,6 +35,8 @@ interface ProjectState {
   setIsSettingsOpen: (open: boolean) => void
   setIsGraphOpen: (open: boolean) => void
   setPendingLine: (line: number | null) => void
+  setTsErrors: (errors: Record<string, TsError[]>) => void
+  setIsTsChecking: (checking: boolean) => void
   initSettings: () => Promise<void>
 }
 
@@ -44,7 +53,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   isSettingsOpen: false,
   isGraphOpen: false,
   pendingLine: null,
-  setProjectPath: (path) => set({ projectPath: path, activeFile: null, isPreviewOpen: true }),
+  tsErrors: {},
+  isTsChecking: false,
+  setProjectPath: (path) => set({ projectPath: path, activeFile: null, isPreviewOpen: true, tsErrors: {} }),
   setActiveFile: (file) => {
     set({ activeFile: file })
     const state = get()
@@ -71,6 +82,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
   setIsGraphOpen: (open) => set({ isGraphOpen: open }),
   setPendingLine: (line) => set({ pendingLine: line }),
+  setTsErrors: (errors) => set({ tsErrors: errors }),
+  setIsTsChecking: (checking) => set({ isTsChecking: checking }),
   initSettings: async () => {
     try {
       const res = await window.api.settings.get()

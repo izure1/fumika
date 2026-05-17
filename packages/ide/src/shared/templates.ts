@@ -2,6 +2,44 @@
 // templates.ts — 프로젝트 스캐폴딩 템플릿 문자열 모음
 // =============================================================
 
+// ─── 이펙트 프리셋 데이터 ─────────────────────────────────────
+
+export const EFFECT_TYPES = ['dust', 'rain', 'snow', 'sakura', 'sparkle', 'fog', 'leaves', 'fireflies'] as const
+export type EffectType = typeof EFFECT_TYPES[number]
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const EFFECT_PARTICLE_PRESETS: Record<EffectType, Record<string, any>> = {
+  dust: { attribute: { frictionAir: 0, gravityScale: 0.001 }, style: { width: 10, height: 10, blendMode: 'lighter' } },
+  rain: { attribute: { gravityScale: 1.5 }, style: { width: 25, height: 100, opacity: 1, blendMode: 'screen' } },
+  snow: { attribute: { gravityScale: 0.01, frictionAir: 0 }, style: { width: 15, height: 15, blendMode: 'lighter' } },
+  sakura: { attribute: { gravityScale: 0.02, frictionAir: 0 }, style: { width: 16, height: 20, opacity: 0.8 } },
+  sparkle: { attribute: { gravityScale: 0.1 }, style: { width: 16, height: 16, opacity: 0.8 } },
+  fog: { attribute: { frictionAir: 0, gravityScale: 0.003 }, style: { width: 120, height: 120, blendMode: 'screen' } },
+  leaves: { attribute: { gravityScale: 0.1, frictionAir: 0.05, strictPhysics: true }, style: { width: 20, height: 20, opacity: 0.9 } },
+  fireflies: { attribute: { gravityScale: -0.02, frictionAir: 0.05, strictPhysics: true }, style: { width: 8, height: 8, opacity: 0.8, blendMode: 'lighter' } },
+}
+
+const EFFECT_CLIP_PRESETS: Record<EffectType, Record<string, any>> = {
+  dust: { impulse: 0.05, lifespan: 10000, interval: 250, size: [[0.5, 1], [0, 0.5]], opacity: [[0, 0], [1, 1], [0, 0]], loop: true },
+  rain: { impulse: 0, lifespan: 3000, interval: 40, size: [[0.1, 0.3], [0.1, 0.3]], opacity: [[1, 1], [1, 1]], loop: true },
+  snow: { impulse: 0.01, lifespan: 10000, interval: 100, size: [[0.3, 0.8], [0, 0]], opacity: [[1, 1], [0, 0]], loop: true, angularImpulse: 0.001 },
+  sakura: { impulse: 0.02, lifespan: 6000, interval: 300, size: [[0.5, 0.8], [0.3, 0.5]], loop: true, angularImpulse: 0.001 },
+  sparkle: { impulse: 0.02, lifespan: 1500, interval: 150, size: [[0.5, 1], [0, 0.1]], loop: true },
+  fog: { impulse: 0.01, lifespan: 15000, interval: 800, size: [[2, 2], [5, 10]], opacity: [[0, 0], [0.1, 0.2], [0, 0]], loop: true, angularImpulse: 0.0001 },
+  leaves: { impulse: 0.08, lifespan: 7000, interval: 350, size: [[0.8, 1.2], [0.8, 1.2]], loop: true, angularImpulse: 0.05 },
+  fireflies: { impulse: 0.03, lifespan: 5000, interval: 300, size: [[0.5, 1.5], [0, 0.5]], loop: true },
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/**
+ * 프리셋이 포함된 이펙트 파일 초기 내용을 생성합니다.
+ */
+export function getInitialEffectContent(effectType: EffectType): string {
+  const particlePreset = JSON.stringify(EFFECT_PARTICLE_PRESETS[effectType], null, 2)
+  const clipPreset = JSON.stringify(EFFECT_CLIP_PRESETS[effectType], null, 2)
+  return `import type { EffectDef } from 'fumika'\n\nconst effectDef: EffectDef = {\n  particle: ${particlePreset.replace(/"([^"]+)":/g, '$1:')},\n  clip: ${clipPreset.replace(/"([^"]+)":/g, '$1:')}\n}\n\nexport default effectDef\n`
+}
+
 // ─── 최상위 설정 파일 ─────────────────────────────────────────
 
 export function getNovelConfigContent(width: number, height: number): string {
@@ -126,8 +164,9 @@ export function getDeclarationTemplate(type: DeclarationFolder | string): string
  * 파일 항목은 watcher가 직접 삽입하고, 앞뒤 틀은 여기서 관리합니다.
  */
 export type WatcherDeclSection = {
-  header: string   // import 라인들 + 선언 시작
-  footer: string   // 선언 닫기
+  header: string          // import 라인들 + 선언 시작
+  footer: string          // 선언 닫기
+  importStyle?: 'default' | 'namespace'  // watcher가 사용할 import 방식
 }
 
 export const WATCHER_DECL: Partial<Record<string, WatcherDeclSection>> = {
@@ -142,10 +181,12 @@ export const WATCHER_DECL: Partial<Record<string, WatcherDeclSection>> = {
   backgrounds: {
     header: `import { defineBackgrounds } from 'fumika'\nimport assets from '@/declarations/assets'\n\nexport default defineBackgrounds(assets)({\n`,
     footer: `})\n`,
+    importStyle: 'namespace',
   },
   effects: {
     header: `import { defineEffects } from 'fumika'\n\nexport default defineEffects({\n`,
     footer: `})\n`,
+    importStyle: 'default',
   },
   modules: {
     header: `import { defineCustomModules } from 'fumika'\n`,
@@ -177,7 +218,7 @@ const FILE_TEMPLATE_GENERATORS: Partial<
     `import type Assets from '@/declarations/assets'\n\nexport const src: keyof typeof Assets = ''\nexport const parallax: boolean = true\n`,
 
   effects: () =>
-    `import type { EffectDef } from 'fumika'\n\nexport const effectDef: EffectDef = {}\n`,
+    `import type { EffectDef } from 'fumika'\n\nconst effectDef: EffectDef = {}\n\nexport default effectDef`,
 
   fallbacks: () =>
     `const fallback: FallbackItem = {\n  type: '',\n  defaults: {}\n}\n\nexport default fallback`,

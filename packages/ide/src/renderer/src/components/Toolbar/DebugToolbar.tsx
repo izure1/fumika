@@ -1,4 +1,5 @@
 import { useProjectStore } from '../../store/useProjectStore'
+import { useToastStore } from '../../store/useToastStore'
 
 export function DebugToolbar() {
   const {
@@ -11,10 +12,50 @@ export function DebugToolbar() {
     setPreviewUrl,
     setPreviewLoading,
     isGraphOpen,
-    setIsGraphOpen
+    setIsGraphOpen,
+    isTsChecking,
+    setTsErrors,
+    setIsTsChecking
   } = useProjectStore()
 
+  const { addToast } = useToastStore()
+
   const isSceneActive = activeFile ? activeFile.includes('/scenes/') && activeFile.endsWith('.ts') : false
+
+  const runTypeCheck = async () => {
+    if (!projectPath || isTsChecking) return
+    setIsTsChecking(true)
+    try {
+      const res = await window.api.project.checkTypes(projectPath)
+      if (res.success && res.errorMap) {
+        setTsErrors(res.errorMap)
+        
+        let errorCount = 0
+        for (const errors of Object.values(res.errorMap)) {
+          errorCount += errors.length
+        }
+
+        if (errorCount === 0) {
+          addToast('타입 검증 완료: 발견된 오류가 없습니다.', 'success')
+        } else {
+          addToast(`타입 검증 완료: ${errorCount}개의 오류가 발견되었습니다.`, 'warning')
+          console.group(`[TS Check] ${errorCount}개 오류 발견`)
+          for (const [file, errors] of Object.entries(res.errorMap)) {
+            console.group(`📄 ${file} (${errors.length}개)`)
+            console.table(errors.map(e => ({ line: e.line, message: e.message })))
+            console.groupEnd()
+          }
+          console.groupEnd()
+        }
+      } else {
+        addToast('타입 검증 실패: ' + res.error, 'error')
+      }
+    } catch (err: any) {
+      addToast(err.message, 'error')
+    } finally {
+      setIsTsChecking(false)
+    }
+  }
 
   const startPreview = async () => {
     if (!projectPath) return
@@ -69,6 +110,25 @@ export function DebugToolbar() {
 
   return (
     <div className="flex items-center gap-2 ml-4">
+      <button
+        onClick={runTypeCheck}
+        disabled={isTsChecking}
+        className={`flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
+          isTsChecking
+            ? 'bg-surface-800 text-surface-500 cursor-not-allowed opacity-50'
+            : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+        }`}
+      >
+        {isTsChecking ? (
+          <div className="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-1" />
+        ) : (
+          <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )}
+        Verify File
+      </button>
+
       {previewUrl ? (
         <>
           <button

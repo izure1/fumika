@@ -6,6 +6,7 @@ import { scaffoldProject, updateProject, ensureEffectsFiles } from './services/p
 import { ProjectWatcher } from './services/watcher'
 import { PreviewService } from './services/preview'
 import { settingsService } from './services/settings'
+import { checkProjectTypes } from './services/typescript'
 
 const watcher = new ProjectWatcher()
 const previewService = new PreviewService()
@@ -157,6 +158,15 @@ app.whenReady().then(() => {
     try {
       await updateProject(projectPath)
       return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('project:checkTypes', async (_, projectPath: string) => {
+    try {
+      const errorMap = await checkProjectTypes(projectPath)
+      return { success: true, errorMap }
     } catch (error: any) {
       return { success: false, error: error.message }
     }

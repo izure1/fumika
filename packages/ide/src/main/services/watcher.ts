@@ -160,13 +160,16 @@ export class ProjectWatcher {
       return buildFallbacksDecl(tsFiles)
     }
 
-    // backgrounds, effects: namespace import
+    // backgrounds, effects: importStyle에 따라 import 방식 결정
     if (folder === 'backgrounds' || folder === 'effects') {
+      const useDefault = decl.importStyle === 'default'
       const imports = tsFiles
         .map((f) => {
           const importName = toImportName(f.rel)
           const relPathNoExt = removeExt(f.rel)
-          return `import * as ${importName} from '@/${folder}/${relPathNoExt}'`
+          return useDefault
+            ? `import ${importName} from '@/${folder}/${relPathNoExt}'`
+            : `import * as ${importName} from '@/${folder}/${relPathNoExt}'`
         })
         .join('\n')
 
