@@ -12,6 +12,19 @@ const watcher = new ProjectWatcher()
 const previewService = new PreviewService()
 let mainWindow: BrowserWindow | null = null
 
+// fetch() API가 local-resource:// 프로토콜을 사용할 수 있도록 사전 등록
+// app.whenReady() 이전에 호출해야 합니다.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'local-resource',
+    privileges: {
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+])
+
 function createWindow(): void {
   // Create the browser window.
   mainWindow = new BrowserWindow({
