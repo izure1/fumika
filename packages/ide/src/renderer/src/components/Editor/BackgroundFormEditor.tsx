@@ -17,6 +17,7 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
   const [fit, setFit] = useState<'cover' | 'contain' | 'inherit' | 'stretch'>('cover')
   const [previewAbsPath, setPreviewAbsPath] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'gui' | 'code'>('gui')
+  const [previewMood, setPreviewMood] = useState<string>('none')
 
   // 간단한 정규식으로 기존 값 추출 (AST 미사용 단순 파싱)
   useEffect(() => {
@@ -137,110 +138,164 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
         </div>
       </div>
 
-      <div className="p-6 bg-[#1e1e1e] flex-1 overflow-y-auto text-surface-300">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <div>
-          <h2 className="text-xl font-bold text-white mb-1">Background Asset Editor</h2>
-          <p className="text-sm text-surface-500">배경 이미지를 등록하고 속성을 설정합니다. 템플릿 덮어쓰기 방식으로 동작합니다.</p>
-        </div>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Panel: Settings */}
+        <div className="w-96 flex flex-col border-r border-surface-700 bg-surface-800/30 overflow-y-auto">
+          <div className="p-4 border-b border-surface-700/50">
+            <h3 className="text-xs font-bold text-surface-400 uppercase tracking-wider mb-4">Background Settings (배경)</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] text-surface-500 uppercase mb-1">이미지 경로 (src)</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={src}
+                    onChange={(e) => {
+                      setSrc(e.target.value)
+                      updateTemplate(e.target.value, parallax)
+                    }}
+                    className="flex-1 bg-surface-900 border border-surface-700 rounded p-1.5 text-xs text-white focus:border-primary-500 focus:outline-none"
+                    placeholder="예: backgrounds/bg_room.png"
+                  />
+                  <button
+                    onClick={handleBrowseImage}
+                    className="px-3 bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded text-surface-300 transition-colors flex items-center justify-center shrink-0"
+                    title="탐색기에서 열기"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                  </button>
+                </div>
+              </div>
 
-        <div className="space-y-4 bg-surface-800/30 p-5 rounded-lg border border-surface-700/50">
-
-          <div>
-            <label className="block text-sm font-medium text-surface-400 mb-1">이미지 경로 (src)</label>
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                value={src}
-                onChange={(e) => {
-                  setSrc(e.target.value)
-                  updateTemplate(e.target.value, parallax)
-                }}
-                className="flex-1 bg-surface-900 border border-surface-700 rounded p-2 text-sm text-white focus:border-primary-500 focus:outline-none"
-                placeholder="예: backgrounds/bg_room.png"
-              />
-              <button
-                onClick={handleBrowseImage}
-                className="px-4 bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded text-surface-300 transition-colors flex items-center justify-center shrink-0"
-                title="탐색기에서 열기"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6 pt-2">
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => {
-                  const newVal = !parallax
-                  setParallax(newVal)
-                  updateTemplate(src, newVal)
-                }}
-                className={`w-12 h-6 rounded-full transition-colors relative ${parallax ? 'bg-primary-500' : 'bg-surface-700'}`}
-              >
-                <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${parallax ? 'translate-x-6' : ''}`} />
-              </button>
-              <label className="text-sm font-medium text-surface-300">
-                패럴랙스(Parallax) 효과 활성화
-              </label>
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-surface-300">
-                맞춤 옵션 (Fit)
-              </label>
-              <select
-                value={fit}
-                onChange={(e) => {
-                  setFit(e.target.value as any)
-                }}
-                className="bg-surface-800 border border-surface-700 text-surface-300 text-sm rounded px-2 py-1 focus:outline-none focus:border-primary-500"
-              >
-                <option value="cover">Cover (꽉 차게)</option>
-                <option value="contain">Contain (비율 유지)</option>
-                <option value="stretch">Stretch (늘리기)</option>
-                <option value="inherit">Inherit (상속)</option>
-              </select>
+              <div className="pt-2">
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => {
+                      const newVal = !parallax
+                      setParallax(newVal)
+                      updateTemplate(src, newVal)
+                    }}
+                    className={`w-10 h-5 rounded-full transition-colors relative ${parallax ? 'bg-primary-500' : 'bg-surface-700'}`}
+                  >
+                    <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${parallax ? 'translate-x-5' : ''}`} />
+                  </button>
+                  <label className="text-[10px] font-medium text-surface-400 uppercase">
+                    패럴랙스 활성화
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        
-        <div className="bg-[#181818] border border-surface-700/50 rounded-xl overflow-hidden h-[400px] flex items-center justify-center relative">
-          {!src ? (
-            <div className="text-center">
-              <svg className="w-16 h-16 text-surface-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p className="text-surface-400 font-medium">에셋 이미지를 선택하면 배경 미리보기가 나타납니다.</p>
+
+        {/* Right Panel: Preview */}
+        <div className="flex-1 bg-[#181818] relative flex flex-col p-8">
+          <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 bg-surface-800/80 p-3 rounded-lg border border-surface-700/50 backdrop-blur-sm z-10">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-4 text-xs text-surface-300">
+                <div className="flex items-center gap-2">
+                  <span className="text-surface-500">Asset:</span>
+                  <span className="truncate max-w-[200px]" title={src}>{src || <span className="text-amber-500 italic">선택되지 않음</span>}</span>
+                </div>
+                <div className="w-px h-4 bg-surface-700"></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-surface-500">Fit:</span>
+                  <select
+                    value={fit}
+                    onChange={(e) => {
+                      setFit(e.target.value as any)
+                    }}
+                    className="bg-surface-900 border border-surface-700 text-surface-300 text-xs rounded px-2 py-1 focus:outline-none focus:border-primary-500"
+                  >
+                    <option value="cover">Cover</option>
+                    <option value="contain">Contain</option>
+                    <option value="stretch">Stretch</option>
+                    <option value="inherit">Inherit</option>
+                  </select>
+                </div>
+                <div className="w-px h-4 bg-surface-700"></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-surface-500">Mood:</span>
+                  <select
+                    value={previewMood}
+                    onChange={(e) => setPreviewMood(e.target.value)}
+                    className="bg-surface-900 border border-surface-700 text-surface-300 text-xs rounded px-2 py-1 focus:outline-none focus:border-primary-500"
+                  >
+                    <option value="none">없음</option>
+                    <option value="day">낮 (Day)</option>
+                    <option value="night">밤 (Night)</option>
+                    <option value="dawn">새벽 (Dawn)</option>
+                    <option value="sunset">노을 (Sunset)</option>
+                    <option value="foggy">안개 (Foggy)</option>
+                    <option value="sepia">세피아 (Sepia)</option>
+                    <option value="cold">차가움 (Cold)</option>
+                    <option value="noir">느와르 (Noir)</option>
+                    <option value="horror">공포 (Horror)</option>
+                    <option value="flashback">회상 (Flashback)</option>
+                    <option value="dream">꿈 (Dream)</option>
+                    <option value="danger">위험 (Danger)</option>
+                    <option value="spot">조명 (Spot)</option>
+                    <option value="ambient">주변광 (Ambient)</option>
+                    <option value="warm">따뜻함 (Warm)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={handleBrowseImage}
+                  className="px-3 py-1 bg-primary-600 hover:bg-primary-500 text-white rounded text-xs font-medium shadow"
+                >
+                  배경 에셋 선택
+                </button>
+              </div>
             </div>
-          ) : !previewUrl ? (
-            <div className="text-center">
-              <svg className="w-10 h-10 text-surface-600 mx-auto mb-3 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p className="text-surface-500 text-sm">파일 탐색 중...</p>
-            </div>
-          ) : (
-            <FumikaPreview
-              assets={{
-                [src]: previewUrl,
-              }}
-              scene={[{
-                type: 'background',
-                name: src,
-                duration: 0,
-                isVideo: previewIsVideo,
-                autoplay: true,
-                fit,
-              }]}
-              configOverride={{
-                backgrounds: {
-                  [src]: { src, parallax }
-                }
-              }}
-            />
-          )}
-        </div>
+          </div>
+
+          <div className="w-full h-full border-2 border-dashed border-surface-700/50 rounded-xl overflow-hidden flex items-center justify-center relative bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADFJREFUOE9jZGBgEGHAA8CUwMDIyMjIwMAA8xG+A+H1A8wEhoFhAxhRTAkMDIwMDAwAE3cK2x1d0JAAAAAASUVORK5CYII=')] bg-repeat mt-24">
+            {!src ? (
+              <div className="text-center z-10 bg-surface-900/80 p-6 rounded-xl backdrop-blur-sm border border-surface-700/50">
+                <svg className="w-16 h-16 text-surface-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-surface-300 font-medium">배경 에셋 이미지를 선택하면 미리보기가 나타납니다.</p>
+              </div>
+            ) : !previewUrl ? (
+              <div className="text-center z-10 bg-surface-900/80 p-6 rounded-xl backdrop-blur-sm border border-surface-700/50">
+                <svg className="w-10 h-10 text-surface-600 mx-auto mb-3 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-surface-500 text-sm">파일 탐색 중...</p>
+              </div>
+            ) : (
+              <div className="absolute inset-0">
+                <FumikaPreview
+                  assets={{
+                    [src]: previewUrl,
+                  }}
+                  scene={[
+                    {
+                      type: 'background',
+                      name: src,
+                      duration: 0,
+                      isVideo: previewIsVideo,
+                      autoplay: true,
+                      fit,
+                    },
+                    ...(previewMood !== 'none' ? [{
+                      type: 'mood',
+                      mood: previewMood,
+                      duration: 0
+                    } as any] : [])
+                  ]}
+                  configOverride={{
+                    backgrounds: {
+                      [src]: { src, parallax }
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

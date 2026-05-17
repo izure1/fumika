@@ -41,6 +41,7 @@ export function EffectFormEditor({ content, onChange, filePath }: Props) {
   const [backgroundList, setBackgroundList] = useState<string[]>([])
   
   const [previewIntensity, setPreviewIntensity] = useState<number>(10)
+  const [previewMood, setPreviewMood] = useState<string>('none')
   const latestParsedDefRef = useRef<ParsedEffectDef | null>(null)
   latestParsedDefRef.current = parsedDef
   
@@ -523,6 +524,32 @@ export default effectDef`
                     <span className="text-[10px] text-surface-500 animate-pulse ml-1">로딩 중...</span>
                   )}
                 </div>
+                <div className="w-px h-4 bg-surface-700"></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-surface-500">Mood:</span>
+                  <select
+                    value={previewMood}
+                    onChange={(e) => setPreviewMood(e.target.value)}
+                    className="bg-surface-900 border border-surface-700 text-surface-300 text-xs rounded px-2 py-1 focus:outline-none focus:border-primary-500"
+                  >
+                    <option value="none">없음 (None)</option>
+                    <option value="day">낮 (Day)</option>
+                    <option value="night">밤 (Night)</option>
+                    <option value="dawn">새벽 (Dawn)</option>
+                    <option value="sunset">노을 (Sunset)</option>
+                    <option value="foggy">안개 (Foggy)</option>
+                    <option value="sepia">세피아 (Sepia)</option>
+                    <option value="cold">차가움 (Cold)</option>
+                    <option value="noir">느와르 (Noir)</option>
+                    <option value="horror">공포 (Horror)</option>
+                    <option value="flashback">회상 (Flashback)</option>
+                    <option value="dream">꿈 (Dream)</option>
+                    <option value="danger">위험 (Danger)</option>
+                    <option value="spot">조명 (Spot)</option>
+                    <option value="ambient">주변광 (Ambient)</option>
+                    <option value="warm">따뜻함 (Warm)</option>
+                  </select>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <button 
@@ -562,6 +589,11 @@ export default effectDef`
                     name: 'preview_bg',
                     duration: 0,
                     fit: 'cover'
+                  } as any] : []),
+                  ...(previewMood !== 'none' ? [{
+                    type: 'mood',
+                    mood: previewMood,
+                    duration: 0
                   } as any] : []),
                   {
                     type: 'effect',
