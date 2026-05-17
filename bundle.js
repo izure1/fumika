@@ -17644,6 +17644,29 @@ ${addLineNumbers(fragment)}`);
       }
       return tex;
     }
+    /**
+     * 렌더러의 모든 리소스를 해제합니다.
+     * WebGL 컨텍스트, 텍스처 캐시, 디버그 오버레이 등을 정리합니다.
+     * @internal World.destroy()에서 호출됩니다.
+     */
+    destroy() {
+      for (const entry of this.textCache.values()) {
+        if (entry.texture && entry.texture.delete) {
+          ;
+          entry.texture.delete();
+        }
+      }
+      this.textCache.clear();
+      this.textContentCache.clear();
+      this.textContentRefCount.clear();
+      this.assetTextureCache.clear();
+      this.videoTextureCache.clear();
+      this.meshCache.clear();
+      this._sortedObjects.length = 0;
+      this._teardownDebugOverlay();
+      const loseCtx = this.gl.getExtension("WEBGL_lose_context");
+      if (loseCtx) loseCtx.loseContext();
+    }
   };
   var AXIS_X2 = new Vec3(1, 0, 0);
   var AXIS_Y2 = new Vec3(0, 1, 0);
@@ -17677,6 +17700,10 @@ ${addLineNumbers(fragment)}`);
     _gravityProxy;
     /** mouseover 상태 추적 (객체 id → boolean) */
     _mouseOver = /* @__PURE__ */ new Set();
+    /** destroy 호출 여부 — true이면 모든 공개 메서드가 즉시 반환됩니다 */
+    _destroyed = false;
+    /** 캔버스에 등록된 마우스 이벤트 핸들러 (destroy 시 제거용) */
+    _mouseEventHandlers = [];
     /** 브라우저 기본 컨텍스트 메뉴 비활성화 여부 */
     disableContextMenu;
     /** 스프라이트 애니메이션 클립 매니저 */
@@ -17781,7 +17808,11 @@ ${addLineNumbers(fragment)}`);
         }
         this.emit(eventName, hits[0], wrapped);
       };
-      canvas.addEventListener("click", (e) => {
+      const addTracked = (type, handler) => {
+        canvas.addEventListener(type, handler);
+        this._mouseEventHandlers.push({ type, handler });
+      };
+      addTracked("click", ((e) => {
         if (this.debugMode) {
           const pos = this._getCanvasMousePos(e);
           this.renderer.debugRipples.push({
@@ -17791,17 +17822,17 @@ ${addLineNumbers(fragment)}`);
           });
         }
         dispatch("click", e);
-      });
-      canvas.addEventListener("dblclick", (e) => dispatch("dblclick", e));
-      canvas.addEventListener("contextmenu", (e) => {
+      }));
+      addTracked("dblclick", ((e) => dispatch("dblclick", e)));
+      addTracked("contextmenu", ((e) => {
         if (this.disableContextMenu) {
           e.preventDefault();
         }
         dispatch("contextmenu", e);
-      });
-      canvas.addEventListener("mousedown", (e) => dispatch("mousedown", e));
-      canvas.addEventListener("mouseup", (e) => dispatch("mouseup", e));
-      canvas.addEventListener("mousemove", (e) => {
+      }));
+      addTracked("mousedown", ((e) => dispatch("mousedown", e)));
+      addTracked("mouseup", ((e) => dispatch("mouseup", e)));
+      addTracked("mousemove", ((e) => {
         const wrapped = wrapMouseEvent(e);
         const hits = this._getHitObjects(wrapped);
         const hitIds = new Set(hits.map((o) => o.attribute.id));
@@ -17829,8 +17860,8 @@ ${addLineNumbers(fragment)}`);
             }
           }
         }
-      });
-      canvas.addEventListener("mouseleave", (e) => {
+      }));
+      addTracked("mouseleave", ((e) => {
         canvas.style.cursor = "";
         const wrapped = wrapMouseEvent(e);
         for (const id of Array.from(this._mouseOver)) {
@@ -17841,7 +17872,7 @@ ${addLineNumbers(fragment)}`);
           }
         }
         this._mouseOver.clear();
-      });
+      }));
     }
     /**
      * 화면좌표 기준으로 마우스 위치에 겹쳐지는 객체를 반환합니다. (AABB hit-test)
@@ -18157,6 +18188,10 @@ ${addLineNumbers(fragment)}`);
       this.renderer.removeTextEntry(obj.attribute.id);
       this.renderer.markSortDirty();
     }
+    /**
+     * 렌더 루프를 시작합니다. 파괴된 월드에서는 아무것도 하지 않습니다.
+     * @returns this
+     */
     start() {
       if (this.rafId != null) return this;
       let prevTime = 0;
@@ -18178,12 +18213,72 @@ ${addLineNumbers(fragment)}`);
       this.rafId = requestAnimationFrame(loop);
       return this;
     }
+    /**
+     * 렌더 루프를 중지합니다. 재시작은 start() 호출로 가능합니다.
+     * @returns this
+     */
     stop() {
       if (this.rafId != null) {
         cancelAnimationFrame(this.rafId);
         this.rafId = null;
       }
       return this;
+    }
+    /**
+     * 월드가 파괴되었는지 여부를 반환합니다.
+     */
+    get destroyed() {
+      return this._destroyed;
+    }
+    /**
+     * 월드를 완전히 파괴합니다.
+     * 렌더 루프를 중지하고, 모든 비디오를 정지하며, 에셋의 Blob URL을 해제하고,
+     * 물리 엔진·매니저·렌더러(WebGL 컨텍스트 포함)를 정리합니다.
+     * 호출 후 이 World 인스턴스는 다시 사용할 수 없습니다.
+     */
+    destroy() {
+      if (this._destroyed) return;
+      this._destroyed = true;
+      this.stop();
+      for (const obj of this.objects) {
+        if (obj instanceof LeviarVideo) {
+          obj.stop();
+          if (obj.__videoElement) {
+            obj.__videoElement.pause();
+            obj.__videoElement = null;
+          }
+        }
+      }
+      for (const asset of Object.values(this._assets)) {
+        if (asset instanceof HTMLVideoElement) {
+          const blobUrl = asset.src;
+          asset.pause();
+          asset.removeAttribute("src");
+          asset.load();
+          if (blobUrl.startsWith("blob:")) {
+            URL.revokeObjectURL(blobUrl);
+          }
+        }
+      }
+      this._assets = {};
+      for (const obj of this.objects) {
+        this.physics.removeBody(obj);
+      }
+      this.objects.clear();
+      this.spriteManager.clips?.clear?.();
+      this.videoManager.clips?.clear?.();
+      this.particleManager.clips?.clear?.();
+      this.renderer.destroy();
+      if (this._canvas) {
+        for (const { type, handler } of this._mouseEventHandlers) {
+          this._canvas.removeEventListener(type, handler);
+        }
+      }
+      this._mouseEventHandlers.length = 0;
+      this._mouseOver.clear();
+      this._activeCamera = null;
+      this.emit("destroy");
+      this.listeners?.clear?.();
     }
     /**
      * 객체의 Z 좌표 또는 zIndex 변경 시 Z-Sort 캐시를 무효화합니다.
@@ -20318,9 +20413,9 @@ ${addLineNumbers(fragment)}`);
      *
      * 1. 오디오 풀 즉시 정지
      * 2. UI 레지스트리 및 씬 훅 해제
-     * 3. Leviar World 오브젝트 전체 정리 (비디오 stop 포함)
+     * 3. 관리형 타이머 취소 및 렌더러 상태 초기화
      * 4. 카메라 동기화 RAF 루프 취소
-     * 5. Leviar World 렌더링 루프 정지
+     * 5. Leviar World 완전 파괴 (오브젝트·비디오·물리·WebGL 컨텍스트 포함)
      *
      * 프리뷰 컴포넌트처럼 단기 수명의 Novel 인스턴스를 사용할 때
      * 언마운트 시 반드시 호출하여 메모리 누수를 방지하십시오.
@@ -20330,14 +20425,8 @@ ${addLineNumbers(fragment)}`);
       this._currentSceneDef?.hooks?._unregister(this);
       this._cleanupUI();
       this._renderer.clear();
-      for (const obj of Array.from(this._world.objects)) {
-        if (typeof obj.stop === "function") {
-          obj.stop();
-        }
-        this._world.removeObject(obj);
-      }
       this._renderer.cancelSyncLoop();
-      this._world.stop();
+      this._world.destroy();
     }
   };
 
