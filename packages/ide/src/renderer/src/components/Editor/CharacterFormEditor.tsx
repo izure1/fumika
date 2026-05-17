@@ -93,11 +93,12 @@ export function CharacterFormEditor({ content, onChange, filePath }: Props) {
         onSelect(selectedPath)
       } else {
         const fileName = selectedPath.split('/').pop() || 'unnamed.png'
-        const destPath = `${projPath}/assets/characters/${parsedChar?.name || 'unnamed'}/${fileName}`
+        const charBasename = filePath.replace(/\\/g, '/').split('/').pop()?.split('.')[0] || 'unnamed'
+        const destPath = `${projPath}/assets/characters/${charBasename}/${fileName}`
         
         await window.api.fs.copyFile(selectedPath, destPath)
         
-        const importedSrc = `characters/${parsedChar?.name || 'unnamed'}/${fileName}`
+        const importedSrc = `characters/${charBasename}/${fileName}`
         onSelect(importedSrc)
       }
     }
