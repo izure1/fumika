@@ -34,12 +34,12 @@ const EFFECT_PARTICLE_PRESETS: Record<EffectType, Record<string, any>> = {
     style: { width: 120, height: 120, blendMode: 'screen' }
   },
   leaves: {
-    attribute: { gravityScale: 0.1, frictionAir: 0, strictPhysics: true },
-    style: { width: 20, height: 20, opacity: 0.9 }
+    attribute: { gravityScale: 0.1, frictionAir: 0.005, strictPhysics: false },
+    style: { width: 20, height: 20 }
   },
   fireflies: {
-    attribute: { gravityScale: -0.02, frictionAir: 0.05, strictPhysics: true },
-    style: { width: 8, height: 8, opacity: 0.8, blendMode: 'lighter' }
+    attribute: { gravityScale: -0.015, frictionAir: 0.001, strictPhysics: false },
+    style: { width: 10, height: 10, opacity: 0.8, blendMode: 'lighter' }
   },
 }
 
@@ -95,20 +95,21 @@ const EFFECT_CLIP_PRESETS: Record<EffectType, Record<string, any>> = {
     angularImpulse: 0.0001
   },
   leaves: {
-    impulse: 0.08,
+    impulse: 0.15,
     lifespan: 7000,
     interval: 350,
     size: [[0.8, 1.2], [0.8, 1.2]],
     loop: true,
-    angularImpulse: 0.05,
+    angularImpulse: 0.01,
     opacity: [[0, 0], [1, 1], [1, 1], [0, 0]]
   },
   fireflies: {
     impulse: 0.03,
     lifespan: 5000,
     interval: 300,
-    size: [[0.5, 1.5], [0, 0.5]],
-    loop: true
+    size: [[0.5, 2.5], [0, 0.5]],
+    loop: true,
+    opacity: [[0, 1], [0.5, 1], [0, 1], [0.5, 1], [0, 0]]
   },
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
