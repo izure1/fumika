@@ -1358,12 +1358,13 @@
     _lastDuration: 1e3,
     _parallax: true,
     _isVideo: false,
-    _lastEase: void 0
+    _lastEase: void 0,
+    _autoplay: true
   });
   backgroundModule.defineView((ctx, data, setState) => {
     let _bgObj = null;
     let _bgParallax = null;
-    const _createBg = (key, fit, parallax, isVideo, opacity = 1) => {
+    const _createBg = (key, fit, parallax, isVideo, autoplay, opacity = 1) => {
       const bgDefs = ctx.renderer.config.backgrounds;
       const def = bgDefs[key];
       if (!def) return null;
@@ -1378,6 +1379,12 @@
       const exactW = baseW + maxPanX * 2;
       const exactH = baseH + maxPanY * 2;
       const createFn = isVideo ? ctx.renderer.world.createVideo.bind(ctx.renderer.world) : ctx.renderer.world.createImage.bind(ctx.renderer.world);
+      if (isVideo) {
+        const vm = ctx.renderer.world.videoManager;
+        if (!vm.get(src)) {
+          vm.create({ name: src, src, loop: true });
+        }
+      }
       const obj = createFn({
         attribute: { src },
         style: {
@@ -1390,7 +1397,12 @@
         transform: { position: { x: 0, y: 0, z: zPos }, scale: { x: ratio, y: ratio, z: 1 } }
       });
       if (fit === "cover" || fit === "contain") {
+        let cancelled = false;
+        obj.__cancelCheckFit = () => {
+          cancelled = true;
+        };
         const checkFit = () => {
+          if (cancelled) return;
           const rw = obj.__renderedSize?.w;
           const rh = obj.__renderedSize?.h;
           if (rw > 0 && rh > 0) {
@@ -1422,10 +1434,13 @@
       if (!parallax) {
         ctx.renderer.world.camera?.addChild(obj);
       }
+      if (isVideo && autoplay && typeof obj.play === "function") {
+        obj.play();
+      }
       return obj;
     };
     if (data._key) {
-      _bgObj = _createBg(data._key, data._fit, data._parallax, data._isVideo);
+      _bgObj = _createBg(data._key, data._fit, data._parallax, data._isVideo, data._autoplay ?? false);
       _bgParallax = data._parallax;
     }
     return {
@@ -1435,6 +1450,14 @@
       },
       onCleanup: () => {
         if (_bgObj) {
+          if (typeof _bgObj.__cancelCheckFit === "function") {
+            ;
+            _bgObj.__cancelCheckFit();
+          }
+          if (typeof _bgObj.stop === "function") {
+            ;
+            _bgObj.stop();
+          }
           _bgObj.remove({ child: true });
           _bgObj = null;
         }
@@ -1464,7 +1487,7 @@
           _bgObj = null;
         }
         _bgParallax = useParallax;
-        _bgObj = _createBg(state._key, state._fit, useParallax, state._isVideo, dur > 0 ? 0 : 1);
+        _bgObj = _createBg(state._key, state._fit, useParallax, state._isVideo, state._autoplay, dur > 0 ? 0 : 1);
         if (dur > 0 && _bgObj) {
           ctx.renderer.animate(_bgObj, { style: { opacity: 1 } }, dur, ease);
         }
@@ -1482,6 +1505,8 @@
       _lastDuration: cmd.duration ?? 1e3,
       _parallax: def.parallax ?? true,
       _isVideo: cmd.isVideo ?? false,
+      _autoplay: cmd.autoplay ?? true,
+      // 기본값으로 자동재생
       _lastEase: cmd.ease
     });
     return true;
@@ -18212,6 +18237,8 @@ ${addLineNumbers(fragment)}`);
     width;
     height;
     _isSkipping = false;
+    /** 카메라 동기화 루프 RAF ID */
+    _syncLoopId = null;
     /** 관리형 타이머 ID 저장소. clear() 시 일괄 취소됩니다. */
     _timers = /* @__PURE__ */ new Set();
     // 커스텀 명령어들이 저장할 범용 상태 저장소
@@ -18250,9 +18277,9 @@ ${addLineNumbers(fragment)}`);
             this.world.camera.transform.rotation.z = this.camBaseObj.transform.rotation.z + this.camOffsetObj.transform.rotation.z;
           }
         }
-        requestAnimationFrame(syncLoop);
+        this._syncLoopId = requestAnimationFrame(syncLoop);
       };
-      requestAnimationFrame(syncLoop);
+      this._syncLoopId = requestAnimationFrame(syncLoop);
     }
     /**
      * 스킵 모드 상태를 설정합니다. 스킵 모드일 경우 애니메이션 시간이 0으로 처리됩니다.
@@ -18433,6 +18460,16 @@ ${addLineNumbers(fragment)}`);
         this.camOffsetObj.transform.position.y = 0;
         this.camOffsetObj.transform.position.z = 0;
         if (this.camOffsetObj.transform.rotation) this.camOffsetObj.transform.rotation.z = 0;
+      }
+    }
+    /**
+     * 카메라 동기화 RAF 루프를 취소합니다.
+     * Novel.destroy() 시 호출하여 orphaned RAF가 남지 않도록 합니다.
+     */
+    cancelSyncLoop() {
+      if (this._syncLoopId !== null) {
+        cancelAnimationFrame(this._syncLoopId);
+        this._syncLoopId = null;
       }
     }
   };
@@ -20275,6 +20312,32 @@ ${addLineNumbers(fragment)}`);
         }
       };
       return ctx;
+    }
+    /**
+     * Novel 인스턴스의 모든 자원을 해제합니다.
+     *
+     * 1. 오디오 풀 즉시 정지
+     * 2. UI 레지스트리 및 씬 훅 해제
+     * 3. Leviar World 오브젝트 전체 정리 (비디오 stop 포함)
+     * 4. 카메라 동기화 RAF 루프 취소
+     * 5. Leviar World 렌더링 루프 정지
+     *
+     * 프리뷰 컴포넌트처럼 단기 수명의 Novel 인스턴스를 사용할 때
+     * 언마운트 시 반드시 호출하여 메모리 누수를 방지하십시오.
+     */
+    destroy() {
+      this.audio.stopAll(0);
+      this._currentSceneDef?.hooks?._unregister(this);
+      this._cleanupUI();
+      this._renderer.clear();
+      for (const obj of Array.from(this._world.objects)) {
+        if (typeof obj.stop === "function") {
+          obj.stop();
+        }
+        this._world.removeObject(obj);
+      }
+      this._renderer.cancelSyncLoop();
+      this._world.stop();
     }
   };
 
