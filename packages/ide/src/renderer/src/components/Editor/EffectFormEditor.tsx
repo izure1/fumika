@@ -36,11 +36,49 @@ export function EffectFormEditor({ content, onChange, filePath }: Props) {
   
   // 미리보기 전용 이미지 소스 (파일에 저장하지 않음)
   const [previewSrc, setPreviewSrc] = useState<string>('')
+  const [previewBgSrc, setPreviewBgSrc] = useState<string>('') // background name (e.g. 'room')
+  const [previewBgDef, setPreviewBgDef] = useState<{ src?: string, parallax?: boolean } | null>(null)
+  const [backgroundList, setBackgroundList] = useState<string[]>([])
+  
   const [previewIntensity, setPreviewIntensity] = useState<number>(10)
   const latestParsedDefRef = useRef<ParsedEffectDef | null>(null)
   latestParsedDefRef.current = parsedDef
   
   const [confirmState, setConfirmState] = useState<any>(null)
+
+  // 프로젝트 배경 목록 불러오기
+  useEffect(() => {
+    if (!projectPath) return
+    window.api.fs.readDir(`${projectPath}/backgrounds`).then(res => {
+      if (res.success && res.files) {
+        const bgs = res.files
+          .filter((f: any) => !f.isDirectory && f.name.endsWith('.ts'))
+          .map((f: any) => f.name.replace('.ts', ''))
+        setBackgroundList(bgs)
+      }
+    }).catch(() => {})
+  }, [projectPath])
+
+  // 배경 선택 시 해당 파일 파싱
+  useEffect(() => {
+    if (!projectPath || !previewBgSrc) {
+      setPreviewBgDef(null)
+      return
+    }
+    window.api.fs.readFile(`${projectPath}/backgrounds/${previewBgSrc}.ts`).then(res => {
+      if (res.success && res.content) {
+        let src = ''
+        let parallax = false
+        const srcMatch = res.content.match(/src(?:\s*:\s*keyof\s+typeof\s+[A-Za-z]+)?\s*=\s*['"]([^'"]+)['"]/)
+        if (srcMatch && srcMatch[1]) src = srcMatch[1]
+        
+        const parallaxMatch = res.content.match(/parallax(?:\s*:\s*boolean)?\s*=\s*(true|false)/)
+        if (parallaxMatch && parallaxMatch[1]) parallax = parallaxMatch[1] === 'true'
+        
+        if (src) setPreviewBgDef({ src, parallax })
+      }
+    }).catch(() => {})
+  }, [projectPath, previewBgSrc])
 
   const handleBrowseImage = async () => {
     if (!projectPath) return
@@ -68,6 +106,8 @@ export function EffectFormEditor({ content, onChange, filePath }: Props) {
       }
     }
   }
+
+
 
   // 파싱
   useEffect(() => {
@@ -449,56 +489,95 @@ export default effectDef`
 
         {/* Right Panel: Preview */}
         <div className="flex-1 bg-[#181818] relative flex flex-col p-8">
-          <div className="absolute top-4 left-4 right-4 flex justify-between items-center bg-surface-800/80 p-3 rounded-lg border border-surface-700/50 backdrop-blur-sm z-10">
-            <div className="flex items-center gap-4 text-xs text-surface-300">
-              <div className="flex items-center gap-2">
-                <span className="text-surface-500">Preview Asset (src):</span>
-                {previewSrc || <span className="text-amber-500 italic">선택되지 않음</span>}
+          <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 bg-surface-800/80 p-3 rounded-lg border border-surface-700/50 backdrop-blur-sm z-10">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-4 text-xs text-surface-300">
+                <div className="flex items-center gap-2">
+                  <span className="text-surface-500">Particle Src:</span>
+                  <span className="truncate max-w-[200px]" title={previewSrc}>{previewSrc || <span className="text-amber-500 italic">선택되지 않음</span>}</span>
+                </div>
+                <div className="w-px h-4 bg-surface-700"></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-surface-500">Intensity:</span>
+                  <input 
+                    type="number" min="1" max="1000"
+                    value={previewIntensity}
+                    onChange={(e) => setPreviewIntensity(Number(e.target.value) || 1)}
+                    className="w-16 bg-surface-900 border border-surface-700 rounded px-1.5 py-0.5 text-white outline-none"
+                  />
+                </div>
+                <div className="w-px h-4 bg-surface-700"></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-surface-500">Background:</span>
+                  <select
+                    value={previewBgSrc}
+                    onChange={(e) => setPreviewBgSrc(e.target.value)}
+                    className="bg-surface-900 border border-surface-700 text-surface-300 text-xs rounded px-2 py-1 focus:outline-none focus:border-primary-500 min-w-[120px] max-w-[150px]"
+                  >
+                    <option value="">없음 (검은색)</option>
+                    {backgroundList.map(bg => (
+                      <option key={bg} value={bg}>{bg}</option>
+                    ))}
+                  </select>
+                  {previewBgSrc && !previewBgDef && (
+                    <span className="text-[10px] text-surface-500 animate-pulse ml-1">로딩 중...</span>
+                  )}
+                </div>
               </div>
-              <div className="w-px h-4 bg-surface-700"></div>
               <div className="flex items-center gap-2">
-                <span className="text-surface-500">Intensity:</span>
-                <input 
-                  type="number" min="1" max="1000"
-                  value={previewIntensity}
-                  onChange={(e) => setPreviewIntensity(Number(e.target.value) || 1)}
-                  className="w-16 bg-surface-900 border border-surface-700 rounded px-1.5 py-0.5 text-white outline-none"
-                />
+                <button 
+                  onClick={handleBrowseImage}
+                  className="px-3 py-1 bg-primary-600 hover:bg-primary-500 text-white rounded text-xs font-medium shadow"
+                >
+                  파티클 에셋 선택
+                </button>
               </div>
             </div>
-            <button 
-              onClick={handleBrowseImage}
-              className="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 text-white rounded text-xs font-medium shadow"
-            >
-              이미지 선택
-            </button>
           </div>
 
-          <div className="w-full h-full border-2 border-dashed border-surface-700/50 rounded-xl flex items-center justify-center relative overflow-hidden bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADFJREFUOE9jZGBgEGHAA8CUwMDIyMjIwMAA8xG+A+H1A8wEhoFhAxhRTAkMDIwMDAwAE3cK2x1d0JAAAAAASUVORK5CYII=')] bg-repeat mt-14">
+          <div className={`w-full h-full border-2 border-dashed border-surface-700/50 rounded-xl flex items-center justify-center relative overflow-hidden ${!previewBgSrc ? "bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADFJREFUOE9jZGBgEGHAA8CUwMDIyMjIwMAA8xG+A+H1A8wEhoFhAxhRTAkMDIwMDAwAE3cK2x1d0JAAAAAASUVORK5CYII=')] bg-repeat" : "bg-black"} mt-24`}>
             {!previewSrc ? (
-              <div className="text-center">
+              <div className="text-center z-10 bg-surface-900/80 p-6 rounded-xl backdrop-blur-sm border border-surface-700/50">
                 <svg className="w-16 h-16 text-surface-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <p className="text-surface-400 font-medium">에셋 이미지를 선택하면 시뮬레이터가 작동합니다.</p>
+                <p className="text-surface-300 font-medium">파티클 에셋 이미지를 선택하면 시뮬레이터가 작동합니다.</p>
                 <p className="text-surface-500 text-sm mt-1">파일에는 저장되지 않으며, 인게임의 rate 및 src를 모의 테스트하는 용도입니다.</p>
               </div>
             ) : (
               <FumikaPreview
                 assets={{
                   [previewSrc]: (previewSrc.includes(':') || previewSrc.startsWith('/'))
-                    ? `local-resource:///${previewSrc}`
-                    : `local-resource:///${projectPath}/assets/${previewSrc}`,
+                    ? `local-resource:///${previewSrc.replace(/\\/g, '/')}`
+                    : `local-resource:///${projectPath?.replace(/\\/g, '/')}/assets/${previewSrc}`,
+                  ...(previewBgDef?.src ? {
+                    ['preview_bg_asset']: (previewBgDef.src.includes(':') || previewBgDef.src.startsWith('/'))
+                      ? `local-resource:///${previewBgDef.src.replace(/\\/g, '/')}`
+                      : `local-resource:///${projectPath?.replace(/\\/g, '/')}/assets/${previewBgDef.src}`
+                  } : {})
                 }}
-                scene={[{
-                  type: 'effect',
-                  action: 'add',
-                  effect: 'dust',
-                  src: previewSrc,
-                  rate: previewIntensity,
-                }]}
+                scene={[
+                  ...(previewBgSrc && previewBgDef ? [{
+                    type: 'background',
+                    name: 'preview_bg',
+                    duration: 0,
+                    fit: 'cover'
+                  } as any] : []),
+                  {
+                    type: 'effect',
+                    action: 'add',
+                    effect: 'dust',
+                    src: previewSrc,
+                    rate: previewIntensity,
+                  }
+                ]}
                 configOverride={{
                   effects: { dust: parsedDef ?? {} },
+                  ...(previewBgSrc && previewBgDef ? {
+                    backgrounds: {
+                      preview_bg: { src: 'preview_bg_asset', parallax: previewBgDef.parallax }
+                    }
+                  } : {})
                 }}
               />
             )}
