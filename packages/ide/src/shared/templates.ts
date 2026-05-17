@@ -19,11 +19,11 @@ const EFFECT_PARTICLE_PRESETS: Record<EffectType, Record<string, any>> = {
   },
   snow: {
     attribute: { gravityScale: 0.01, frictionAir: 0 },
-    style: { width: 15, height: 15, blendMode: 'lighter' }
+    style: { width: 32, height: 32, blendMode: 'screen' }
   },
   sakura: {
     attribute: { gravityScale: 0.02, frictionAir: 0.001 },
-    style: { width: 16, height: 20, opacity: 0.8 }
+    style: { width: 32, height: 32, blendMode: 'screen' }
   },
   sparkle: {
     attribute: { gravityScale: 0.1 },
@@ -34,12 +34,12 @@ const EFFECT_PARTICLE_PRESETS: Record<EffectType, Record<string, any>> = {
     style: { width: 120, height: 120, blendMode: 'screen' }
   },
   leaves: {
-    attribute: { gravityScale: 0.1, frictionAir: 0.005, strictPhysics: false },
-    style: { width: 20, height: 20 }
+    attribute: { gravityScale: 0.1, frictionAir: 0.005 },
+    style: { width: 40, height: 40, blendMode: 'screen' }
   },
   fireflies: {
-    attribute: { gravityScale: -0.015, frictionAir: 0.001, strictPhysics: false },
-    style: { width: 10, height: 10, opacity: 0.8, blendMode: 'lighter' }
+    attribute: { gravityScale: -0.015, frictionAir: 0.001 },
+    style: { width: 50, height: 50, blendMode: 'lighter' }
   },
 }
 
@@ -65,7 +65,7 @@ const EFFECT_CLIP_PRESETS: Record<EffectType, Record<string, any>> = {
     lifespan: 10000,
     interval: 100,
     size: [[0.3, 0.8], [0, 0]],
-    opacity: [[1, 1], [0, 0]],
+    opacity: [[1, 1]],
     loop: true,
     angularImpulse: 0.001
   },
@@ -107,7 +107,7 @@ const EFFECT_CLIP_PRESETS: Record<EffectType, Record<string, any>> = {
     impulse: 0.03,
     lifespan: 5000,
     interval: 300,
-    size: [[0.5, 2.5], [0, 0.5]],
+    size: [[1, 1]],
     loop: true,
     opacity: [[0, 1], [0.5, 1], [0, 1], [0.5, 1], [0, 0]]
   },
