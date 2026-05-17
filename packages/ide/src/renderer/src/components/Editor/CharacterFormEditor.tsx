@@ -84,7 +84,6 @@ export function CharacterFormEditor({ content, onChange, filePath }: Props) {
       
       if (selectedPath.startsWith(projPath)) {
         selectedPath = selectedPath.substring(projPath.length + 1)
-        selectedPath = selectedPath.replace(/\.(png|webp|jpe?g)$/i, '')
         
         // 사용자의 요청: 'assets/'로 시작하면 이를 제거 (예: assets/characters/... -> characters/...)
         if (selectedPath.startsWith('assets/')) {
@@ -93,13 +92,13 @@ export function CharacterFormEditor({ content, onChange, filePath }: Props) {
         
         onSelect(selectedPath)
       } else {
-        setConfirmState({
-          isOpen: true,
-          title: '외부 경로 에러',
-          message: '프로젝트 폴더 외부의 파일이 선택되었습니다. 프로젝트 내의 assets 또는 characters 폴더에 있는 파일을 선택해 주세요.',
-          action: 'error',
-          targetName: ''
-        })
+        const fileName = selectedPath.split('/').pop() || 'unnamed.png'
+        const destPath = `${projPath}/assets/characters/${parsedChar?.name || 'unnamed'}/${fileName}`
+        
+        await window.api.fs.copyFile(selectedPath, destPath)
+        
+        const importedSrc = `characters/${parsedChar?.name || 'unnamed'}/${fileName}`
+        onSelect(importedSrc)
       }
     }
   }
@@ -207,9 +206,6 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
     }
 
     let finalSrc = `local-resource:///${projectPath}/${srcPath}`
-    if (!finalSrc.match(/\.(png|webp|jpg)$/)) {
-      finalSrc += '.png'
-    }
 
     img.src = finalSrc
 
@@ -257,8 +253,7 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
         srcPath = `assets/${srcPath}`
       }
 
-      let finalSrc = `local-resource:///${projectPath}/${srcPath}`
-      if (!finalSrc.match(/\.(png|webp|jpg)$/)) finalSrc += '.png'
+      const finalSrc = `local-resource:///${projectPath}/${srcPath}`
       
       img.src = finalSrc
       img.onload = () => {
@@ -757,7 +752,7 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
                       value={currentBaseObj.src}
                       onChange={(e) => updateChar(prev => { prev.bases[activeBase].src = e.target.value; return prev })}
                       className="flex-1 min-w-0 bg-surface-900 border border-surface-700 rounded p-1.5 text-xs text-white focus:border-primary-500 outline-none"
-                      placeholder="예: characters/fumika/base/idle"
+                      placeholder="예: characters/fumika/base/idle.png"
                     />
                     <button
                       onClick={() => handleBrowseImage((src) => updateChar(prev => { prev.bases[activeBase].src = src; return prev }))}

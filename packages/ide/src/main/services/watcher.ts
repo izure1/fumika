@@ -260,8 +260,7 @@ function buildAssetDecl(files: FileEntry[]): string {
     .filter((f) => !f.name.endsWith('.ts') && !audioExt.test(f.name))
     .map((f) => {
       const relFwd = f.rel.replace(/\\/g, '/')
-      const key = removeExt(relFwd)
-      return `  '${key}': './assets/${relFwd}',`
+      return `  '${relFwd}': './assets/${relFwd}',`
     })
     .join('\n')
 
@@ -275,8 +274,7 @@ function buildAudioDecl(files: FileEntry[]): string {
     .filter((f) => audioExt.test(f.name))
     .map((f) => {
       const relFwd = f.rel.replace(/\\/g, '/')
-      const key = removeExt(relFwd)
-      return `  '${key}': './assets/${relFwd}',`
+      return `  '${relFwd}': './assets/${relFwd}',`
     })
     .join('\n')
 

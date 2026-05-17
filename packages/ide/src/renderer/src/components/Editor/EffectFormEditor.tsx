@@ -56,7 +56,6 @@ export function EffectFormEditor({ content, onChange, filePath }: Props) {
       
       if (selectedPath.startsWith(projPath)) {
         selectedPath = selectedPath.substring(projPath.length + 1)
-        selectedPath = selectedPath.replace(/\.(png|webp|jpe?g)$/i, '')
         
         if (selectedPath.startsWith('assets/')) {
           selectedPath = selectedPath.substring(7)
@@ -64,12 +63,8 @@ export function EffectFormEditor({ content, onChange, filePath }: Props) {
         
         setPreviewSrc(selectedPath)
       } else {
-        setConfirmState({
-          isOpen: true,
-          title: '외부 경로 에러',
-          message: '프로젝트 폴더 외부의 파일이 선택되었습니다. 프로젝트 내의 assets 폴더에 있는 파일을 선택해 주세요.',
-          type: 'error'
-        })
+        // 파티클 에셋은 1회용 미리보기이므로 복사하지 않고 외부 절대 경로를 그대로 사용합니다.
+        setPreviewSrc(selectedPath)
       }
     }
   }
@@ -491,7 +486,9 @@ export default effectDef`
             ) : (
               <FumikaPreview
                 assets={{
-                  [previewSrc]: `local-resource:///${projectPath}/assets/${previewSrc}.png`,
+                  [previewSrc]: (previewSrc.includes(':') || previewSrc.startsWith('/'))
+                    ? `local-resource:///${previewSrc}`
+                    : `local-resource:///${projectPath}/assets/${previewSrc}`,
                 }}
                 scene={[{
                   type: 'effect',

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { Novel } from 'fumika'
 
 interface Props {
   /**
@@ -43,9 +44,10 @@ export function FumikaPreview({ assets, scene, configOverride, width, height }: 
     const container = containerRef.current
 
     let cancelled = false
+    let novelInstance: Novel<any> | null = null
 
     const run = async () => {
-      const { Novel, defineNovelConfig, effectModule, defineScene } = await import('fumika')
+      const { Novel, defineNovelConfig, effectModule, backgroundModule, defineScene } = await import('fumika')
 
       if (cancelled) return
 
@@ -63,7 +65,7 @@ export function FumikaPreview({ assets, scene, configOverride, width, height }: 
         ...configOverride,
         assets,
         scenes: ['__preview__'],
-        modules: { effect: effectModule },
+        modules: { effect: effectModule, background: backgroundModule },
       })
 
       const capturedScene = scene
@@ -73,6 +75,12 @@ export function FumikaPreview({ assets, scene, configOverride, width, height }: 
         element: container,
         scenes: { '__preview__': previewScene },
       })
+      novelInstance = novel
+
+      if (cancelled) {
+        novel.destroy()
+        return
+      }
 
       await novel.load()
       await novel.boot()
@@ -83,7 +91,11 @@ export function FumikaPreview({ assets, scene, configOverride, width, height }: 
 
     return () => {
       cancelled = true
-      while (container.firstChild) container.removeChild(container.firstChild)
+      if (novelInstance) {
+        novelInstance.destroy()
+      } else {
+        while (container.firstChild) container.removeChild(container.firstChild)
+      }
     }
   }, [assets, scene, configOverride, width, height])
 

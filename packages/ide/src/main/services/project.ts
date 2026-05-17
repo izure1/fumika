@@ -110,7 +110,7 @@ export async function ensureProjectDependencies(targetDir: string, processName?:
   if (needsInstall || forceUpdate) {
     console.log('[IDE] Installing fumika and vite from npm to', targetDir)
     const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-    
+
     await new Promise<void>((resolve, reject) => {
       execFile(npmCmd, ['install', 'fumika'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
         if (err) {

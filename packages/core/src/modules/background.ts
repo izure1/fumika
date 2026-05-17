@@ -80,6 +80,14 @@ backgroundModule.defineView((ctx, data, setState) => {
       ? ctx.renderer.world.createVideo.bind(ctx.renderer.world)
       : ctx.renderer.world.createImage.bind(ctx.renderer.world)
 
+    // 비디오인 경우 VideoManager에 클립이 등록되지 않으면 자동 등록
+    if (isVideo) {
+      const vm = ctx.renderer.world.videoManager
+      if (!vm.get(src)) {
+        vm.create({ name: src, src, loop: true })
+      }
+    }
+
     const obj = createFn({
       attribute: { src },
       style: {

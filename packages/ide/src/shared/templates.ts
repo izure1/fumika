@@ -122,6 +122,10 @@ export function getInitialEffectContent(effectType: EffectType): string {
   return `import type { EffectDef } from 'fumika'\n\nconst effectDef: EffectDef = {\n  particle: ${particlePreset.replace(/"([^"]+)":/g, '$1:')},\n  clip: ${clipPreset.replace(/"([^"]+)":/g, '$1:')}\n}\n\nexport default effectDef\n`
 }
 
+export function getBackgroundContent(srcVal: string, parallaxVal: boolean): string {
+  return `import type Assets from '@/declarations/assets'\n\nexport const src: keyof typeof Assets = '${srcVal}'\nexport const parallax: boolean = ${parallaxVal}\n`
+}
+
 // ─── 최상위 설정 파일 ─────────────────────────────────────────
 
 export function getNovelConfigContent(width: number, height: number): string {
@@ -296,8 +300,7 @@ const FILE_TEMPLATE_GENERATORS: Partial<
   modules: (safeName) =>
     `import { define } from 'fumika'\n\ninterface MyCmd { }\n\ninterface MySchema { }\n\ninterface MyHook {\n  '${safeName}:event': (val: unknown) => unknown\n}\n\nexport default define<MyCmd, MySchema, MyHook>({ })\n  .defineCommand(function* (cmd, ctx, state, setState) {\n    // 커맨드 구현\n  })\n  .defineView((ctx, state, setState) => {\n    // 뷰 구현\n    return {\n      show: () => {},\n      hide: () => {},\n      onUpdate: () => {},\n      onCleanup: () => {}\n    }\n  })\n`,
 
-  backgrounds: (_, _relativeDots) =>
-    `import type Assets from '@/declarations/assets'\n\nexport const src: keyof typeof Assets = ''\nexport const parallax: boolean = true\n`,
+  backgrounds: (_, _relativeDots) => getBackgroundContent('', true),
 
   effects: () =>
     `import type { EffectDef } from 'fumika'\n\nconst effectDef: EffectDef = {}\n\nexport default effectDef`,

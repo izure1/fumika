@@ -432,11 +432,18 @@ export function EditorArea() {
         ) : (() => {
           const data = tabData[activeFile]
           if (!data) return null
+
+          const normalizedPath = activeFile.replace(/\\/g, '/')
+          const fileName = normalizedPath.split('/').pop() || ''
+          const extension = fileName.includes('.') ? fileName.split('.').pop()?.toLowerCase() || '' : ''
+          const pathParts = normalizedPath.split('/')
+
+          const isTs = extension === 'ts'
+          const isEditable = isTs || extension === 'json' || extension === 'md'
           
-          const isEditable = activeFile.endsWith('.ts') || activeFile.endsWith('.json') || activeFile.endsWith('.md')
-          const isBackground = activeFile.includes('/backgrounds/') || activeFile.includes('\\backgrounds\\')
-          const isCharacter = activeFile.includes('/characters/') || activeFile.includes('\\characters\\')
-          const isEffect = activeFile.includes('/effects/') || activeFile.includes('\\effects\\')
+          const isBackground = isTs && pathParts.includes('backgrounds')
+          const isCharacter = isTs && pathParts.includes('characters')
+          const isEffect = isTs && pathParts.includes('effects')
           
           if (isBackground && !data.isLoading) {
             return (
@@ -444,6 +451,7 @@ export function EditorArea() {
                 <BackgroundFormEditor 
                   content={data.content} 
                   onChange={(val) => handleContentChange(activeFile, val)} 
+                  filePath={activeFile}
                 />
               </div>
             )
@@ -481,10 +489,9 @@ export function EditorArea() {
             )
           }
           
-          const lowerFile = activeFile.toLowerCase()
-          const isImage = lowerFile.match(/\.(png|jpe?g|webp|gif|svg)$/)
-          const isVideo = lowerFile.match(/\.(mp4|webm)$/)
-          const isAudio = lowerFile.match(/\.(mp3|wav|m4a|ogg)$/)
+          const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(extension)
+          const isVideo = ['mp4', 'webm'].includes(extension)
+          const isAudio = ['mp3', 'wav', 'm4a', 'ogg'].includes(extension)
           
           if (isImage || isVideo || isAudio) {
             // 커스텀 프로토콜을 사용해 로컬 파일 접근 (보안 제약 회피)

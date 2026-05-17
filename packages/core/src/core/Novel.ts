@@ -1280,4 +1280,22 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
     }
     return ctx
   }
+
+  /**
+   * Novel 인스턴스의 모든 자원을 해제합니다.
+   *
+   * 1. 오디오 풀 즉시 정지
+   * 2. UI 레지스트리 및 씬 훅 해제
+   * 3. Leviar World 렌더링 루프 정지
+   *
+   * 프리뷰 컴포넌트처럼 단기 수명의 Novel 인스턴스를 사용할 때
+   * 언마운트 시 반드시 호출하여 메모리 누수를 방지하십시오.
+   */
+  destroy(): void {
+    this.audio.stopAll(0)
+    this._currentSceneDef?.hooks?._unregister(this)
+    this._cleanupUI()
+    this._renderer.clear()
+    this._world.stop()
+  }
 }
