@@ -1286,31 +1286,27 @@ export class Novel<TConfig extends NovelConfig<any, any, any, any, any, any, any
    *
    * 1. 오디오 풀 즉시 정지
    * 2. UI 레지스트리 및 씬 훅 해제
-   * 3. Leviar World 오브젝트 전체 정리 (비디오 stop 포함)
+   * 3. 관리형 타이머 취소 및 렌더러 상태 초기화
    * 4. 카메라 동기화 RAF 루프 취소
-   * 5. Leviar World 렌더링 루프 정지
+   * 5. Leviar World 완전 파괴 (오브젝트·비디오·물리·WebGL 컨텍스트 포함)
    *
    * 프리뷰 컴포넌트처럼 단기 수명의 Novel 인스턴스를 사용할 때
    * 언마운트 시 반드시 호출하여 메모리 누수를 방지하십시오.
    */
   destroy(): void {
+    // fumika 레벨 정리: 오디오, 훅, UI 콜백, 관리형 타이머
     this.audio.stopAll(0)
     this._currentSceneDef?.hooks?._unregister(this)
     this._cleanupUI()
     this._renderer.clear()
 
-    // 월드에 남아 있는 모든 Leviar 오브젝트를 정리합니다.
-    // LeviarVideo는 remove()만으로 내부 <video> 요소가 정지되지 않으므로
-    // 반드시 stop()을 먼저 호출해야 합니다.
-    for (const obj of Array.from((this._world as any).objects)) {
-      if (typeof (obj as any).stop === 'function') {
-        (obj as any).stop()
-      }
-      this._world.removeObject(obj as any)
-    }
-
-    // 카메라 동기화 RAF 루프를 취소합니다.
+    // Renderer._initCameraSync()가 등록한 독립적인 RAF 루프를 취소합니다.
+    // world.destroy()는 이 루프를 알지 못하므로 fumika에서 직접 취소해야 합니다.
     this._renderer.cancelSyncLoop()
-    this._world.stop()
+
+    // Leviar World 완전 파괴.
+    // 렌더 루프 중지, 모든 오브젝트·비디오 정지, 물리 엔진,
+    // WebGL 컨텍스트, 이벤트 리스너까지 모두 정리합니다.
+    this._world.destroy()
   }
 }
