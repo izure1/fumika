@@ -49,58 +49,62 @@ export function TitleBar() {
             <div className="flex items-center gap-2 font-semibold text-primary-400">
               <span className="text-[10px]">F</span>
             </div>
-            <div className="relative" ref={menuRef} style={{ WebkitAppRegion: 'no-drag' } as any}>
-              <button 
-                className={`px-2 py-0.5 text-xs rounded transition-colors ${isMenuOpen ? 'bg-surface-800 text-surface-200' : 'hover:bg-surface-800 hover:text-surface-200'}`}
-                onClick={() => {
-                  setIsMenuOpen(!isMenuOpen)
-                  setIsHelpMenuOpen(false)
-                }}
-              >
-                보기
-              </button>
-              {isMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-md shadow-xl py-1 z-50">
+            {projectPath && (
+              <>
+                <div className="relative" ref={menuRef} style={{ WebkitAppRegion: 'no-drag' } as any}>
                   <button 
-                    className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors flex items-center justify-between"
+                    className={`px-2 py-0.5 text-xs rounded transition-colors ${isMenuOpen ? 'bg-surface-800 text-surface-200' : 'hover:bg-surface-800 hover:text-surface-200'}`}
                     onClick={() => {
-                      togglePanel()
+                      setIsMenuOpen(!isMenuOpen)
+                      setIsHelpMenuOpen(false)
+                    }}
+                  >
+                    보기
+                  </button>
+                  {isMenuOpen && (
+                    <div className="absolute left-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-md shadow-xl py-1 z-50">
+                      <button 
+                        className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors flex items-center justify-between"
+                        onClick={() => {
+                          togglePanel()
+                          setIsMenuOpen(false)
+                        }}
+                      >
+                        <span>출력 패널</span>
+                        {isPanelOpen && <span className="text-[9px] font-bold bg-primary-500/20 text-primary-300 px-1.5 py-0.5 rounded">ON</span>}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="relative" ref={helpMenuRef} style={{ WebkitAppRegion: 'no-drag' } as any}>
+                  <button 
+                    className={`px-2 py-0.5 text-xs rounded transition-colors ${isHelpMenuOpen ? 'bg-surface-800 text-surface-200' : 'hover:bg-surface-800 hover:text-surface-200'}`}
+                    onClick={() => {
+                      setIsHelpMenuOpen(!isHelpMenuOpen)
                       setIsMenuOpen(false)
                     }}
                   >
-                    <span>출력 패널</span>
-                    {isPanelOpen && <span className="text-[9px] font-bold bg-primary-500/20 text-primary-300 px-1.5 py-0.5 rounded">ON</span>}
+                    도움말
                   </button>
+                  {isHelpMenuOpen && (
+                    <div className="absolute left-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-md shadow-xl py-1 z-50">
+                      <button 
+                        className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
+                        onClick={() => openHelpDialog('license')}
+                      >
+                        라이선스
+                      </button>
+                      <button 
+                        className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
+                        onClick={() => openHelpDialog('info')}
+                      >
+                        정보
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="relative" ref={helpMenuRef} style={{ WebkitAppRegion: 'no-drag' } as any}>
-              <button 
-                className={`px-2 py-0.5 text-xs rounded transition-colors ${isHelpMenuOpen ? 'bg-surface-800 text-surface-200' : 'hover:bg-surface-800 hover:text-surface-200'}`}
-                onClick={() => {
-                  setIsHelpMenuOpen(!isHelpMenuOpen)
-                  setIsMenuOpen(false)
-                }}
-              >
-                도움말
-              </button>
-              {isHelpMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-md shadow-xl py-1 z-50">
-                  <button 
-                    className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
-                    onClick={() => openHelpDialog('license')}
-                  >
-                    라이선스
-                  </button>
-                  <button 
-                    className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
-                    onClick={() => openHelpDialog('info')}
-                  >
-                    정보
-                  </button>
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -109,13 +113,15 @@ export function TitleBar() {
         </div>
 
         <div className="flex h-full" style={{ WebkitAppRegion: 'no-drag' } as any}>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="flex h-full w-10 items-center justify-center text-surface-400 hover:bg-surface-700 hover:text-surface-100 transition-colors"
-            title="설정"
-          >
-            <Settings size={14} strokeWidth={1.5} />
-          </button>
+          {projectPath && (
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex h-full w-10 items-center justify-center text-surface-400 hover:bg-surface-700 hover:text-surface-100 transition-colors"
+              title="설정"
+            >
+              <Settings size={14} strokeWidth={1.5} />
+            </button>
+          )}
           <button
             onClick={() => window.api.window.minimize()}
             className="flex h-full w-12 items-center justify-center text-surface-400 hover:bg-surface-700 hover:text-surface-100 transition-colors"
