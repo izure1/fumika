@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 
 export type BuildTarget = 'static' | 'library-js' | 'library-ts' | 'pwa'
 
+type MainCategory = 'web' | 'windows' | 'android'
+
 interface BuildDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -10,6 +12,7 @@ interface BuildDialogProps {
 }
 
 export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
+  const [mainCategory, setMainCategory] = useState<MainCategory>('web')
   const [selectedTarget, setSelectedTarget] = useState<BuildTarget>('static')
 
   // ESC 키를 누르면 닫히도록 설정
@@ -27,127 +30,174 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-surface-800 border border-surface-700 p-6 rounded-md shadow-2xl w-full max-w-[500px] mx-4 animate-fade-scale">
-        <h3 className="text-lg font-bold text-white mb-4">Build Options</h3>
-        
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-surface-400">
-            프로젝트를 어떤 형태로 빌드할지 선택하세요. <br />
-            빌드 결과물은 자동으로 에셋과 분리되어 최적화됩니다.
-          </p>
+      <div className="bg-surface-800 border border-surface-700 p-6 rounded-md shadow-2xl w-full max-w-[500px] mx-4 animate-fade-scale flex flex-col">
+        <h3 className="text-lg font-bold text-white mb-2">Build Options</h3>
+        <p className="text-sm text-surface-400 mb-4">
+          프로젝트를 빌드할 플랫폼과 세부 형태를 선택하세요.
+        </p>
 
-          <div className="flex flex-col gap-3">
-            {/* Static Build Option */}
-            <label className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-colors ${selectedTarget === 'static' ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 bg-surface-800 hover:border-surface-600'}`}>
-              <div className="mt-0.5">
-                <input
-                  type="radio"
-                  name="buildTarget"
-                  value="static"
-                  checked={selectedTarget === 'static'}
-                  onChange={() => setSelectedTarget('static')}
-                  className="w-4 h-4 text-primary-500 bg-surface-900 border-surface-600"
-                />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-surface-200">Static Web Build</div>
-                <div className="text-xs text-surface-400 mt-1">
-                  자체 웹 호스팅에 적합한 HTML/JS/CSS 기반의 완전한 독립형 정적 빌드입니다.
-                </div>
-              </div>
-            </label>
-
-            {/* Library Build Option (JS Only) */}
-            <label className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-colors ${selectedTarget === 'library-js' ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 bg-surface-800 hover:border-surface-600'}`}>
-              <div className="mt-0.5">
-                <input
-                  type="radio"
-                  name="buildTarget"
-                  value="library-js"
-                  checked={selectedTarget === 'library-js'}
-                  onChange={() => setSelectedTarget('library-js')}
-                  className="w-4 h-4 text-primary-500 bg-surface-900 border-surface-600"
-                />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-surface-200">Library Build (JS Only)</div>
-                <div className="text-xs text-surface-400 mt-1">
-                  타 웹 프레임워크에 삽입할 수 있는 가벼운 자바스크립트 모듈 번들만 빠르게 생성합니다.
-                </div>
-              </div>
-            </label>
-
-            {/* Library Build Option (TypeScript) */}
-            <label className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-colors ${selectedTarget === 'library-ts' ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 bg-surface-800 hover:border-surface-600'}`}>
-              <div className="mt-0.5">
-                <input
-                  type="radio"
-                  name="buildTarget"
-                  value="library-ts"
-                  checked={selectedTarget === 'library-ts'}
-                  onChange={() => setSelectedTarget('library-ts')}
-                  className="w-4 h-4 text-primary-500 bg-surface-900 border-surface-600"
-                />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-surface-200">Library Build (with TypeScript .d.ts)</div>
-                <div className="text-xs text-surface-400 mt-1">
-                  모듈 번들과 함께 완벽한 타입 추론을 위한 TypeScript 선언 파일을 추출합니다. (빌드 시간이 약간 더 소요됨)
-                </div>
-              </div>
-            </label>
-
-            {/* PWA Build Option */}
-            <label className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-colors ${selectedTarget === 'pwa' ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 bg-surface-800 hover:border-surface-600'}`}>
-              <div className="mt-0.5">
-                <input
-                  type="radio"
-                  name="buildTarget"
-                  value="pwa"
-                  checked={selectedTarget === 'pwa'}
-                  onChange={() => setSelectedTarget('pwa')}
-                  className="w-4 h-4 text-primary-500 bg-surface-900 border-surface-600"
-                />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-surface-200">Progressive Web App (PWA)</div>
-                <div className="text-xs text-surface-400 mt-1">
-                  모바일 및 데스크톱에서 설치 가능한 웹 앱(PWA) 형태로 빌드합니다. 오프라인 캐싱이 지원됩니다.
-                </div>
-              </div>
-            </label>
-
-            {/* Disabled Options for Future */}
-            <label className="flex items-start gap-3 p-3 rounded border border-surface-800 bg-surface-900 opacity-50 cursor-not-allowed">
-              <div className="mt-0.5">
-                <input type="radio" disabled className="w-4 h-4 bg-surface-800 border-surface-700" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-surface-500">IFrame / Headless</div>
-                <div className="text-xs text-surface-600 mt-1">
-                  Coming Soon. 추후 업데이트를 통해 지원될 예정입니다.
-                </div>
-              </div>
-            </label>
-          </div>
-
-          <div className="mt-4 flex justify-end gap-2">
+        {/* Category Tabs */}
+        <div className="flex gap-2 mb-4">
+          {(['web', 'windows', 'android'] as MainCategory[]).map((category) => (
             <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-surface-300 hover:text-white hover:bg-surface-800 rounded transition-colors"
+              key={category}
+              onClick={() => setMainCategory(category)}
+              className={`flex-1 py-2 px-3 rounded text-sm font-semibold transition-colors flex items-center justify-center gap-2 border ${
+                mainCategory === category
+                  ? 'bg-primary-500/20 text-primary-400 border-primary-500/50'
+                  : 'bg-surface-900 text-surface-400 border-surface-700 hover:bg-surface-700 hover:text-surface-300'
+              }`}
             >
-              Cancel
+              {category === 'web' && (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+              )}
+              {category === 'windows' && (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M2 3.841l8.528-1.18v8.435H2V3.841zm9.646-1.34L22 1.054v10.042h-10.354V2.501zm0 10.042H22v10.357l-10.354-1.503V12.543zM2 12.543h8.528v7.653L2 19.167v-6.624z" />
+                </svg>
+              )}
+              {category === 'android' && (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0004.5511-.4482.9997-.9993.9997zm-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997zm11.4045-6.02l1.9973-3.4592a.4158.4158 0 00-.1521-.5676.4162.4162 0 00-.5676.1521l-2.0216 3.5013C15.5898 8.2435 13.8532 7.8488 12 7.8488c-1.8528 0-3.5894.3947-5.137.1004L4.841 4.4475a.416.416 0 00-.5673-.1521.4156.4156 0 00-.1521.5676l1.9969 3.4592C2.6865 10.2223.3225 13.5638.0772 17.514h23.845c-.2449-3.9502-2.6092-7.2917-6.0417-9.1926z" />
+                </svg>
+              )}
+              <span className="capitalize">{category}</span>
             </button>
-            <button
-              onClick={() => {
+          ))}
+        </div>
+        
+        {/* Main Content Area */}
+        <div className="flex-1 min-h-[300px]">
+          {mainCategory === 'web' && (
+            <div className="flex flex-col gap-3">
+              {/* Static Build Option */}
+              <label className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-colors ${selectedTarget === 'static' ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 bg-surface-900 hover:border-surface-600'}`}>
+                <div className="mt-0.5">
+                  <input
+                    type="radio"
+                    name="buildTarget"
+                    value="static"
+                    checked={selectedTarget === 'static'}
+                    onChange={() => setSelectedTarget('static')}
+                    className="w-4 h-4 text-primary-500 bg-surface-800 border-surface-600"
+                  />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-surface-200">Static Web Build</div>
+                  <div className="text-xs text-surface-400 mt-1">
+                    자체 웹 호스팅에 적합한 HTML/JS/CSS 기반의 완전한 독립형 정적 빌드입니다.
+                  </div>
+                </div>
+              </label>
+
+              {/* Library Build Option (JS Only) */}
+              <label className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-colors ${selectedTarget === 'library-js' ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 bg-surface-900 hover:border-surface-600'}`}>
+                <div className="mt-0.5">
+                  <input
+                    type="radio"
+                    name="buildTarget"
+                    value="library-js"
+                    checked={selectedTarget === 'library-js'}
+                    onChange={() => setSelectedTarget('library-js')}
+                    className="w-4 h-4 text-primary-500 bg-surface-800 border-surface-600"
+                  />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-surface-200">Library Build (JS Only)</div>
+                  <div className="text-xs text-surface-400 mt-1">
+                    타 웹 프레임워크에 삽입할 수 있는 가벼운 자바스크립트 모듈 번들만 빠르게 생성합니다.
+                  </div>
+                </div>
+              </label>
+
+              {/* Library Build Option (TypeScript) */}
+              <label className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-colors ${selectedTarget === 'library-ts' ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 bg-surface-900 hover:border-surface-600'}`}>
+                <div className="mt-0.5">
+                  <input
+                    type="radio"
+                    name="buildTarget"
+                    value="library-ts"
+                    checked={selectedTarget === 'library-ts'}
+                    onChange={() => setSelectedTarget('library-ts')}
+                    className="w-4 h-4 text-primary-500 bg-surface-800 border-surface-600"
+                  />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-surface-200">Library Build (with TypeScript .d.ts)</div>
+                  <div className="text-xs text-surface-400 mt-1">
+                    모듈 번들과 함께 완벽한 타입 추론을 위한 TypeScript 선언 파일을 추출합니다.
+                  </div>
+                </div>
+              </label>
+
+              {/* PWA Build Option */}
+              <label className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-colors ${selectedTarget === 'pwa' ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 bg-surface-900 hover:border-surface-600'}`}>
+                <div className="mt-0.5">
+                  <input
+                    type="radio"
+                    name="buildTarget"
+                    value="pwa"
+                    checked={selectedTarget === 'pwa'}
+                    onChange={() => setSelectedTarget('pwa')}
+                    className="w-4 h-4 text-primary-500 bg-surface-800 border-surface-600"
+                  />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-surface-200">Progressive Web App (PWA)</div>
+                  <div className="text-xs text-surface-400 mt-1">
+                    모바일 및 데스크톱에서 설치 가능한 웹 앱(PWA) 형태로 빌드합니다. 오프라인 캐싱이 지원됩니다.
+                  </div>
+                </div>
+              </label>
+            </div>
+          )}
+
+          {mainCategory === 'windows' && (
+            <div className="flex flex-col items-center justify-center h-full text-surface-400 bg-surface-900/50 rounded border border-surface-800 border-dashed py-4">
+              <svg className="w-12 h-12 mb-4 text-surface-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M2 3.841l8.528-1.18v8.435H2V3.841zm9.646-1.34L22 1.054v10.042h-10.354V2.501zm0 10.042H22v10.357l-10.354-1.503V12.543zM2 12.543h8.528v7.653L2 19.167v-6.624z" />
+              </svg>
+              <div className="font-semibold text-surface-300">Windows Build</div>
+              <div className="text-sm mt-1 text-surface-500">추후 업데이트를 통해 지원될 예정입니다.</div>
+            </div>
+          )}
+
+          {mainCategory === 'android' && (
+            <div className="flex flex-col items-center justify-center h-full text-surface-400 bg-surface-900/50 rounded border border-surface-800 border-dashed py-4">
+              <svg className="w-12 h-12 mb-4 text-surface-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0004.5511-.4482.9997-.9993.9997zm-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997zm11.4045-6.02l1.9973-3.4592a.4158.4158 0 00-.1521-.5676.4162.4162 0 00-.5676.1521l-2.0216 3.5013C15.5898 8.2435 13.8532 7.8488 12 7.8488c-1.8528 0-3.5894.3947-5.137.1004L4.841 4.4475a.416.416 0 00-.5673-.1521.4156.4156 0 00-.1521.5676l1.9969 3.4592C2.6865 10.2223.3225 13.5638.0772 17.514h23.845c-.2449-3.9502-2.6092-7.2917-6.0417-9.1926z" />
+              </svg>
+              <div className="font-semibold text-surface-300">Android Build</div>
+              <div className="text-sm mt-1 text-surface-500">추후 업데이트를 통해 지원될 예정입니다.</div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-end gap-2 pt-4 border-t border-surface-700">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-surface-300 hover:text-white hover:bg-surface-700 rounded transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              if (mainCategory === 'web') {
                 onConfirm(selectedTarget)
                 onClose()
-              }}
-              className="px-4 py-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded transition-colors"
-            >
-              Start Build
-            </button>
-          </div>
+              }
+            }}
+            disabled={mainCategory !== 'web'}
+            className={`px-4 py-2 text-sm font-semibold rounded transition-colors ${
+              mainCategory === 'web'
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                : 'bg-surface-700 text-surface-500 cursor-not-allowed'
+            }`}
+          >
+            Start Build
+          </button>
         </div>
       </div>
     </div>,
