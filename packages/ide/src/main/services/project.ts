@@ -255,7 +255,7 @@ async function copyProjectAssets(targetDir: string, outDir: string) {
 /**
  * 프로젝트 빌드 (Vite 정적 웹 빌드 및 플랫폼별 패키징)
  */
-export async function buildProject(targetDir: string, options?: { target: string, resizable?: boolean }): Promise<string> {
+export async function buildProject(targetDir: string, options?: { target: string, resizable?: boolean, installer?: boolean }): Promise<string> {
   const isPwa = options?.target === 'pwa'
   const isWindows = options?.target === 'windows'
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
@@ -379,7 +379,19 @@ export async function buildProject(targetDir: string, options?: { target: string
             await fs.writeFile(path.join(distPath, 'package.json'), JSON.stringify({
               name: 'fumika-game',
               version: '1.0.0',
-              main: 'main.js'
+              main: 'main.js',
+              build: {
+                appId: 'com.fumika.game',
+                productName: 'FumikaGame',
+                directories: {
+                  output: '../windows_build'
+                },
+                win: {
+                  target: options?.installer ? ['nsis'] : ['portable'],
+                  icon: '../../public/icon.png'
+                },
+                asar: true
+              }
             }, null, 2), 'utf-8')
 
             const mainJsContent = `const { app, BrowserWindow } = require('electron')
@@ -412,11 +424,11 @@ app.on('window-all-closed', () => {
 `
             await fs.writeFile(path.join(distPath, 'main.js'), mainJsContent, 'utf-8')
 
-            console.log('[IDE] Ensuring electron and @electron/packager are installed...')
+            console.log('[IDE] Ensuring electron and electron-builder are installed...')
             await new Promise<void>((res, rej) => {
-              execFile(npmCmd, ['install', '--save-dev', 'electron', '@electron/packager'], { cwd: targetDir, shell: true }, (installErr, installStdout, installStderr) => {
+              execFile(npmCmd, ['install', '--save-dev', 'electron', 'electron-builder'], { cwd: targetDir, shell: true }, (installErr, installStdout, installStderr) => {
                 if (installErr) {
-                  console.error('[IDE] Failed to install electron/packager:', installStderr)
+                  console.error('[IDE] Failed to install electron/builder:', installStderr)
                   rej(installErr)
                 } else {
                   res()
@@ -424,26 +436,19 @@ app.on('window-all-closed', () => {
               })
             })
 
-            console.log('[IDE] Running @electron/packager...')
+            console.log('[IDE] Running electron-builder...')
             const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
             await new Promise<void>((res, rej) => {
               const packagerArgs = [
-                '@electron/packager',
+                'electron-builder',
+                '--project',
                 `./${outDir}`,
-                'FumikaGame',
-                '--platform=win32',
-                '--arch=x64',
-                '--asar',
-                '--out=./dist/windows_build',
-                '--overwrite'
+                '--win'
               ]
               
-              // App Icon - assuming public/icon.png is created before buildProject is called
-              packagerArgs.push('--icon=./public/icon.png')
-
               execFile(npxCmd, packagerArgs, { cwd: targetDir, shell: true }, (packErr, packStdout, packStderr) => {
                 if (packErr) {
-                  console.error('[IDE] @electron/packager failed:', packStderr)
+                  console.error('[IDE] electron-builder failed:', packStderr)
                   rej(packErr)
                 } else {
                   res()
@@ -451,7 +456,7 @@ app.on('window-all-closed', () => {
               })
             })
 
-            resolve('dist/windows_build/FumikaGame-win32-x64')
+            resolve('dist/windows_build')
           } catch (err) {
             reject(err)
           }

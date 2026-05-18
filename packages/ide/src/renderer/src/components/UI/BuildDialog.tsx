@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useProjectStore } from '../../store/useProjectStore'
+import { WindowsBuildOptionsDialog, WindowsBuildOptions } from './WindowsBuildOptionsDialog'
 
 export type BuildTarget = 'static' | 'library-js' | 'library-ts' | 'pwa' | 'windows'
 
@@ -9,7 +10,7 @@ type MainCategory = 'web' | 'windows' | 'android'
 interface BuildDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (target: BuildTarget, options?: { resizable?: boolean }) => void
+  onConfirm: (target: BuildTarget, options?: { resizable?: boolean, installer?: boolean }) => void
 }
 
 export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
@@ -19,7 +20,7 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
   const [showIconMissing, setShowIconMissing] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
   const [iconError, setIconError] = useState('')
-  const [isResizable, setIsResizable] = useState(false)
+  const [showWindowsOptions, setShowWindowsOptions] = useState(false)
 
   // ESC 키를 누르면 닫히도록 설정
   useEffect(() => {
@@ -70,8 +71,12 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
                 
                 if (res.success) {
                   setShowIconMissing(false)
-                  onConfirm(selectedTarget, { resizable: isResizable })
-                  onClose()
+                  if (mainCategory === 'windows') {
+                    setShowWindowsOptions(true)
+                  } else {
+                    onConfirm(selectedTarget)
+                    onClose()
+                  }
                 } else if (res.error !== '선택이 취소되었습니다.') {
                   setIconError(res.error || '알 수 없는 오류가 발생했습니다.')
                 }
@@ -240,27 +245,11 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
                 <div>
                   <div className="text-sm font-semibold text-surface-200">Windows (.exe) 빌드</div>
                   <div className="text-xs text-surface-400 mt-1">
-                    Windows 환경에서 단독으로 실행 가능한 애플리케이션으로 패키징합니다. (ASAR 포함)
+                    Windows 환경에서 단독으로 실행 가능한 애플리케이션으로 패키징합니다. (ASAR 포함)<br/>
+                    빌드 옵션에서 포터블(무설치) 또는 설치 파일 포맷을 선택할 수 있습니다.
                   </div>
                 </div>
               </label>
-
-              {/* Windows Options */}
-              <div className="mt-2 p-3 bg-surface-900/50 rounded border border-surface-800">
-                <div className="text-xs font-semibold text-surface-400 mb-2">빌드 옵션</div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isResizable}
-                    onChange={(e) => setIsResizable(e.target.checked)}
-                    className="rounded text-primary-500 bg-surface-800 border-surface-600 focus:ring-primary-500 focus:ring-offset-surface-900"
-                  />
-                  <span className="text-sm text-surface-300">창 크기 조절 허용 (Resizable)</span>
-                </label>
-                <div className="text-[10px] text-surface-500 mt-1 pl-6">
-                  창 크기가 조절되어도 게임의 기본 종횡비는 유지됩니다.
-                </div>
-              </div>
             </div>
           )}
 
@@ -293,8 +282,12 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
                 if (!res.exists) {
                   setShowIconMissing(true)
                 } else {
-                  onConfirm(selectedTarget, { resizable: isResizable })
-                  onClose()
+                  if (mainCategory === 'windows') {
+                    setShowWindowsOptions(true)
+                  } else {
+                    onConfirm(selectedTarget)
+                    onClose()
+                  }
                 }
               }
             }}
@@ -311,10 +304,20 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             )}
-            {isChecking ? '확인 중...' : 'Start Build'}
+            {isChecking ? '확인 중...' : (mainCategory === 'windows' ? 'Next' : 'Start Build')}
           </button>
         </div>
       </div>
+
+      <WindowsBuildOptionsDialog
+        isOpen={showWindowsOptions}
+        onClose={() => setShowWindowsOptions(false)}
+        onConfirm={(options: WindowsBuildOptions) => {
+          setShowWindowsOptions(false)
+          onConfirm(selectedTarget, options)
+          onClose()
+        }}
+      />
     </div>,
     document.body
   )
