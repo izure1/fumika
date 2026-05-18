@@ -217,6 +217,7 @@ export default defineConfig(({ mode }) => {
   const outDir = process.env.BUILD_TIME ? \`dist/\${process.env.BUILD_TIME}\` : 'dist'
 
   return {
+    base: './',
     build: {
       outDir,
       emptyOutDir: true,
