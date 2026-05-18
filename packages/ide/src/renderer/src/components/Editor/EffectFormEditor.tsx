@@ -47,6 +47,23 @@ export function EffectFormEditor({ content, onChange, filePath }: Props) {
   
   const [confirmState, setConfirmState] = useState<any>(null)
 
+  const [projectSize, setProjectSize] = useState<{width: number, height: number} | null>(null)
+
+  // novel.config.ts에서 width, height 읽어오기
+  useEffect(() => {
+    if (!projectPath) return
+    window.api.fs.readFile(`${projectPath}/novel.config.ts`).then(res => {
+      if (res.success && res.content) {
+        const wMatch = res.content.match(/width\s*:\s*(\d+)/)
+        const hMatch = res.content.match(/height\s*:\s*(\d+)/)
+        if (wMatch && hMatch) {
+          setProjectSize({ width: parseInt(wMatch[1], 10), height: parseInt(hMatch[1], 10) })
+        }
+      }
+    }).catch(() => {})
+  }, [projectPath])
+
+
   // declarations/backgrounds.ts를 파싱하여 배경 키 목록 추출 (하위 폴더 포함)
   useEffect(() => {
     if (!projectPath) return
@@ -563,8 +580,17 @@ export default effectDef`
             </div>
           </div>
 
-          <div className={`w-full h-full border-2 border-dashed border-surface-700/50 rounded-xl flex items-center justify-center relative overflow-hidden ${!previewBgSrc ? "bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADFJREFUOE9jZGBgEGHAA8CUwMDIyMjIwMAA8xG+A+H1A8wEhoFhAxhRTAkMDIwMDAwAE3cK2x1d0JAAAAAASUVORK5CYII=')] bg-repeat" : "bg-black"} mt-24`}>
-            {!previewSrc ? (
+          <div className="flex-1 mt-24 flex items-center justify-center min-h-0 w-full">
+            <div 
+              className={`border-2 border-dashed border-surface-700/50 rounded-xl overflow-hidden flex items-center justify-center relative ${!previewBgSrc ? "bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADFJREFUOE9jZGBgEGHAA8CUwMDIyMjIwMAA8xG+A+H1A8wEhoFhAxhRTAkMDIwMDAwAE3cK2x1d0JAAAAAASUVORK5CYII=')] bg-repeat" : "bg-black"}`}
+              style={projectSize ? {
+                aspectRatio: `${projectSize.width} / ${projectSize.height}`,
+                maxHeight: '100%',
+                maxWidth: '100%',
+                width: '100%'
+              } : { width: '100%', height: '100%' }}
+            >
+              {!previewSrc ? (
               <div className="text-center z-10 bg-surface-900/80 p-6 rounded-xl backdrop-blur-sm border border-surface-700/50">
                 <svg className="w-16 h-16 text-surface-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -612,8 +638,11 @@ export default effectDef`
                     }
                   } : {})
                 }}
+                width={projectSize?.width}
+                height={projectSize?.height}
               />
             )}
+            </div>
           </div>
         </div>
       </div>

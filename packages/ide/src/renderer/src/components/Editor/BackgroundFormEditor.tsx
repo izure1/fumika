@@ -18,6 +18,22 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
   const [previewAbsPath, setPreviewAbsPath] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'gui' | 'code'>('gui')
   const [previewMood, setPreviewMood] = useState<string>('none')
+  const [projectSize, setProjectSize] = useState<{width: number, height: number} | null>(null)
+
+  // novel.config.ts에서 width, height 읽어오기
+  useEffect(() => {
+    if (!projectPath) return
+    window.api.fs.readFile(`${projectPath}/novel.config.ts`).then(res => {
+      if (res.success && res.content) {
+        const wMatch = res.content.match(/width\s*:\s*(\d+)/)
+        const hMatch = res.content.match(/height\s*:\s*(\d+)/)
+        if (wMatch && hMatch) {
+          setProjectSize({ width: parseInt(wMatch[1], 10), height: parseInt(hMatch[1], 10) })
+        }
+      }
+    }).catch(() => {})
+  }, [projectPath])
+
 
   // 간단한 정규식으로 기존 값 추출 (AST 미사용 단순 파싱)
   useEffect(() => {
@@ -243,8 +259,17 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
             </div>
           </div>
 
-          <div className="w-full h-full border-2 border-dashed border-surface-700/50 rounded-xl overflow-hidden flex items-center justify-center relative bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADFJREFUOE9jZGBgEGHAA8CUwMDIyMjIwMAA8xG+A+H1A8wEhoFhAxhRTAkMDIwMDAwAE3cK2x1d0JAAAAAASUVORK5CYII=')] bg-repeat mt-24">
-            {!src ? (
+          <div className="flex-1 mt-24 flex items-center justify-center min-h-0 w-full">
+            <div 
+              className="border-2 border-dashed border-surface-700/50 rounded-xl overflow-hidden flex items-center justify-center relative bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADFJREFUOE9jZGBgEGHAA8CUwMDIyMjIwMAA8xG+A+H1A8wEhoFhAxhRTAkMDIwMDAwAE3cK2x1d0JAAAAAASUVORK5CYII=')] bg-repeat"
+              style={projectSize ? {
+                aspectRatio: `${projectSize.width} / ${projectSize.height}`,
+                maxHeight: '100%',
+                maxWidth: '100%',
+                width: '100%'
+              } : { width: '100%', height: '100%' }}
+            >
+              {!src ? (
               <div className="text-center z-10 bg-surface-900/80 p-6 rounded-xl backdrop-blur-sm border border-surface-700/50">
                 <svg className="w-16 h-16 text-surface-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -284,9 +309,12 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
                       [src]: { src, parallax }
                     }
                   }}
+                  width={projectSize?.width}
+                  height={projectSize?.height}
                 />
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
