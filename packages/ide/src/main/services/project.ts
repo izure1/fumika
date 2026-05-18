@@ -236,6 +236,22 @@ export async function scaffoldProject(targetDir: string, options: ProjectOptions
   await ensureProjectDependencies(targetDir, options.processName)
 }
 
+async function copyProjectAssets(targetDir: string, outDir: string) {
+  // TS 소스 코드(backgrounds, effects 등)는 Vite가 번들링하므로 제외하고,
+  // 순수 미디어 파일들이 담긴 assets 폴더만 복사합니다.
+  const assetFolders = ['assets']
+  for (const folder of assetFolders) {
+    const src = path.join(targetDir, folder)
+    const dest = path.join(targetDir, outDir, folder)
+    try {
+      await fs.access(src)
+      await fs.cp(src, dest, { recursive: true })
+    } catch {
+      // Folder might not exist, just ignore
+    }
+  }
+}
+
 /**
  * 프로젝트 빌드 (Vite 정적 웹 빌드)
  */
@@ -319,12 +335,14 @@ export async function buildProject(targetDir: string, options?: { target: string
               } else {
                 console.log('[IDE] TS Declarations generated successfully')
               }
+              await copyProjectAssets(targetDir, outDir)
               resolve(outDir)
             })
           } catch (e) {
             reject(e)
           }
         } else {
+          await copyProjectAssets(targetDir, outDir)
           resolve(outDir)
         }
       }
