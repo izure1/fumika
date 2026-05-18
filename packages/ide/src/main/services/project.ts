@@ -299,6 +299,7 @@ export async function buildProject(targetDir: string, options?: { target: string
                 noEmit: false,
                 declaration: true,
                 emitDeclarationOnly: true,
+                noEmitOnError: false,
                 outDir: `./${outDir}/types`
               },
               include: ["**/*.ts"]
@@ -314,12 +315,11 @@ export async function buildProject(targetDir: string, options?: { target: string
               }
               
               if (tscErr) {
-                console.error('[IDE] TSC build failed:', tscStderr)
-                reject(tscErr)
+                console.warn('[IDE] TSC build finished with warnings/errors:', tscStderr || tscStdout)
               } else {
                 console.log('[IDE] TS Declarations generated successfully')
-                resolve(outDir)
               }
+              resolve(outDir)
             })
           } catch (e) {
             reject(e)
