@@ -241,13 +241,13 @@ app.on('window-all-closed', () => {
 `
 }
 
-export function getAppPackageJsonContent(name?: string, productName?: string): string {
+export function getAppPackageJsonContent(name?: string, productName?: string, version?: string, author?: string, description?: string): string {
   return JSON.stringify({
     name: name || 'fumika-game',
-    version: '1.0.0',
+    version: version || '1.0.0',
     main: 'main.js',
-    author: 'Fumika',
-    description: productName || 'Fumika Visual Novel'
+    author: author || 'Fumika',
+    description: description || productName || 'Fumika Visual Novel'
   }, null, 2)
 }
 

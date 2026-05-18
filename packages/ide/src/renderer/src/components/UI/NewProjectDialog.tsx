@@ -10,6 +10,9 @@ export interface NewProjectOptions {
   processName: string
   width: number
   height: number
+  version?: string
+  author?: string
+  description?: string
 }
 
 export interface NewProjectDialogProps {
@@ -21,7 +24,7 @@ export interface NewProjectDialogProps {
 export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDialogProps) {
   const { addToast } = useToastStore()
   const [step, setStep] = useState(1)
-  const maxStep = 4
+  const maxStep = 5
 
   const handleCopyLicense = async () => {
     try {
@@ -36,6 +39,9 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
   const [gameName, setGameName] = useState('My Visual Novel')
   const [projectId, setProjectId] = useState('com.mycompany.myvisualnovel')
   const [processName, setProcessName] = useState('my-visual-novel')
+  const [version, setVersion] = useState('1.0.0')
+  const [author, setAuthor] = useState('Fumika')
+  const [description, setDescription] = useState('My Visual Novel Game')
   const [width, setWidth] = useState(1920)
   const [height, setHeight] = useState(1080)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -82,6 +88,14 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
     }
 
     if (currentStep === 4) {
+      if (!version.trim()) newErrors.version = '버전을 입력해주세요.'
+      else if (!/^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$/.test(version)) {
+        newErrors.version = '올바른 버전 형식이 아닙니다 (예: 1.0.0)'
+      }
+      if (!author.trim()) newErrors.author = '작성자(개발사)를 입력해주세요.'
+    }
+
+    if (currentStep === 5) {
       if (width <= 0) newErrors.width = '해상도는 1 이상이어야 합니다.'
       if (height <= 0) newErrors.height = '해상도는 1 이상이어야 합니다.'
     }
@@ -112,7 +126,10 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
         projectId,
         processName,
         width,
-        height
+        height,
+        version,
+        author,
+        description
       })
     }
   }
@@ -207,6 +224,40 @@ export function NewProjectDialog({ isOpen, onConfirm, onCancel }: NewProjectDial
           )}
 
           {step === 4 && (
+            <>
+              <label className="flex flex-col gap-1 text-surface-300 animate-fade-in">
+                <span className="font-semibold text-xs">버전 (예: 1.0.0)</span>
+                <input
+                  ref={inputRef}
+                  className={`bg-surface-900 border ${errors.version ? 'border-red-500' : 'border-surface-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-primary-500`}
+                  value={version}
+                  onChange={(e) => setVersion(e.target.value)}
+                />
+                {errors.version && <span className="text-red-400 text-[10px]">{errors.version}</span>}
+              </label>
+
+              <label className="flex flex-col gap-1 text-surface-300 animate-fade-in">
+                <span className="font-semibold text-xs">작성자 / 개발사</span>
+                <input
+                  className={`bg-surface-900 border ${errors.author ? 'border-red-500' : 'border-surface-600'} text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-primary-500`}
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                />
+                {errors.author && <span className="text-red-400 text-[10px]">{errors.author}</span>}
+              </label>
+
+              <label className="flex flex-col gap-1 text-surface-300 animate-fade-in">
+                <span className="font-semibold text-xs">게임 설명 (선택)</span>
+                <input
+                  className="bg-surface-900 border border-surface-600 text-white px-2 py-1.5 rounded-sm focus:outline-none focus:border-primary-500"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </label>
+            </>
+          )}
+
+          {step === 5 && (
             <>
               <div className="flex gap-2 animate-fade-in">
                 <label className="flex flex-col gap-1 text-surface-300 flex-1">

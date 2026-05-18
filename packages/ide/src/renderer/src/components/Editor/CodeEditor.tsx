@@ -242,6 +242,9 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
     return unsubscribe
   }, [monacoInstance])
 
+  const codeRef = useRef(code)
+  useEffect(() => { codeRef.current = code }, [code])
+
   // 현재 에디터가 열린 파일의 extraLib을 제거하여 model/extraLib 충돌 방지
   // Monaco는 같은 URI에 model과 extraLib이 동시 존재하면
   // TS worker가 두 소스를 모두 인식 → 중복 선언/타입 충돌 발생
@@ -257,8 +260,8 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
     return () => {
       // 에디터가 닫히면 최종 코드로 extraLib 복원
       // 다른 파일에서 이 파일을 참조할 때 타입 정보 유지
-      if (code !== undefined) {
-        ts.typescriptDefaults.addExtraLib(code, libUri)
+      if (codeRef.current !== undefined) {
+        ts.typescriptDefaults.addExtraLib(codeRef.current, libUri)
       }
     }
   }, [monacoInstance, filePath])

@@ -533,7 +533,7 @@ export function EditorArea() {
               <CodeEditor
                 code={data.content}
                 onChange={(val) => handleContentChange(activeFile, val)}
-                language={activeFile.endsWith('.ts') ? 'typescript' : 'javascript'}
+                language={extension === 'ts' ? 'typescript' : extension === 'json' ? 'json' : 'javascript'}
                 filePath={activeFile}
               />
             </div>

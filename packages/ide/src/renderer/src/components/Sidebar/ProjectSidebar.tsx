@@ -33,7 +33,7 @@ const getRootGenre = (fullPath: string, projectPath: string): string => {
   return rel.split(/[/\\]/)[0]
 }
 
-const CONFIG_FILES = ['novel.config.ts', 'main.ts']
+const CONFIG_FILES = ['novel.config.ts', 'main.ts', 'package.json']
 
 interface FileNode {
   name: string

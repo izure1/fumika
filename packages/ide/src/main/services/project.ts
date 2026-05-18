@@ -69,6 +69,9 @@ export interface ProjectOptions {
   processName: string
   width: number
   height: number
+  version?: string
+  author?: string
+  description?: string
 }
 
 export async function ensureEffectsFiles(targetDir: string) {
@@ -118,8 +121,10 @@ export async function ensureProjectDependencies(targetDir: string, options?: Par
       name: options?.processName || path.basename(targetDir).replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase() || 'fumika-project',
       productName: options?.gameName || 'My Visual Novel',
       appId: options?.projectId || 'com.example.game',
+      description: options?.description || '',
+      author: options?.author || 'Fumika',
       private: true,
-      version: '0.0.0',
+      version: options?.version || '1.0.0',
       type: 'module',
       scripts: {
         dev: 'vite',
@@ -296,12 +301,18 @@ export async function buildProject(targetDir: string, options?: { target: string
   let appName = 'fumika-game'
   let appProductName = 'FumikaGame'
   let appId = 'com.fumika.game'
+  let appVersion = '1.0.0'
+  let appAuthor = 'Fumika'
+  let appDescription = 'Fumika Visual Novel'
   try {
     const projectPkgContent = await fs.readFile(path.join(targetDir, 'package.json'), 'utf-8')
     const projectPkg = JSON.parse(projectPkgContent)
     if (projectPkg.name) appName = projectPkg.name
     if (projectPkg.productName) appProductName = projectPkg.productName
     if (projectPkg.appId) appId = projectPkg.appId
+    if (projectPkg.version) appVersion = projectPkg.version
+    if (projectPkg.author) appAuthor = projectPkg.author
+    if (projectPkg.description) appDescription = projectPkg.description
   } catch (e) {
     log(`[IDE] Warning: Could not read package.json for app info: ${e}`)
   }
@@ -417,7 +428,7 @@ export async function buildProject(targetDir: string, options?: { target: string
 
           const distPath = path.join(targetDir, outDir)
           // 앱 런타임 구동용 package.json
-          await fs.writeFile(path.join(distPath, 'package.json'), getAppPackageJsonContent(appName, appProductName), 'utf-8')
+          await fs.writeFile(path.join(distPath, 'package.json'), getAppPackageJsonContent(appName, appProductName, appVersion, appAuthor, appDescription), 'utf-8')
 
           // electron 버전 추출
           let electronVersion = '28.2.0'
@@ -457,11 +468,11 @@ export async function buildProject(targetDir: string, options?: { target: string
             await runCommandLive(npxCmd, packagerArgs, { cwd: targetDir }, onLog)
             try {
               await fs.unlink(builderConfigPath)
-            } catch (e) {}
-            
+            } catch (e) { }
+
             // 빌드 결과물 정리 로직
             const fullOutWindowsDir = path.join(targetDir, outWindowsDir)
-            
+
             // 무설치판(dir)일 경우 win-unpacked의 모든 파일을 바깥으로 꺼내고 폴더 삭제
             if (!options?.installer) {
               const unpackedDir = path.join(fullOutWindowsDir, 'win-unpacked')
@@ -481,15 +492,15 @@ export async function buildProject(targetDir: string, options?: { target: string
               const filesInOut = await fs.readdir(fullOutWindowsDir)
               for (const file of filesInOut) {
                 if (file.endsWith('.yml') || file.endsWith('.yaml')) {
-                  await fs.unlink(path.join(fullOutWindowsDir, file)).catch(() => {})
+                  await fs.unlink(path.join(fullOutWindowsDir, file)).catch(() => { })
                 }
               }
-            } catch (e) {}
+            } catch (e) { }
 
           } catch (packErr: any) {
             try {
               await fs.unlink(builderConfigPath)
-            } catch (e) {}
+            } catch (e) { }
             log(`[IDE] electron-builder failed: ${packErr.message}`)
             throw packErr
           }
