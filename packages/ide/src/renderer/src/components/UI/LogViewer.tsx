@@ -42,7 +42,7 @@ export function LogViewer({ logs }: LogViewerProps) {
   return (
     <div 
       ref={containerRef} 
-      className="absolute inset-0 overflow-y-auto custom-scrollbar bg-surface-950 py-2" 
+      className="absolute inset-0 overflow-y-auto custom-scrollbar bg-surface-950 py-2 select-text" 
     />
   )
 }
