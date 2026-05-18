@@ -331,7 +331,21 @@ export async function buildProject(targetDir: string, options?: { target: string
 
   // 항상 최신 템플릿으로 vite.config.ts를 덮어씁니다. (구버전 충돌 방지)
   const viteConfigPath = path.join(targetDir, 'vite.config.ts')
-  await fs.writeFile(viteConfigPath, getViteConfigContent({ pwa: isPwa, appName: appProductName, shortName: appProductName }), 'utf-8')
+  await fs.writeFile(viteConfigPath, getViteConfigContent({
+    pwa: isPwa,
+    appName: appProductName,
+    shortName: appProductName,
+    description: appDescription,
+  }), 'utf-8')
+
+  // package.json의 최신 메타데이터로 index.html을 항상 덮어씁니다.
+  // (프로젝트 생성 이후 메타데이터가 변경되어도 빌드 시 반영됨)
+  const indexHtmlPath = path.join(targetDir, 'index.html')
+  await fs.writeFile(indexHtmlPath, getIndexHtmlContent({
+    gameName: appProductName,
+    description: appDescription,
+    author: appAuthor,
+  }), 'utf-8')
 
   // 하위 호환성을 위해 package.json에 build 스크립트가 없다면 추가
   const packageJsonPath = path.join(targetDir, 'package.json')
@@ -445,7 +459,7 @@ export async function buildProject(targetDir: string, options?: { target: string
 
           // 패키징 전용 빌드 설정 파일 (루트에 임시 생성)
           const builderConfigPath = path.join(targetDir, 'electron-builder.json')
-          await fs.writeFile(builderConfigPath, getElectronBuilderConfigContent(electronVersion, outDir, outWindowsDir, !!options?.installer, appId, appProductName), 'utf-8')
+          await fs.writeFile(builderConfigPath, getElectronBuilderConfigContent(electronVersion, outDir, outWindowsDir, !!options?.installer, appId, appProductName, appAuthor), 'utf-8')
 
           const mainJsContent = getElectronMainContent(width, height, !!options?.resizable)
           await fs.writeFile(path.join(distPath, 'main.js'), mainJsContent, 'utf-8')

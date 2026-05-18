@@ -189,13 +189,29 @@ async function main() {
 main().catch(console.error)
 `
 
-export function getIndexHtmlContent(gameName: string): string {
+export interface IndexHtmlOptions {
+  gameName: string
+  description?: string
+  author?: string
+}
+
+export function getIndexHtmlContent(opts: IndexHtmlOptions | string): string {
+  // 이전 버전 호환성: 문자열로 넘길 수도 있음
+  const gameName = typeof opts === 'string' ? opts : opts.gameName
+  const description = typeof opts === 'string' ? '' : (opts.description ?? '')
+  const author = typeof opts === 'string' ? '' : (opts.author ?? '')
+
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${gameName}</title>
+    <meta name="description" content="${description}" />
+    <meta name="author" content="${author}" />
+    <meta property="og:title" content="${gameName}" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:type" content="website" />
     <link rel="icon" type="image/png" href="./icon.png" />
     <style>
       body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
@@ -257,11 +273,13 @@ export function getElectronBuilderConfigContent(
   outWindowsDir: string,
   isInstaller: boolean,
   appId?: string,
-  productName?: string
+  productName?: string,
+  author?: string
 ): string {
   return JSON.stringify({
     appId: appId || 'com.fumika.game',
     productName: productName || 'FumikaGame',
+    copyright: `Copyright © ${new Date().getFullYear()} ${author || 'Fumika'}`,
     electronVersion,
     directories: {
       app: appDir,
@@ -276,14 +294,16 @@ export function getElectronBuilderConfigContent(
 }
 
 
-export function getViteConfigContent(options?: { pwa?: boolean, appName?: string, shortName?: string }): string {
+export function getViteConfigContent(options?: { pwa?: boolean, appName?: string, shortName?: string, description?: string }): string {
   const pwaImport = options?.pwa ? `\nimport { VitePWA } from 'vite-plugin-pwa'` : ''
-  const pwaPlugin = options?.pwa ? `\n    plugins: [
+  const pwaPlugin = options?.pwa ? `
+    plugins: [
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: options?.appName || 'Fumika Game',
-          short_name: options?.shortName || 'Fumika',
+          name: '${options?.appName || 'Fumika Game'}',
+          short_name: '${options?.shortName || 'Fumika'}',
+          description: '${options?.description || ''}',
           theme_color: '#000000',
           background_color: '#000000',
           display: 'standalone',
@@ -305,7 +325,7 @@ export function getViteConfigContent(options?: { pwa?: boolean, appName?: string
 
   return `import { defineConfig } from 'vite'${pwaImport}
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(() => {
   const isLibrary = process.env.BUILD_TARGET === 'library'
   const outDir = process.env.BUILD_TIME ? \`dist/\${process.env.BUILD_TIME}\` : 'dist'
 
