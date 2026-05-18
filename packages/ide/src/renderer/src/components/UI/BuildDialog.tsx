@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useProjectStore } from '../../store/useProjectStore'
 
-export type BuildTarget = 'static' | 'library-js' | 'library-ts' | 'pwa'
+export type BuildTarget = 'static' | 'library-js' | 'library-ts' | 'pwa' | 'windows'
 
 type MainCategory = 'web' | 'windows' | 'android'
 
 interface BuildDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (target: BuildTarget) => void
+  onConfirm: (target: BuildTarget, options?: { resizable?: boolean }) => void
 }
 
 export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
@@ -19,6 +19,7 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
   const [showIconMissing, setShowIconMissing] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
   const [iconError, setIconError] = useState('')
+  const [isResizable, setIsResizable] = useState(false)
 
   // ESC 키를 누르면 닫히도록 설정
   useEffect(() => {
@@ -69,7 +70,7 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
                 
                 if (res.success) {
                   setShowIconMissing(false)
-                  onConfirm(selectedTarget)
+                  onConfirm(selectedTarget, { resizable: isResizable })
                   onClose()
                 } else if (res.error !== '선택이 취소되었습니다.') {
                   setIconError(res.error || '알 수 없는 오류가 발생했습니다.')
@@ -105,7 +106,11 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
           {(['web', 'windows', 'android'] as MainCategory[]).map((category) => (
             <button
               key={category}
-              onClick={() => setMainCategory(category)}
+              onClick={() => {
+                setMainCategory(category)
+                if (category === 'windows') setSelectedTarget('windows')
+                else if (category === 'web') setSelectedTarget('static')
+              }}
               className={`flex-1 py-2 px-3 rounded text-sm font-semibold transition-colors flex items-center justify-center gap-2 border ${
                 mainCategory === category
                   ? 'bg-primary-500/20 text-primary-400 border-primary-500/50'
@@ -219,12 +224,43 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
           )}
 
           {mainCategory === 'windows' && (
-            <div className="flex flex-col items-center justify-center h-full text-surface-400 bg-surface-900/50 rounded border border-surface-800 border-dashed py-4">
-              <svg className="w-12 h-12 mb-4 text-surface-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M2 3.841l8.528-1.18v8.435H2V3.841zm9.646-1.34L22 1.054v10.042h-10.354V2.501zm0 10.042H22v10.357l-10.354-1.503V12.543zM2 12.543h8.528v7.653L2 19.167v-6.624z" />
-              </svg>
-              <div className="font-semibold text-surface-300">Windows Build</div>
-              <div className="text-sm mt-1 text-surface-500">추후 업데이트를 통해 지원될 예정입니다.</div>
+            <div className="flex flex-col gap-3">
+              {/* Windows Build Option */}
+              <label className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-colors ${selectedTarget === 'windows' ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 bg-surface-900 hover:border-surface-600'}`}>
+                <div className="mt-0.5">
+                  <input
+                    type="radio"
+                    name="buildTarget"
+                    value="windows"
+                    checked={selectedTarget === 'windows'}
+                    onChange={() => setSelectedTarget('windows')}
+                    className="w-4 h-4 text-primary-500 bg-surface-800 border-surface-600"
+                  />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-surface-200">Windows (.exe) 빌드</div>
+                  <div className="text-xs text-surface-400 mt-1">
+                    Windows 환경에서 단독으로 실행 가능한 애플리케이션으로 패키징합니다. (ASAR 포함)
+                  </div>
+                </div>
+              </label>
+
+              {/* Windows Options */}
+              <div className="mt-2 p-3 bg-surface-900/50 rounded border border-surface-800">
+                <div className="text-xs font-semibold text-surface-400 mb-2">빌드 옵션</div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isResizable}
+                    onChange={(e) => setIsResizable(e.target.checked)}
+                    className="rounded text-primary-500 bg-surface-800 border-surface-600 focus:ring-primary-500 focus:ring-offset-surface-900"
+                  />
+                  <span className="text-sm text-surface-300">창 크기 조절 허용 (Resizable)</span>
+                </label>
+                <div className="text-[10px] text-surface-500 mt-1 pl-6">
+                  창 크기가 조절되어도 게임의 기본 종횡비는 유지됩니다.
+                </div>
+              </div>
             </div>
           )}
 
@@ -248,7 +284,7 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
           </button>
           <button
             onClick={async () => {
-              if (mainCategory === 'web') {
+              if (mainCategory === 'web' || mainCategory === 'windows') {
                 if (!projectPath) return
                 setIsChecking(true)
                 const res = await window.api.fs.checkExists(`${projectPath}/assets/icon.png`)
@@ -257,14 +293,14 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
                 if (!res.exists) {
                   setShowIconMissing(true)
                 } else {
-                  onConfirm(selectedTarget)
+                  onConfirm(selectedTarget, { resizable: isResizable })
                   onClose()
                 }
               }
             }}
-            disabled={mainCategory !== 'web' || isChecking}
+            disabled={(mainCategory !== 'web' && mainCategory !== 'windows') || isChecking}
             className={`px-4 py-2 text-sm font-semibold rounded transition-colors flex items-center gap-2 ${
-              mainCategory === 'web' && !isChecking
+              (mainCategory === 'web' || mainCategory === 'windows') && !isChecking
                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                 : 'bg-surface-700 text-surface-500 cursor-not-allowed'
             }`}

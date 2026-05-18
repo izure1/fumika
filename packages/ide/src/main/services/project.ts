@@ -253,10 +253,11 @@ async function copyProjectAssets(targetDir: string, outDir: string) {
 }
 
 /**
- * 프로젝트 빌드 (Vite 정적 웹 빌드)
+ * 프로젝트 빌드 (Vite 정적 웹 빌드 및 플랫폼별 패키징)
  */
-export async function buildProject(targetDir: string, options?: { target: string }): Promise<string> {
+export async function buildProject(targetDir: string, options?: { target: string, resizable?: boolean }): Promise<string> {
   const isPwa = options?.target === 'pwa'
+  const isWindows = options?.target === 'windows'
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
   if (isPwa) {
@@ -355,6 +356,104 @@ export async function buildProject(targetDir: string, options?: { target: string
             })
           } catch (e) {
             reject(e)
+          }
+        } else if (isWindows) {
+          try {
+            await copyProjectAssets(targetDir, outDir)
+            console.log('[IDE] Starting Windows Packaging...')
+            
+            let width = 1920
+            let height = 1080
+            try {
+              const configContent = await fs.readFile(path.join(targetDir, 'novel.config.ts'), 'utf-8')
+              const widthMatch = configContent.match(/width:\s*(\d+)/)
+              if (widthMatch) width = parseInt(widthMatch[1])
+              
+              const heightMatch = configContent.match(/height:\s*(\d+)/)
+              if (heightMatch) height = parseInt(heightMatch[1])
+            } catch (e) {
+              console.warn('[IDE] Failed to parse novel.config.ts for build:', e)
+            }
+
+            const distPath = path.join(targetDir, outDir)
+            await fs.writeFile(path.join(distPath, 'package.json'), JSON.stringify({
+              name: 'fumika-game',
+              version: '1.0.0',
+              main: 'main.js'
+            }, null, 2), 'utf-8')
+
+            const mainJsContent = `const { app, BrowserWindow } = require('electron')
+
+app.whenReady().then(() => {
+  const win = new BrowserWindow({
+    width: ${width},
+    height: ${height},
+    useContentSize: true,
+    resizable: ${options?.resizable ? 'true' : 'false'},
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  })
+  
+  try {
+    win.setAspectRatio(${width} / ${height})
+  } catch (e) {
+    // Ignore if not supported on this platform
+  }
+
+  win.loadFile('index.html')
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
+`
+            await fs.writeFile(path.join(distPath, 'main.js'), mainJsContent, 'utf-8')
+
+            console.log('[IDE] Ensuring electron and @electron/packager are installed...')
+            await new Promise<void>((res, rej) => {
+              execFile(npmCmd, ['install', '--save-dev', 'electron', '@electron/packager'], { cwd: targetDir, shell: true }, (installErr, installStdout, installStderr) => {
+                if (installErr) {
+                  console.error('[IDE] Failed to install electron/packager:', installStderr)
+                  rej(installErr)
+                } else {
+                  res()
+                }
+              })
+            })
+
+            console.log('[IDE] Running @electron/packager...')
+            const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
+            await new Promise<void>((res, rej) => {
+              const packagerArgs = [
+                '@electron/packager',
+                `./${outDir}`,
+                'FumikaGame',
+                '--platform=win32',
+                '--arch=x64',
+                '--asar',
+                '--out=./dist/windows_build',
+                '--overwrite'
+              ]
+              
+              // App Icon - assuming public/icon.png is created before buildProject is called
+              packagerArgs.push('--icon=./public/icon.png')
+
+              execFile(npxCmd, packagerArgs, { cwd: targetDir, shell: true }, (packErr, packStdout, packStderr) => {
+                if (packErr) {
+                  console.error('[IDE] @electron/packager failed:', packStderr)
+                  rej(packErr)
+                } else {
+                  res()
+                }
+              })
+            })
+
+            resolve('dist/windows_build/FumikaGame-win32-x64')
+          } catch (err) {
+            reject(err)
           }
         } else {
           await copyProjectAssets(targetDir, outDir)

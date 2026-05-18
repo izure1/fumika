@@ -237,7 +237,7 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('project:build', async (_, projectPath: string, options?: { target: string }) => {
+  ipcMain.handle('project:build', async (_, projectPath: string, options?: { target: string, resizable?: boolean }) => {
     try {
       const iconPath = path.join(projectPath, 'assets', 'icon.png')
       let hasIcon = true

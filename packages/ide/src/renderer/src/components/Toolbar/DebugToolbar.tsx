@@ -72,16 +72,16 @@ export function DebugToolbar() {
     }
   }
 
-  const runBuild = async (target: BuildTarget) => {
+  const runBuild = async (target: BuildTarget, options?: { resizable?: boolean }) => {
     if (!projectPath || isBuilding) return
     setIsBuilding(true)
     setPanelOpen(true)
     setActiveChannel('Build')
     addLog('Build', '----------------------------------------')
-    addLog('Build', `[IDE] 프로젝트 웹 빌드(${target.toUpperCase()})를 시작합니다...`)
+    addLog('Build', `[IDE] 프로젝트 빌드(${target.toUpperCase()})를 시작합니다...`)
     try {
       addToast('프로젝트 빌드를 시작합니다. (하단 출력 패널 확인)', 'info')
-      const res = await window.api.project.build(projectPath, { target })
+      const res = await window.api.project.build(projectPath, { target, ...options })
       if (res.success) {
         addLog('Build', '[IDE] 빌드가 성공적으로 완료되었습니다.')
         addToast('빌드가 성공적으로 완료되었습니다!', 'success')
