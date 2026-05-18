@@ -60,7 +60,9 @@ const DEFAULT_FOLDERS = [
   'declarations',
   'backgrounds',
   'effects',
-  'fallbacks'
+  'fallbacks',
+  'initials',
+  'hooks'
 ]
 
 export interface ProjectOptions {
@@ -193,7 +195,7 @@ export async function ensureProjectStructure(targetDir: string, options?: Partia
     await fs.mkdir(dirPath, { recursive: true })
   }
 
-  const declareFiles = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks', 'audios']
+  const declareFiles = ['assets', 'scenes', 'sceneKeys', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks', 'audios']
   for (const file of declareFiles) {
     const filePath = path.join(targetDir, 'declarations', `${file}.ts`)
     try {
