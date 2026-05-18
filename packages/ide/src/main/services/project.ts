@@ -101,7 +101,7 @@ export async function ensureEffectsFiles(targetDir: string) {
 }
 
 
-export async function ensureProjectDependencies(targetDir: string, processName?: string, forceUpdate = false): Promise<void> {
+export async function ensureProjectDependencies(targetDir: string, options?: Partial<ProjectOptions>, forceUpdate = false): Promise<void> {
   const packageJsonPath = path.join(targetDir, 'package.json')
   let needsInstall = false
 
@@ -115,7 +115,9 @@ export async function ensureProjectDependencies(targetDir: string, processName?:
   } catch {
     needsInstall = true
     const pkg = {
-      name: processName || path.basename(targetDir).replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase() || 'fumika-project',
+      name: options?.processName || path.basename(targetDir).replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase() || 'fumika-project',
+      productName: options?.gameName || 'My Visual Novel',
+      appId: options?.projectId || 'com.example.game',
       private: true,
       version: '0.0.0',
       type: 'module',
@@ -258,7 +260,7 @@ export async function updateProject(targetDir: string): Promise<void> {
  */
 export async function scaffoldProject(targetDir: string, options: ProjectOptions): Promise<void> {
   await ensureProjectStructure(targetDir, options)
-  await ensureProjectDependencies(targetDir, options.processName)
+  await ensureProjectDependencies(targetDir, options)
 }
 
 async function copyProjectAssets(targetDir: string, outDir: string) {
@@ -290,6 +292,20 @@ export async function buildProject(targetDir: string, options?: { target: string
   const isWindows = options?.target === 'windows'
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
+  // targetDir의 package.json에서 빌드 정보 추출 (Windows 앱, PWA 공통 사용)
+  let appName = 'fumika-game'
+  let appProductName = 'FumikaGame'
+  let appId = 'com.fumika.game'
+  try {
+    const projectPkgContent = await fs.readFile(path.join(targetDir, 'package.json'), 'utf-8')
+    const projectPkg = JSON.parse(projectPkgContent)
+    if (projectPkg.name) appName = projectPkg.name
+    if (projectPkg.productName) appProductName = projectPkg.productName
+    if (projectPkg.appId) appId = projectPkg.appId
+  } catch (e) {
+    log(`[IDE] Warning: Could not read package.json for app info: ${e}`)
+  }
+
   if (isPwa) {
     log('[IDE] Ensuring vite-plugin-pwa is installed for PWA build...')
     try {
@@ -302,7 +318,7 @@ export async function buildProject(targetDir: string, options?: { target: string
 
   // 항상 최신 템플릿으로 vite.config.ts를 덮어씁니다. (구버전 충돌 방지)
   const viteConfigPath = path.join(targetDir, 'vite.config.ts')
-  await fs.writeFile(viteConfigPath, getViteConfigContent({ pwa: isPwa }), 'utf-8')
+  await fs.writeFile(viteConfigPath, getViteConfigContent({ pwa: isPwa, appName: appProductName, shortName: appProductName }), 'utf-8')
 
   // 하위 호환성을 위해 package.json에 build 스크립트가 없다면 추가
   const packageJsonPath = path.join(targetDir, 'package.json')
@@ -401,7 +417,7 @@ export async function buildProject(targetDir: string, options?: { target: string
 
           const distPath = path.join(targetDir, outDir)
           // 앱 런타임 구동용 package.json
-          await fs.writeFile(path.join(distPath, 'package.json'), getAppPackageJsonContent(), 'utf-8')
+          await fs.writeFile(path.join(distPath, 'package.json'), getAppPackageJsonContent(appName, appProductName), 'utf-8')
 
           // electron 버전 추출
           let electronVersion = '28.2.0'
@@ -416,7 +432,7 @@ export async function buildProject(targetDir: string, options?: { target: string
 
           // 패키징 전용 빌드 설정 파일 (루트에 임시 생성)
           const builderConfigPath = path.join(targetDir, 'electron-builder.json')
-          await fs.writeFile(builderConfigPath, getElectronBuilderConfigContent(electronVersion, outDir, outWindowsDir, !!options?.installer), 'utf-8')
+          await fs.writeFile(builderConfigPath, getElectronBuilderConfigContent(electronVersion, outDir, outWindowsDir, !!options?.installer, appId, appProductName), 'utf-8')
 
           const mainJsContent = getElectronMainContent(width, height, !!options?.resizable)
           await fs.writeFile(path.join(distPath, 'main.js'), mainJsContent, 'utf-8')

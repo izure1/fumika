@@ -241,13 +241,13 @@ app.on('window-all-closed', () => {
 `
 }
 
-export function getAppPackageJsonContent(): string {
+export function getAppPackageJsonContent(name?: string, productName?: string): string {
   return JSON.stringify({
-    name: 'fumika-game',
+    name: name || 'fumika-game',
     version: '1.0.0',
     main: 'main.js',
     author: 'Fumika',
-    description: 'Fumika Visual Novel'
+    description: productName || 'Fumika Visual Novel'
   }, null, 2)
 }
 
@@ -255,11 +255,13 @@ export function getElectronBuilderConfigContent(
   electronVersion: string,
   appDir: string,
   outWindowsDir: string,
-  isInstaller: boolean
+  isInstaller: boolean,
+  appId?: string,
+  productName?: string
 ): string {
   return JSON.stringify({
-    appId: 'com.fumika.game',
-    productName: 'FumikaGame',
+    appId: appId || 'com.fumika.game',
+    productName: productName || 'FumikaGame',
     electronVersion,
     directories: {
       app: appDir,
@@ -274,14 +276,14 @@ export function getElectronBuilderConfigContent(
 }
 
 
-export function getViteConfigContent(options?: { pwa?: boolean }): string {
+export function getViteConfigContent(options?: { pwa?: boolean, appName?: string, shortName?: string }): string {
   const pwaImport = options?.pwa ? `\nimport { VitePWA } from 'vite-plugin-pwa'` : ''
   const pwaPlugin = options?.pwa ? `\n    plugins: [
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'Fumika Game',
-          short_name: 'Fumika',
+          name: options?.appName || 'Fumika Game',
+          short_name: options?.shortName || 'Fumika',
           theme_color: '#000000',
           background_color: '#000000',
           display: 'standalone',
