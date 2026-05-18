@@ -1,5 +1,6 @@
 import { useProjectStore } from '../../store/useProjectStore'
 import { useToastStore } from '../../store/useToastStore'
+import { useOutputStore } from '../../store/useOutputStore'
 
 export function DebugToolbar() {
   const {
@@ -21,12 +22,18 @@ export function DebugToolbar() {
   } = useProjectStore()
 
   const { addToast } = useToastStore()
+  const { setPanelOpen, setActiveChannel, addLog } = useOutputStore()
 
   const isSceneActive = activeFile ? activeFile.includes('/scenes/') && activeFile.endsWith('.ts') : false
 
   const runTypeCheck = async () => {
     if (!projectPath || isTsChecking) return
     setIsTsChecking(true)
+    setPanelOpen(true)
+    setActiveChannel('Type Check')
+    addLog('Type Check', '----------------------------------------')
+    addLog('Type Check', '[IDE] 타입 검증(Type Check)을 시작합니다...')
+    
     try {
       const res = await window.api.project.checkTypes(projectPath)
       if (res.success && res.errorMap) {
@@ -38,21 +45,24 @@ export function DebugToolbar() {
         }
 
         if (errorCount === 0) {
+          addLog('Type Check', '[IDE] 타입 검증 완료: 발견된 오류가 없습니다.')
           addToast('타입 검증 완료: 발견된 오류가 없습니다.', 'success')
         } else {
-          addToast(`타입 검증 완료: ${errorCount}개의 오류가 발견되었습니다.`, 'warning')
-          console.group(`[TS Check] ${errorCount}개 오류 발견`)
+          addLog('Type Check', `[IDE] 타입 검증 완료: ${errorCount}개의 오류가 발견되었습니다.`)
           for (const [file, errors] of Object.entries(res.errorMap)) {
-            console.group(`📄 ${file} (${errors.length}개)`)
-            console.table(errors.map(e => ({ line: e.line, message: e.message })))
-            console.groupEnd()
+            addLog('Type Check', `📄 ${file} (${errors.length}개)`)
+            errors.forEach(e => {
+              addLog('Type Check', `   - [Line ${e.line}] ${e.message}`)
+            })
           }
-          console.groupEnd()
+          addToast(`타입 검증 완료: ${errorCount}개의 오류가 발견되었습니다.`, 'warning')
         }
       } else {
+        addLog('Type Check', `[IDE] 타입 검증 실패: ${res.error}`)
         addToast('타입 검증 실패: ' + res.error, 'error')
       }
     } catch (err: any) {
+      addLog('Type Check', `[IDE] 타입 검증 오류: ${err.message}`)
       addToast(err.message, 'error')
     } finally {
       setIsTsChecking(false)
@@ -62,15 +72,22 @@ export function DebugToolbar() {
   const runBuild = async () => {
     if (!projectPath || isBuilding) return
     setIsBuilding(true)
+    setPanelOpen(true)
+    setActiveChannel('Build')
+    addLog('Build', '----------------------------------------')
+    addLog('Build', '[IDE] 프로젝트 정적 웹 빌드(Vite)를 시작합니다...')
     try {
-      addToast('프로젝트 빌드를 시작합니다. (터미널에서 빌드 진행)', 'info')
+      addToast('프로젝트 빌드를 시작합니다. (하단 출력 패널 확인)', 'info')
       const res = await window.api.project.build(projectPath)
       if (res.success) {
+        addLog('Build', '[IDE] 빌드가 성공적으로 완료되었습니다.')
         addToast('빌드가 성공적으로 완료되었습니다!', 'success')
       } else {
+        addLog('Build', `[IDE] 빌드 실패: ${res.error}`)
         addToast('빌드 실패: ' + res.error, 'error')
       }
     } catch (err: any) {
+      addLog('Build', `[IDE] 빌드 오류: ${err.message}`)
       addToast(err.message, 'error')
     } finally {
       setIsBuilding(false)
@@ -98,6 +115,10 @@ export function DebugToolbar() {
       if (res.success && res.url) {
         setPreviewUrl(res.url)
         if (!isPreviewOpen) setIsPreviewOpen(true)
+        setPanelOpen(true)
+        setActiveChannel('Browser Console')
+        addLog('Browser Console', '----------------------------------------')
+        addLog('Browser Console', '[IDE] Live Preview 서버가 시작되었습니다.')
       } else {
         alert(res.error || 'Failed to start preview')
       }

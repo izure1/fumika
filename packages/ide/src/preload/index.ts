@@ -63,6 +63,13 @@ const api = {
       ipcRenderer.on('fs:dirDeleted', listener)
       return () => ipcRenderer.removeListener('fs:dirDeleted', listener)
     }
+  },
+  output: {
+    onOutputLog: (callback: (data: { channel: string; message: string }) => void) => {
+      const listener = (_: Electron.IpcRendererEvent, data: { channel: string; message: string }) => callback(data)
+      ipcRenderer.on('output:log', listener)
+      return () => ipcRenderer.removeListener('output:log', listener)
+    }
   }
 }
 

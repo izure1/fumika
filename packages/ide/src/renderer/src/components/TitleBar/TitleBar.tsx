@@ -1,8 +1,23 @@
 import { Minus, Square, X, Settings } from 'lucide-react'
 import { useProjectStore } from '../../store/useProjectStore'
+import { useOutputStore } from '../../store/useOutputStore'
+import { useState, useRef, useEffect } from 'react'
 
 export function TitleBar() {
   const { projectPath, setIsSettingsOpen } = useProjectStore()
+  const { isPanelOpen, togglePanel } = useOutputStore()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
   
   // VS Code 스타일의 타이틀 표시. 프로젝트가 열려있으면 프로젝트 경로 표시.
   const projectName = projectPath ? projectPath.split(/[/\\]/).pop() : ''
@@ -17,6 +32,28 @@ export function TitleBar() {
         <div className="flex items-center gap-4 text-[13px] text-surface-400">
           <div className="flex items-center gap-2 font-semibold text-primary-400">
             <span className="text-[10px]">F</span>
+          </div>
+          <div className="relative" ref={menuRef} style={{ WebkitAppRegion: 'no-drag' } as any}>
+            <button 
+              className={`px-2 py-0.5 text-xs rounded transition-colors ${isMenuOpen ? 'bg-surface-800 text-surface-200' : 'hover:bg-surface-800 hover:text-surface-200'}`}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              보기
+            </button>
+            {isMenuOpen && (
+              <div className="absolute left-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-md shadow-xl py-1 z-50">
+                <button 
+                  className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors flex items-center justify-between"
+                  onClick={() => {
+                    togglePanel()
+                    setIsMenuOpen(false)
+                  }}
+                >
+                  <span>출력 패널</span>
+                  {isPanelOpen && <span className="text-[9px] font-bold bg-primary-500/20 text-primary-300 px-1.5 py-0.5 rounded">ON</span>}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

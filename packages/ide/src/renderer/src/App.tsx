@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { World } from 'leviar'
 import { useProjectStore } from './store/useProjectStore'
+import { useOutputStore } from './store/useOutputStore'
 import { PreviewPanel } from './components/Preview/PreviewPanel'
 import { ProjectSidebar } from './components/Sidebar/ProjectSidebar'
 import { EditorArea } from './components/Editor/EditorArea'
@@ -10,6 +11,7 @@ import { NewProjectDialog, NewProjectOptions } from './components/UI/NewProjectD
 import { LoadingOverlay } from './components/UI/LoadingOverlay'
 import { SettingsModal } from './components/Settings/SettingsModal'
 import { TitleBar } from './components/TitleBar/TitleBar'
+import { BottomPanel } from './components/UI/BottomPanel'
 import welcomeFumika from './assets/welcome/char_fumika.png'
 import welcomeBg from './assets/welcome/bg.png'
 import welcomeSakura from './assets/welcome/particle_sakura.png'
@@ -156,10 +158,22 @@ function App() {
   const [previewWidth, setPreviewWidth] = useState(400)
   const [isResizing, setIsResizing] = useState(false)
   const [isActionPending, setIsActionPending] = useState(false)
+  
+  const { addLog } = useOutputStore()
 
   useEffect(() => {
     initSettings()
   }, [])
+
+  useEffect(() => {
+    if (window.api?.output?.onOutputLog) {
+      const cleanup = window.api.output.onOutputLog(({ channel, message }) => {
+        addLog(channel, message)
+      })
+      return cleanup
+    }
+    return () => {}
+  }, [addLog])
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeColor
@@ -385,6 +399,7 @@ function App() {
         <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 flex flex-col overflow-hidden rounded-none">
             <EditorArea />
+            <BottomPanel />
           </div>
           {isPreviewOpen && (
             <>

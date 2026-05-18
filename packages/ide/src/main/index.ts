@@ -12,6 +12,32 @@ const watcher = new ProjectWatcher()
 const previewService = new PreviewService()
 let mainWindow: BrowserWindow | null = null
 
+const util = require('util')
+const originalLog = console.log
+const originalError = console.error
+const originalWarn = console.warn
+
+console.log = (...args) => {
+  originalLog(...args)
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('output:log', { channel: 'Electron Main (Log)', message: util.format(...args) })
+  }
+}
+
+console.error = (...args) => {
+  originalError(...args)
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('output:log', { channel: 'Electron Main (Error)', message: util.format(...args) })
+  }
+}
+
+console.warn = (...args) => {
+  originalWarn(...args)
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('output:log', { channel: 'Electron Main (Warn)', message: util.format(...args) })
+  }
+}
+
 // fetch() API가 local-resource:// 프로토콜을 사용할 수 있도록 사전 등록
 // app.whenReady() 이전에 호출해야 합니다.
 protocol.registerSchemesAsPrivileged([

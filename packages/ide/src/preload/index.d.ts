@@ -15,6 +15,7 @@ declare global {
         getTypes: (projectPath: string) => Promise<{ success: boolean; types?: { path: string; content: string }[]; error?: string }>
         checkTypes: (projectPath: string) => Promise<{ success: boolean; errorMap?: Record<string, { line: number; message: string }[]>; error?: string }>
         getTsFileCache: () => Promise<{ success: boolean; files?: { path: string; content: string }[]; error?: string }>
+        build: (projectPath: string) => Promise<{ success: boolean; error?: string }>
       }
       preview: {
         start: (projectPath: string, targetScene?: string) => Promise<{ success: boolean; url?: string; error?: string }>
@@ -51,6 +52,9 @@ declare global {
         onFileChanged: (callback: (data: { path: string; content: string }) => void) => () => void
         onFileDeleted: (callback: (data: { path: string }) => void) => () => void
         onDirDeleted: (callback: (data: { path: string }) => void) => () => void
+      }
+      output: {
+        onOutputLog: (callback: (data: { channel: string; message: string }) => void) => () => void
       }
     }
   }
