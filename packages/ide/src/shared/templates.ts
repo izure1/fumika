@@ -109,7 +109,7 @@ const EFFECT_CLIP_PRESETS: Record<EffectType, Record<string, any>> = {
     interval: 300,
     size: [[1, 1]],
     loop: true,
-    opacity: [[0, 1], [0.5, 1], [0, 1], [0.5, 1], [0, 0]]
+    opacity: [[0, 0], [0.5, 1], [0, 1], [0.5, 1], [0, 0]]
   },
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

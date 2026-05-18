@@ -562,6 +562,34 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
     })
   }
 
+  const focusPoint = (pt: ParsedPoint) => {
+    const canvas = canvasRef.current
+    if (!canvas || imageSize.width === 0 || imageSize.height === 0) return
+
+    const displayWidth = canvas.width
+    const displayHeight = canvas.height
+    const baseScale = Math.min(displayWidth / imageSize.width, displayHeight / imageSize.height) * 0.9
+    
+    zoomRef.current = Math.max(zoomRef.current, 2.0)
+    
+    const scale = baseScale * zoomRef.current
+    const w = imageSize.width * scale
+    const h = imageSize.height * scale
+    
+    const baseX = (displayWidth - w) / 2
+    const baseY = (displayHeight - h) / 2
+    
+    const ptAbsoluteX = baseX + pt.x * w
+    const ptAbsoluteY = baseY + pt.y * h
+    
+    panRef.current = {
+      x: displayWidth / 2 - ptAbsoluteX,
+      y: displayHeight / 2 - ptAbsoluteY
+    }
+    
+    drawCanvasRef.current()
+  }
+
   const handleAddEmotion = () => {
     setPromptData({ isOpen: true, action: 'add_emotion', title: '새 Emotion 이름 입력', placeholder: '예: smile' })
   }
@@ -792,9 +820,10 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
                 {Object.entries(currentBaseObj.points || {}).map(([ptName, pt]) => (
                   <div 
                     key={ptName} 
-                    className={`flex items-center justify-between p-2 rounded border ${activePoint === ptName ? 'border-primary-500 bg-surface-900' : 'border-surface-700 bg-surface-800/50'}`}
+                    className={`flex items-center justify-between p-2 rounded border cursor-pointer ${activePoint === ptName ? 'border-primary-500 bg-surface-900' : 'border-surface-700 bg-surface-800/50'}`}
                     onMouseEnter={() => setActivePoint(ptName)}
                     onMouseLeave={() => setActivePoint(null)}
+                    onClick={() => focusPoint(pt)}
                   >
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-red-500" />
@@ -804,7 +833,10 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
                       x:{pt.x.toFixed(3)} y:{pt.y.toFixed(3)}
                     </div>
                     <button 
-                      onClick={() => handleDeletePoint(ptName)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeletePoint(ptName)
+                      }}
                       className="text-surface-500 hover:text-red-400"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
