@@ -105,7 +105,7 @@ export function WindowsBuildOptionsDialog({ isOpen, onClose, onConfirm }: Window
             }}
             className="px-4 py-2 text-sm font-semibold rounded bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
           >
-            빌드 시작
+            Start Build
           </button>
         </div>
       </div>

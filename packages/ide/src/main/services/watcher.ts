@@ -63,7 +63,7 @@ export class ProjectWatcher {
     })
 
     this.cacheWatcher = watch(projectPath, {
-      ignored: [/(^|[\\\/])\../, /node_modules/, /dist/],
+      ignored: [/(^|[\\\/])\../, /node_modules/, /([\\\/])dist([\\\/]|$)/],
       persistent: true,
       ignoreInitial: false,
     })

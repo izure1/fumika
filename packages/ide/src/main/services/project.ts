@@ -489,26 +489,44 @@ export async function buildProject(targetDir: string, options?: { target: string
             // 빌드 결과물 정리 로직
             const fullOutWindowsDir = path.join(targetDir, outWindowsDir)
 
-            // 무설치판(dir)일 경우 win-unpacked의 모든 파일을 바깥으로 꺼내고 폴더 삭제
+            // 무설치판(dir)일 경우 win-unpacked 폴더 자체를 appName으로 rename
+            // (파일을 개별 이동하면 app.asar 같은 특수 파일에서 EBUSY/Invalid package 에러 발생)
             if (!options?.installer) {
               const unpackedDir = path.join(fullOutWindowsDir, 'win-unpacked')
-              try {
-                const files = await fs.readdir(unpackedDir)
-                for (const file of files) {
-                  await fs.rename(path.join(unpackedDir, file), path.join(fullOutWindowsDir, file))
+              const renamedDir = path.join(fullOutWindowsDir, appName)
+              // watcher/antivirus가 파일 핸들을 잠시 잡을 수 있으므로 재시도
+              const maxRetries = 5
+              const retryDelayMs = 800
+              let renamed = false
+              for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                  await fs.rename(unpackedDir, renamedDir)
+                  renamed = true
+                  break
+                } catch (e: any) {
+                  if (attempt < maxRetries && (e.code === 'EPERM' || e.code === 'EBUSY')) {
+                    log(`[IDE] rename 시도 ${attempt}/${maxRetries} 실패 (${e.code}), ${retryDelayMs}ms 후 재시도...`)
+                    await new Promise((r) => setTimeout(r, retryDelayMs))
+                  } else {
+                    log(`[IDE] Warning: Failed to rename win-unpacked folder: ${e}`)
+                    break
+                  }
                 }
-                await fs.rm(unpackedDir, { recursive: true, force: true })
-              } catch (e) {
-                log(`[IDE] Warning: Failed to cleanup win-unpacked folder: ${e}`)
+              }
+              if (renamed) {
+                log(`[IDE] win-unpacked → ${appName} 폴더 이름 변경 완료`)
               }
             }
 
-            // 디버그용 yml 찌꺼기 파일 삭제
+            // 디버그용 yml 찌꺼기 파일 및 .icon-ico 폴더 삭제
             try {
               const filesInOut = await fs.readdir(fullOutWindowsDir)
               for (const file of filesInOut) {
                 if (file.endsWith('.yml') || file.endsWith('.yaml')) {
                   await fs.unlink(path.join(fullOutWindowsDir, file)).catch(() => { })
+                }
+                if (file === '.icon-ico') {
+                  await fs.rm(path.join(fullOutWindowsDir, file), { recursive: true, force: true }).catch(() => { })
                 }
               }
             } catch (e) { }
