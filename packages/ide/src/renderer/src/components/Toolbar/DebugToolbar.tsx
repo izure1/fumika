@@ -93,6 +93,7 @@ export function DebugToolbar() {
       setPreviewLoading(true)
       await window.api.preview.stop()
       setPreviewUrl(null)
+      setIsPreviewOpen(false)
     } catch (err: any) {
       console.error('Failed to stop preview:', err)
     } finally {
@@ -198,19 +199,6 @@ export function DebugToolbar() {
         {isGraphOpen ? 'Hide Graph' : 'Show Graph'}
       </button>
 
-      <button
-        onClick={() => setIsPreviewOpen(!isPreviewOpen)}
-        className={`flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
-          isPreviewOpen
-            ? 'bg-primary-500/20 text-primary-300 hover:bg-primary-500/30'
-            : 'bg-surface-800 text-surface-400 hover:bg-surface-700'
-        }`}
-      >
-        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-        </svg>
-        {isPreviewOpen ? 'Hide Panel' : 'Show Panel'}
-      </button>
     </div>
   )
 }

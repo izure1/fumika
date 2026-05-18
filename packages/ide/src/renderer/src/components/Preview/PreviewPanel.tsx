@@ -37,7 +37,7 @@ function WebviewWithConsole({ url, onLog }: { url: string; onLog: (log: ConsoleL
 }
 
 export function PreviewPanel() {
-  const { projectPath, previewUrl, previewLoading, isPreviewOpen } = useProjectStore()
+  const { projectPath, previewUrl, previewLoading, isPreviewOpen, setIsPreviewOpen, setPreviewUrl, setPreviewLoading } = useProjectStore()
   const [logs, setLogs] = useState<ConsoleLog[]>([])
   const [showConsole, setShowConsole] = useState(true)
   const [consoleHeight, setConsoleHeight] = useState(192)
@@ -120,12 +120,36 @@ export function PreviewPanel() {
           </svg>
           Live Preview
         </span>
-        <button
-          onClick={() => setShowConsole(!showConsole)}
-          className={`text-xs px-2 py-1 rounded transition-colors ${showConsole ? 'bg-primary-500/20 text-primary-300' : 'text-surface-400 hover:bg-surface-700/50'}`}
-        >
-          Console
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowConsole(!showConsole)}
+            className={`text-xs px-2 py-1 rounded transition-colors ${showConsole ? 'bg-primary-500/20 text-primary-300' : 'text-surface-400 hover:bg-surface-700/50'}`}
+          >
+            Console
+          </button>
+          <button
+            onClick={async () => {
+              setIsPreviewOpen(false)
+              if (previewUrl || previewLoading) {
+                try {
+                  setPreviewLoading(true)
+                  await window.api.preview.stop()
+                  setPreviewUrl(null)
+                } catch (err) {
+                  console.error('Failed to stop preview:', err)
+                } finally {
+                  setPreviewLoading(false)
+                }
+              }
+            }}
+            className="text-surface-400 hover:text-surface-200 hover:bg-surface-700/50 rounded p-1 transition-colors"
+            title="Close Panel"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 relative bg-black flex flex-col items-stretch overflow-hidden">
