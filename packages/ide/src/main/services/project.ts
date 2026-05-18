@@ -14,7 +14,7 @@ const DEFAULT_FOLDERS = [
   'fallbacks'
 ]
 
-import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, getDeclarationTemplate, EFFECT_TYPES, getInitialEffectContent } from '../../shared/templates'
+import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, getDeclarationTemplate, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent } from '../../shared/templates'
 
 export interface ProjectOptions {
   gameName: string
@@ -213,6 +213,13 @@ SOFTWARE.
 `
     await fs.writeFile(licensePath, MIT_LICENSE, 'utf-8')
   }
+
+  const viteConfigPath = path.join(targetDir, 'vite.config.ts')
+  try {
+    await fs.access(viteConfigPath)
+  } catch {
+    await fs.writeFile(viteConfigPath, getViteConfigContent(), 'utf-8')
+  }
 }
 
 export async function updateProject(targetDir: string): Promise<void> {
@@ -232,7 +239,11 @@ export async function scaffoldProject(targetDir: string, options: ProjectOptions
 /**
  * 프로젝트 빌드 (Vite 정적 웹 빌드)
  */
-export async function buildProject(targetDir: string): Promise<void> {
+export async function buildProject(targetDir: string, options?: { target: string }): Promise<void> {
+  // 항상 최신 템플릿으로 vite.config.ts를 덮어씁니다. (구버전 충돌 방지)
+  const viteConfigPath = path.join(targetDir, 'vite.config.ts')
+  await fs.writeFile(viteConfigPath, getViteConfigContent(), 'utf-8')
+
   // 하위 호환성을 위해 package.json에 build 스크립트가 없다면 추가
   const packageJsonPath = path.join(targetDir, 'package.json')
   try {
@@ -250,13 +261,66 @@ export async function buildProject(targetDir: string): Promise<void> {
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
   
   return new Promise<void>((resolve, reject) => {
-    execFile(npmCmd, ['run', 'build'], { cwd: targetDir, shell: true }, (err, stdout, stderr) => {
+    const env = { ...process.env }
+    let isLibraryTs = false
+
+    if (options?.target) {
+      if (options.target === 'library-ts' || options.target === 'library-js') {
+        env.BUILD_TARGET = 'library'
+      } else {
+        env.BUILD_TARGET = options.target
+      }
+      
+      if (options.target === 'library-ts') {
+        isLibraryTs = true
+      }
+    }
+
+    execFile(npmCmd, ['run', 'build'], { cwd: targetDir, env, shell: true }, async (err, stdout, stderr) => {
       if (err) {
         console.error('[IDE] Build failed:', stderr)
         reject(err)
       } else {
-        console.log('[IDE] Build success:', stdout)
-        resolve()
+        console.log('[IDE] Vite build success:', stdout)
+        
+        if (isLibraryTs) {
+          try {
+            console.log('[IDE] Starting TSC declaration generation...')
+            const tsconfigBuildPath = path.join(targetDir, 'tsconfig.build.json')
+            const tsconfigBuildContent = JSON.stringify({
+              extends: "./tsconfig.json",
+              compilerOptions: {
+                noEmit: false,
+                declaration: true,
+                emitDeclarationOnly: true,
+                outDir: "./dist/types"
+              },
+              include: ["**/*.ts"]
+            }, null, 2)
+            await fs.writeFile(tsconfigBuildPath, tsconfigBuildContent, 'utf-8')
+            
+            const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
+            execFile(npxCmd, ['tsc', '-p', 'tsconfig.build.json'], { cwd: targetDir, env, shell: true }, async (tscErr, tscStdout, tscStderr) => {
+              try {
+                await fs.unlink(tsconfigBuildPath) // cleanup
+              } catch (e) {
+                console.warn('[IDE] Failed to cleanup tsconfig.build.json:', e)
+              }
+              
+              if (tscErr) {
+                console.error('[IDE] TSC build failed:', tscStderr)
+                reject(tscErr)
+              } else {
+                console.log('[IDE] TS Declarations generated successfully')
+                resolve()
+              }
+            })
+          } catch (e) {
+            reject(e)
+          }
+        } else {
+          resolve()
+        }
       }
     })
   })

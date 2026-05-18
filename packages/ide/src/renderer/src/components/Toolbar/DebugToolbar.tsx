@@ -1,6 +1,8 @@
 import { useProjectStore } from '../../store/useProjectStore'
 import { useToastStore } from '../../store/useToastStore'
 import { useOutputStore } from '../../store/useOutputStore'
+import { useState } from 'react'
+import { BuildDialog, BuildTarget } from '../UI/BuildDialog'
 
 export function DebugToolbar() {
   const {
@@ -23,6 +25,7 @@ export function DebugToolbar() {
 
   const { addToast } = useToastStore()
   const { setPanelOpen, setActiveChannel, addLog } = useOutputStore()
+  const [isBuildDialogOpen, setIsBuildDialogOpen] = useState(false)
 
   const isSceneActive = activeFile ? activeFile.includes('/scenes/') && activeFile.endsWith('.ts') : false
 
@@ -69,16 +72,16 @@ export function DebugToolbar() {
     }
   }
 
-  const runBuild = async () => {
+  const runBuild = async (target: BuildTarget) => {
     if (!projectPath || isBuilding) return
     setIsBuilding(true)
     setPanelOpen(true)
     setActiveChannel('Build')
     addLog('Build', '----------------------------------------')
-    addLog('Build', '[IDE] 프로젝트 정적 웹 빌드(Vite)를 시작합니다...')
+    addLog('Build', `[IDE] 프로젝트 웹 빌드(${target.toUpperCase()})를 시작합니다...`)
     try {
       addToast('프로젝트 빌드를 시작합니다. (하단 출력 패널 확인)', 'info')
-      const res = await window.api.project.build(projectPath)
+      const res = await window.api.project.build(projectPath, { target })
       if (res.success) {
         addLog('Build', '[IDE] 빌드가 성공적으로 완료되었습니다.')
         addToast('빌드가 성공적으로 완료되었습니다!', 'success')
@@ -172,7 +175,7 @@ export function DebugToolbar() {
       </button>
 
       <button
-        onClick={runBuild}
+        onClick={() => setIsBuildDialogOpen(true)}
         disabled={isBuilding || isTsChecking}
         className={`flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
           isBuilding || isTsChecking
@@ -261,6 +264,11 @@ export function DebugToolbar() {
         {isGraphOpen ? 'Hide Graph' : 'Show Graph'}
       </button>
 
+      <BuildDialog
+        isOpen={isBuildDialogOpen}
+        onClose={() => setIsBuildDialogOpen(false)}
+        onConfirm={runBuild}
+      />
     </div>
   )
 }

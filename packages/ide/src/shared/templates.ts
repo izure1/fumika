@@ -209,6 +209,36 @@ export function getIndexHtmlContent(gameName: string): string {
 `
 }
 
+export function getViteConfigContent(): string {
+  return `import { defineConfig } from 'vite'
+
+export default defineConfig(({ mode }) => {
+  const isLibrary = process.env.BUILD_TARGET === 'library'
+
+  return {
+    build: {
+      lib: isLibrary ? {
+        entry: 'main.ts',
+        name: 'FumikaGame',
+        fileName: 'fumika-game',
+        formats: ['es', 'umd']
+      } : undefined,
+      rollupOptions: {
+        output: {
+          assetFileNames: (assetInfo) => {
+            if (assetInfo.name && /\\.(png|jpe?g|gif|webp|svg|mp3|ogg|wav)$/i.test(assetInfo.name)) {
+              return 'resources/[name]-[hash][extname]'
+            }
+            return 'assets/[name]-[hash][extname]'
+          }
+        }
+      }
+    }
+  }
+})
+`
+}
+
 // ─── declarations/ 초기 파일 템플릿 ──────────────────────────
 
 export type DeclarationFolder =

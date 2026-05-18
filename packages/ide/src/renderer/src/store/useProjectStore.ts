@@ -46,7 +46,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   projectPath: null,
   activeFile: null,
   globalLoading: false,
-  isPreviewOpen: true,
+  isPreviewOpen: false,
   previewUrl: null,
   previewLoading: false,
   themeColor: 'amber',
@@ -58,7 +58,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   tsErrors: {},
   isTsChecking: false,
   isBuilding: false,
-  setProjectPath: (path) => set({ projectPath: path, activeFile: null, isPreviewOpen: true, tsErrors: {} }),
+  setProjectPath: (path) => set({ projectPath: path, activeFile: null, isPreviewOpen: false, tsErrors: {} }),
   setActiveFile: (file) => {
     set({ activeFile: file })
     const state = get()

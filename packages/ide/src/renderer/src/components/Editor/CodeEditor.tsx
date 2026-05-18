@@ -266,7 +266,7 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
   const fileUri = filePath ? toFileUri(filePath) : undefined
 
   return (
-    <div className="w-full h-full overflow-hidden rounded-lg border border-surface-700 bg-[#1e1e1e]">
+    <div className="w-full h-full overflow-hidden bg-[#1e1e1e]">
       <Editor
         height="100%"
         defaultLanguage={language}
