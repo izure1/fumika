@@ -240,14 +240,6 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
                   </select>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={handleBrowseImage}
-                  className="px-3 py-1 bg-primary-600 hover:bg-primary-500 text-white rounded text-xs font-medium shadow"
-                >
-                  배경 에셋 선택
-                </button>
-              </div>
             </div>
           </div>
 

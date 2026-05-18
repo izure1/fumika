@@ -47,15 +47,16 @@ export function EffectFormEditor({ content, onChange, filePath }: Props) {
   
   const [confirmState, setConfirmState] = useState<any>(null)
 
-  // 프로젝트 배경 목록 불러오기
+  // declarations/backgrounds.ts를 파싱하여 배경 키 목록 추출 (하위 폴더 포함)
   useEffect(() => {
     if (!projectPath) return
-    window.api.fs.readDir(`${projectPath}/backgrounds`).then(res => {
-      if (res.success && res.files) {
-        const bgs = res.files
-          .filter((f: any) => !f.isDirectory && f.name.endsWith('.ts'))
-          .map((f: any) => f.name.replace('.ts', ''))
-        setBackgroundList(bgs)
+
+    window.api.fs.readFile(`${projectPath}/declarations/backgrounds.ts`).then(res => {
+      if (res.success && res.content) {
+        // `'folder/name': _var,` 또는 `'name': _var,` 패턴에서 키 추출
+        const keys = [...res.content.matchAll(/^\s*'([^']+)'\s*:/gm)]
+          .map(m => m[1])
+        setBackgroundList(keys)
       }
     }).catch(() => {})
   }, [projectPath])

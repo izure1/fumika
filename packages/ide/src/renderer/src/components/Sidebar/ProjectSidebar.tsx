@@ -291,7 +291,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     setConfirmState({
       isOpen: true,
       title: '프로젝트 업데이트',
-      message: '프로젝트의 누락된 설정 파일을 복구하고 최신 버전의 엔진 의존성을 설치하시겠습니까?\n(이 작업은 네트워크 환경에 따라 수십 초 정도 소요될 수 있습니다)',
+      message: '프로젝트의 누락된 설정 파일을 복구하고 \n최신 버전의 엔진 의존성을 설치하시겠습니까?\n\n(이 작업은 네트워크 환경에 따라 수십 초 정도 소요될 수 있습니다)',
       type: 'info',
       onConfirm: async () => {
         setConfirmState(null)

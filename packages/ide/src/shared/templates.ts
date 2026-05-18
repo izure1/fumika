@@ -293,7 +293,7 @@ const FILE_TEMPLATE_GENERATORS: Partial<
   Record<DeclarationFolder, (safeName: string, relativeDots: string) => string>
 > = {
   scenes: (_, _relativeDots) =>
-    `import { defineScene } from 'fumika'\nimport config from '@/novel.config'\nimport Initials from '@/declarations/initials'\nimport Hooks from '@/declarations/hooks'\n\nexport default defineScene({\n  config,\n  variables: {},\n  // next: { scene: '', preserve: true },\n  // initial: Initials[''],\n  // hooks: Hooks['']\n})(({ label, goto, call, set, condition, next }) => [\n\n])\n`,
+    `import { defineScene } from 'fumika'\nimport config from '@/novel.config'\nimport Initials from '@/declarations/initials'\nimport Hooks from '@/declarations/hooks'\n\nexport default defineScene({\n  config,\n  variables: {},\n  // next: { scene: '', preserve: true },\n  // initial: Initials[''],\n  // hooks: Hooks[''],\n})(({ label, goto, call, set, condition, next }) => [\n\n])\n`,
 
   characters: (safeName, _relativeDots) =>
     `import { defineCharacter } from 'fumika'\nimport assets from '@/declarations/assets'\n\nexport default defineCharacter(assets)({\n  name: '${safeName}',\n  bases: { },\n  emotions: { }\n})\n`,
