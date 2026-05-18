@@ -214,9 +214,12 @@ export function getViteConfigContent(): string {
 
 export default defineConfig(({ mode }) => {
   const isLibrary = process.env.BUILD_TARGET === 'library'
+  const outDir = process.env.BUILD_TIME ? \`dist/\${process.env.BUILD_TIME}\` : 'dist'
 
   return {
     build: {
+      outDir,
+      emptyOutDir: true,
       lib: isLibrary ? {
         entry: 'main.ts',
         name: 'FumikaGame',

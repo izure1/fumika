@@ -239,7 +239,7 @@ export async function scaffoldProject(targetDir: string, options: ProjectOptions
 /**
  * 프로젝트 빌드 (Vite 정적 웹 빌드)
  */
-export async function buildProject(targetDir: string, options?: { target: string }): Promise<void> {
+export async function buildProject(targetDir: string, options?: { target: string }): Promise<string> {
   // 항상 최신 템플릿으로 vite.config.ts를 덮어씁니다. (구버전 충돌 방지)
   const viteConfigPath = path.join(targetDir, 'vite.config.ts')
   await fs.writeFile(viteConfigPath, getViteConfigContent(), 'utf-8')
@@ -260,9 +260,15 @@ export async function buildProject(targetDir: string, options?: { target: string
 
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
   
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<string>((resolve, reject) => {
     const env = { ...process.env }
     let isLibraryTs = false
+
+    const now = new Date()
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+    env.BUILD_TIME = timestamp
+    const outDir = `dist/${timestamp}`
 
     if (options?.target) {
       if (options.target === 'library-ts' || options.target === 'library-js') {
@@ -293,7 +299,7 @@ export async function buildProject(targetDir: string, options?: { target: string
                 noEmit: false,
                 declaration: true,
                 emitDeclarationOnly: true,
-                outDir: "./dist/types"
+                outDir: `./${outDir}/types`
               },
               include: ["**/*.ts"]
             }, null, 2)
@@ -312,14 +318,14 @@ export async function buildProject(targetDir: string, options?: { target: string
                 reject(tscErr)
               } else {
                 console.log('[IDE] TS Declarations generated successfully')
-                resolve()
+                resolve(outDir)
               }
             })
           } catch (e) {
             reject(e)
           }
         } else {
-          resolve()
+          resolve(outDir)
         }
       }
     })

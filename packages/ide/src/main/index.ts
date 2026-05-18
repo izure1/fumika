@@ -202,12 +202,12 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('project:build', async (_, projectPath: string) => {
+  ipcMain.handle('project:build', async (_, projectPath: string, options?: { target: string }) => {
     try {
-      await buildProject(projectPath)
+      const outDir = await buildProject(projectPath, options)
       const path = require('path')
-      const distPath = path.join(projectPath, 'dist')
-      await shell.openPath(distPath)
+      const fullPath = path.join(projectPath, outDir)
+      await shell.openPath(fullPath)
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
