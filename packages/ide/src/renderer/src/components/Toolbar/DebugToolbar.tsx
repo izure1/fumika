@@ -15,7 +15,9 @@ export function DebugToolbar() {
     setIsGraphOpen,
     isTsChecking,
     setTsErrors,
-    setIsTsChecking
+    setIsTsChecking,
+    isBuilding,
+    setIsBuilding
   } = useProjectStore()
 
   const { addToast } = useToastStore()
@@ -54,6 +56,24 @@ export function DebugToolbar() {
       addToast(err.message, 'error')
     } finally {
       setIsTsChecking(false)
+    }
+  }
+
+  const runBuild = async () => {
+    if (!projectPath || isBuilding) return
+    setIsBuilding(true)
+    try {
+      addToast('프로젝트 빌드를 시작합니다. (터미널에서 빌드 진행)', 'info')
+      const res = await window.api.project.build(projectPath)
+      if (res.success) {
+        addToast('빌드가 성공적으로 완료되었습니다!', 'success')
+      } else {
+        addToast('빌드 실패: ' + res.error, 'error')
+      }
+    } catch (err: any) {
+      addToast(err.message, 'error')
+    } finally {
+      setIsBuilding(false)
     }
   }
 
@@ -129,6 +149,27 @@ export function DebugToolbar() {
         )}
         Verify File
       </button>
+
+      <button
+        onClick={runBuild}
+        disabled={isBuilding || isTsChecking}
+        className={`flex items-center justify-center rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
+          isBuilding || isTsChecking
+            ? 'bg-surface-800 text-surface-500 cursor-not-allowed opacity-50'
+            : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
+        }`}
+      >
+        {isBuilding ? (
+          <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mr-1" />
+        ) : (
+          <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+        )}
+        Build Project
+      </button>
+
+      <div className="w-px h-4 bg-surface-700 mx-1"></div>
 
       {previewUrl ? (
         <>

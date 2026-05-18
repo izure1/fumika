@@ -73,7 +73,8 @@ export async function ensureProjectDependencies(targetDir: string, processName?:
       version: '0.0.0',
       type: 'module',
       scripts: {
-        dev: 'vite'
+        dev: 'vite',
+        build: 'vite build'
       }
     }
     await fs.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2), 'utf-8')
@@ -226,4 +227,37 @@ export async function updateProject(targetDir: string): Promise<void> {
 export async function scaffoldProject(targetDir: string, options: ProjectOptions): Promise<void> {
   await ensureProjectStructure(targetDir, options)
   await ensureProjectDependencies(targetDir, options.processName)
+}
+
+/**
+ * 프로젝트 빌드 (Vite 정적 웹 빌드)
+ */
+export async function buildProject(targetDir: string): Promise<void> {
+  // 하위 호환성을 위해 package.json에 build 스크립트가 없다면 추가
+  const packageJsonPath = path.join(targetDir, 'package.json')
+  try {
+    const content = await fs.readFile(packageJsonPath, 'utf-8')
+    const pkg = JSON.parse(content)
+    if (!pkg.scripts?.build) {
+      pkg.scripts = pkg.scripts || {}
+      pkg.scripts.build = 'vite build'
+      await fs.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2), 'utf-8')
+    }
+  } catch (e) {
+    console.warn('[IDE] Failed to verify package.json for build script:', e)
+  }
+
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+  
+  return new Promise<void>((resolve, reject) => {
+    execFile(npmCmd, ['run', 'build'], { cwd: targetDir, shell: true }, (err, stdout, stderr) => {
+      if (err) {
+        console.error('[IDE] Build failed:', stderr)
+        reject(err)
+      } else {
+        console.log('[IDE] Build success:', stdout)
+        resolve()
+      }
+    })
+  })
 }

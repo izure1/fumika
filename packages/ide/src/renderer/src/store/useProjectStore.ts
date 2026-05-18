@@ -23,6 +23,7 @@ interface ProjectState {
   pendingLine: number | null
   tsErrors: Record<string, TsError[]>
   isTsChecking: boolean
+  isBuilding: boolean
   setProjectPath: (path: string | null) => void
   setActiveFile: (file: string | null) => void
   setGlobalLoading: (loading: boolean) => void
@@ -37,6 +38,7 @@ interface ProjectState {
   setPendingLine: (line: number | null) => void
   setTsErrors: (errors: Record<string, TsError[]>) => void
   setIsTsChecking: (checking: boolean) => void
+  setIsBuilding: (building: boolean) => void
   initSettings: () => Promise<void>
 }
 
@@ -55,6 +57,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   pendingLine: null,
   tsErrors: {},
   isTsChecking: false,
+  isBuilding: false,
   setProjectPath: (path) => set({ projectPath: path, activeFile: null, isPreviewOpen: true, tsErrors: {} }),
   setActiveFile: (file) => {
     set({ activeFile: file })
@@ -84,6 +87,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setPendingLine: (line) => set({ pendingLine: line }),
   setTsErrors: (errors) => set({ tsErrors: errors }),
   setIsTsChecking: (checking) => set({ isTsChecking: checking }),
+  setIsBuilding: (building) => set({ isBuilding: building }),
   initSettings: async () => {
     try {
       const res = await window.api.settings.get()

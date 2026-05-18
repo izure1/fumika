@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { scaffoldProject, updateProject, ensureEffectsFiles } from './services/project'
+import { scaffoldProject, updateProject, ensureEffectsFiles, buildProject } from './services/project'
 import { ProjectWatcher } from './services/watcher'
 import { PreviewService } from './services/preview'
 import { settingsService } from './services/settings'
@@ -170,6 +170,18 @@ app.whenReady().then(() => {
   ipcMain.handle('project:update', async (_, projectPath: string) => {
     try {
       await updateProject(projectPath)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('project:build', async (_, projectPath: string) => {
+    try {
+      await buildProject(projectPath)
+      const path = require('path')
+      const distPath = path.join(projectPath, 'dist')
+      await shell.openPath(distPath)
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
