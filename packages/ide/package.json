@@ -30,7 +30,6 @@
     "fumika": "*",
     "lucide-react": "^1.16.0",
     "sharp": "^0.34.5",
-    "vite": "^7.2.6",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
@@ -45,6 +44,7 @@
     "electron": "39.2.6",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",
+    "vite": "^7.2.6",
     "eslint": "^9.39.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
