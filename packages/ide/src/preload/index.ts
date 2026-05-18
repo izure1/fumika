@@ -12,6 +12,7 @@ const api = {
     load: (projectPath: string) => ipcRenderer.invoke('project:load', projectPath),
     update: (projectPath: string) => ipcRenderer.invoke('project:update', projectPath),
     build: (projectPath: string, options?: { target: string }) => ipcRenderer.invoke('project:build', projectPath, options),
+    selectIcon: (projectPath: string) => ipcRenderer.invoke('project:selectIcon', projectPath),
     getTypes: (projectPath: string) => ipcRenderer.invoke('project:getTypes', projectPath),
     checkTypes: (projectPath: string) => ipcRenderer.invoke('project:checkTypes', projectPath),
     getTsFileCache: () => ipcRenderer.invoke('project:getTsFileCache'),

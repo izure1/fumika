@@ -29,6 +29,7 @@
     "electron-updater": "^6.3.9",
     "fumika": "*",
     "lucide-react": "^1.16.0",
+    "sharp": "^0.34.5",
     "vite": "^7.2.6",
     "zustand": "^5.0.13"
   },

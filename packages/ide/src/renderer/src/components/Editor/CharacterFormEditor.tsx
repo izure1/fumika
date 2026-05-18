@@ -321,7 +321,7 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
 
     // 이모션 오버레이 그리기
     if (activeEmotion && parsed.emotions[activeEmotion]) {
-      Object.entries(parsed.emotions[activeEmotion]).forEach(([slot, src]) => {
+      Object.entries(parsed.emotions[activeEmotion]).forEach(([slot]) => {
         const img = emotionImgsRef.current[slot]
         const pt = base.points[slot]
         if (img && pt) {

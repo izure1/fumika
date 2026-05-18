@@ -196,6 +196,7 @@ export function getIndexHtmlContent(gameName: string): string {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${gameName}</title>
+    <link rel="icon" type="image/png" href="./icon.png" />
     <style>
       body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
       #app { width: 100%; height: 100%; }
@@ -211,7 +212,30 @@ export function getIndexHtmlContent(gameName: string): string {
 
 export function getViteConfigContent(options?: { pwa?: boolean }): string {
   const pwaImport = options?.pwa ? `\nimport { VitePWA } from 'vite-plugin-pwa'` : ''
-  const pwaPlugin = options?.pwa ? `\n    plugins: [\n      VitePWA({\n        registerType: 'autoUpdate',\n        manifest: {\n          name: 'Fumika Game',\n          short_name: 'Fumika',\n          theme_color: '#000000',\n          background_color: '#000000',\n          display: 'standalone'\n        }\n      })\n    ],` : ''
+  const pwaPlugin = options?.pwa ? `\n    plugins: [
+      VitePWA({
+        registerType: 'autoUpdate',
+        manifest: {
+          name: 'Fumika Game',
+          short_name: 'Fumika',
+          theme_color: '#000000',
+          background_color: '#000000',
+          display: 'standalone',
+          icons: [
+            {
+              src: 'pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png'
+            },
+            {
+              src: 'pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png'
+            }
+          ]
+        }
+      })
+    ],` : ''
 
   return `import { defineConfig } from 'vite'${pwaImport}
 

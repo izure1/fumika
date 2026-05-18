@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useProjectStore } from '../../store/useProjectStore'
 
 export type BuildTarget = 'static' | 'library-js' | 'library-ts' | 'pwa'
 
@@ -12,21 +13,84 @@ interface BuildDialogProps {
 }
 
 export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
+  const { projectPath } = useProjectStore()
   const [mainCategory, setMainCategory] = useState<MainCategory>('web')
   const [selectedTarget, setSelectedTarget] = useState<BuildTarget>('static')
+  const [showIconMissing, setShowIconMissing] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
+  const [iconError, setIconError] = useState('')
 
   // ESC 키를 누르면 닫히도록 설정
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape' && isOpen && !showIconMissing) {
         onClose()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, showIconMissing])
 
   if (!isOpen) return null
+
+  if (showIconMissing) {
+    return createPortal(
+      <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="bg-surface-800 border border-surface-700 p-6 rounded-md shadow-2xl w-full max-w-[520px] mx-4 animate-fade-scale flex flex-col">
+          <h3 className="text-lg font-bold text-white mb-2">프로젝트 아이콘 필요</h3>
+          <p className="text-sm text-surface-400 mb-4">
+            빌드를 위해 프로젝트 아이콘(assets/icon.png)이 필수적으로 필요합니다. <br />
+            512x512 해상도 이상의 이미지를 선택해주세요.
+          </p>
+
+          {iconError && (
+            <div className="mb-4 text-xs text-red-400 bg-red-400/10 p-2 rounded border border-red-400/20">
+              {iconError}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-surface-700">
+            <button
+              onClick={() => {
+                setShowIconMissing(false)
+                setIconError('')
+              }}
+              className="px-4 py-2 text-sm font-medium text-surface-300 hover:text-white hover:bg-surface-700 rounded transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={async () => {
+                if (!projectPath) return
+                setIconError('')
+                setIsChecking(true)
+                const res = await window.api.project.selectIcon(projectPath)
+                setIsChecking(false)
+                
+                if (res.success) {
+                  setShowIconMissing(false)
+                  onConfirm(selectedTarget)
+                  onClose()
+                } else if (res.error !== '선택이 취소되었습니다.') {
+                  setIconError(res.error || '알 수 없는 오류가 발생했습니다.')
+                }
+              }}
+              disabled={isChecking}
+              className={`px-4 py-2 text-sm font-semibold rounded transition-colors flex items-center gap-2 ${
+                isChecking
+                  ? 'bg-surface-700 text-surface-500 cursor-not-allowed'
+                  : 'bg-primary-600 hover:bg-primary-500 text-white'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+              {isChecking ? '처리 중...' : '탐색기 열기'}
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -183,20 +247,35 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
             Cancel
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
               if (mainCategory === 'web') {
-                onConfirm(selectedTarget)
-                onClose()
+                if (!projectPath) return
+                setIsChecking(true)
+                const res = await window.api.fs.checkExists(`${projectPath}/assets/icon.png`)
+                setIsChecking(false)
+                
+                if (!res.exists) {
+                  setShowIconMissing(true)
+                } else {
+                  onConfirm(selectedTarget)
+                  onClose()
+                }
               }
             }}
-            disabled={mainCategory !== 'web'}
-            className={`px-4 py-2 text-sm font-semibold rounded transition-colors ${
-              mainCategory === 'web'
+            disabled={mainCategory !== 'web' || isChecking}
+            className={`px-4 py-2 text-sm font-semibold rounded transition-colors flex items-center gap-2 ${
+              mainCategory === 'web' && !isChecking
                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                 : 'bg-surface-700 text-surface-500 cursor-not-allowed'
             }`}
           >
-            Start Build
+            {isChecking && (
+              <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
+            {isChecking ? '확인 중...' : 'Start Build'}
           </button>
         </div>
       </div>
