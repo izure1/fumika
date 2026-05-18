@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, protocol, Notification } from 'electron'
 import path, { join } from 'node:path'
 import { promises as fs } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -237,7 +237,7 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('project:build', async (_, projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean }) => {
+  ipcMain.handle('project:build', async (event, projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean }) => {
     try {
       const iconPath = path.join(projectPath, 'assets', 'icon.png')
       let hasIcon = true
@@ -248,17 +248,21 @@ app.whenReady().then(() => {
         hasIcon = false
       }
 
-      if (!hasIcon) {
-        return { success: false, error: 'ICON_MISSING' }
+      if ((options?.target === 'windows' || options?.target === 'pwa') && !hasIcon) {
+        return { success: false, error: '프로젝트 아이콘이 필요합니다.' }
       }
+
+
 
       const publicDir = path.join(projectPath, 'public')
       await fs.mkdir(publicDir, { recursive: true })
       
       // Favicon용으로 icon.png 복사
-      await fs.copyFile(iconPath, path.join(publicDir, 'icon.png'))
+      if (hasIcon) {
+        await fs.copyFile(iconPath, path.join(publicDir, 'icon.png'))
+      }
 
-      if (options?.target === 'pwa') {
+      if (options?.target === 'pwa' && hasIcon) {
         await sharp(iconPath)
           .resize(192, 192)
           .png()
@@ -270,9 +274,20 @@ app.whenReady().then(() => {
           .toFile(path.join(publicDir, 'pwa-512x512.png'))
       }
 
-      const outDir = await buildProject(projectPath, options)
+      const outDir = await buildProject(projectPath, options, (msg) => {
+        event.sender.send('output:log', { channel: 'Build', message: `${msg}` })
+      })
       const fullPath = path.join(projectPath, outDir)
       await shell.openPath(fullPath)
+      
+      if (Notification.isSupported()) {
+        new Notification({
+          title: 'Fumika IDE 빌드 완료',
+          body: `프로젝트 빌드가 성공적으로 완료되었습니다! (${options?.target?.toUpperCase() || 'WEB'})`,
+          icon: hasIcon ? iconPath : icon
+        }).show()
+      }
+
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }

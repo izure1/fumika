@@ -1,7 +1,56 @@
 import { promises as fs } from 'fs'
 import path from 'path'
-import { execFile } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import prettier from 'prettier'
+import licenseContent from '../../../LICENSE?raw'
+import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, getDeclarationTemplate, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent } from '../../shared/templates'
+
+async function runCommandLive(
+  cmd: string,
+  args: string[],
+  options: { cwd: string, env?: any },
+  onLog?: (msg: string) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, {
+      cwd: options.cwd,
+      env: options.env || process.env,
+      shell: true,
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
+
+    child.stdout.on('data', (data) => {
+      const lines = data.toString().split('\n')
+      lines.forEach((line: string) => {
+        const msg = line.trim()
+        if (msg) {
+          if (onLog) onLog(msg)
+          else console.log(msg)
+        }
+      })
+    })
+
+    child.stderr.on('data', (data) => {
+      const lines = data.toString().split('\n')
+      lines.forEach((line: string) => {
+        const msg = line.trim()
+        if (msg) {
+          if (onLog) onLog(msg)
+          else console.warn(msg)
+        }
+      })
+    })
+
+    child.on('error', (err) => {
+      reject(err)
+    })
+
+    child.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(`Command failed with exit code ${code}`))
+    })
+  })
+}
 
 const DEFAULT_FOLDERS = [
   'assets',
@@ -13,8 +62,6 @@ const DEFAULT_FOLDERS = [
   'effects',
   'fallbacks'
 ]
-
-import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, getDeclarationTemplate, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent } from '../../shared/templates'
 
 export interface ProjectOptions {
   gameName: string
@@ -189,29 +236,7 @@ export async function ensureProjectStructure(targetDir: string, options?: Partia
   try {
     await fs.access(licensePath)
   } catch {
-    const MIT_LICENSE = `MIT License
-
-Copyright (c) ${new Date().getFullYear()}
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-`
-    await fs.writeFile(licensePath, MIT_LICENSE, 'utf-8')
+    await fs.writeFile(licensePath, licenseContent, 'utf-8')
   }
 
   const viteConfigPath = path.join(targetDir, 'vite.config.ts')
@@ -255,23 +280,24 @@ async function copyProjectAssets(targetDir: string, outDir: string) {
 /**
  * 프로젝트 빌드 (Vite 정적 웹 빌드 및 플랫폼별 패키징)
  */
-export async function buildProject(targetDir: string, options?: { target: string, resizable?: boolean, installer?: boolean }): Promise<string> {
+export async function buildProject(targetDir: string, options?: { target: string, resizable?: boolean, installer?: boolean }, onLog?: (msg: string) => void): Promise<string> {
+  const log = (msg: string) => {
+    console.log(msg)
+    if (onLog) onLog(msg)
+  }
+
   const isPwa = options?.target === 'pwa'
   const isWindows = options?.target === 'windows'
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
   if (isPwa) {
-    console.log('[IDE] Ensuring vite-plugin-pwa is installed for PWA build...')
-    await new Promise<void>((resolve, reject) => {
-      execFile(npmCmd, ['install', '--save-dev', 'vite-plugin-pwa'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
-        if (err) {
-          console.error('[IDE] npm install vite-plugin-pwa failed:', stderr)
-          reject(err)
-        } else {
-          resolve()
-        }
-      })
-    })
+    log('[IDE] Ensuring vite-plugin-pwa is installed for PWA build...')
+    try {
+      await runCommandLive(npmCmd, ['install', '--save-dev', 'vite-plugin-pwa'], { cwd: targetDir }, onLog)
+    } catch (e: any) {
+      log(`[IDE] npm install vite-plugin-pwa failed: ${e.message}`)
+      throw e
+    }
   }
 
   // 항상 최신 템플릿으로 vite.config.ts를 덮어씁니다. (구버전 충돌 방지)
@@ -314,157 +340,155 @@ export async function buildProject(targetDir: string, options?: { target: string
       }
     }
 
-    execFile(npmCmd, ['run', 'build'], { cwd: targetDir, env, shell: true }, async (err, stdout, stderr) => {
-      if (err) {
-        console.error('[IDE] Build failed:', stderr)
-        reject(err)
-      } else {
-        console.log('[IDE] Vite build success:', stdout)
+    log(`[IDE] Starting Vite build (Target: ${env.BUILD_TARGET})...`)
 
-        if (isLibraryTs) {
+    runCommandLive(npmCmd, ['run', 'build'], { cwd: targetDir, env }, onLog).then(async () => {
+      log('[IDE] Vite build success')
+
+      if (isLibraryTs) {
+        try {
+          log('[IDE] Starting TSC declaration generation...')
+          const tsconfigBuildPath = path.join(targetDir, 'tsconfig.build.json')
+          const tsconfigBuildContent = JSON.stringify({
+            extends: "./tsconfig.json",
+            compilerOptions: {
+              noEmit: false,
+              declaration: true,
+              emitDeclarationOnly: true,
+              noEmitOnError: false,
+              outDir: `./${outDir}/types`
+            },
+            include: ["**/*.ts"]
+          }, null, 2)
+          await fs.writeFile(tsconfigBuildPath, tsconfigBuildContent, 'utf-8')
+
+          const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
           try {
-            console.log('[IDE] Starting TSC declaration generation...')
-            const tsconfigBuildPath = path.join(targetDir, 'tsconfig.build.json')
-            const tsconfigBuildContent = JSON.stringify({
-              extends: "./tsconfig.json",
-              compilerOptions: {
-                noEmit: false,
-                declaration: true,
-                emitDeclarationOnly: true,
-                noEmitOnError: false,
-                outDir: `./${outDir}/types`
-              },
-              include: ["**/*.ts"]
-            }, null, 2)
-            await fs.writeFile(tsconfigBuildPath, tsconfigBuildContent, 'utf-8')
+            await runCommandLive(npxCmd, ['tsc', '-p', 'tsconfig.build.json'], { cwd: targetDir, env }, onLog)
+            log('[IDE] TS Declarations generated successfully')
+          } catch (tscErr: any) {
+            log(`[IDE] TSC build finished with warnings/errors: ${tscErr.message}`)
+          }
 
-            const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-            execFile(npxCmd, ['tsc', '-p', 'tsconfig.build.json'], { cwd: targetDir, env, shell: true }, async (tscErr, tscStdout, tscStderr) => {
-              try {
-                await fs.unlink(tsconfigBuildPath) // cleanup
-              } catch (e) {
-                console.warn('[IDE] Failed to cleanup tsconfig.build.json:', e)
-              }
-
-              if (tscErr) {
-                console.warn('[IDE] TSC build finished with warnings/errors:', tscStderr || tscStdout)
-              } else {
-                console.log('[IDE] TS Declarations generated successfully')
-              }
-              await copyProjectAssets(targetDir, outDir)
-              resolve(outDir)
-            })
+          try {
+            await fs.unlink(tsconfigBuildPath) // cleanup
           } catch (e) {
-            reject(e)
+            log(`[IDE] Failed to cleanup tsconfig.build.json: ${e}`)
           }
-        } else if (isWindows) {
-          try {
-            await copyProjectAssets(targetDir, outDir)
-            console.log('[IDE] Starting Windows Packaging...')
-            
-            let width = 1920
-            let height = 1080
-            try {
-              const configContent = await fs.readFile(path.join(targetDir, 'novel.config.ts'), 'utf-8')
-              const widthMatch = configContent.match(/width:\s*(\d+)/)
-              if (widthMatch) width = parseInt(widthMatch[1])
-              
-              const heightMatch = configContent.match(/height:\s*(\d+)/)
-              if (heightMatch) height = parseInt(heightMatch[1])
-            } catch (e) {
-              console.warn('[IDE] Failed to parse novel.config.ts for build:', e)
-            }
 
-            const distPath = path.join(targetDir, outDir)
-            await fs.writeFile(path.join(distPath, 'package.json'), JSON.stringify({
-              name: 'fumika-game',
-              version: '1.0.0',
-              main: 'main.js',
-              build: {
-                appId: 'com.fumika.game',
-                productName: 'FumikaGame',
-                directories: {
-                  output: '../windows_build'
-                },
-                win: {
-                  target: options?.installer ? ['nsis'] : ['portable'],
-                  icon: '../../public/icon.png'
-                },
-                asar: true
-              }
-            }, null, 2), 'utf-8')
-
-            const mainJsContent = `const { app, BrowserWindow } = require('electron')
-
-app.whenReady().then(() => {
-  const win = new BrowserWindow({
-    width: ${width},
-    height: ${height},
-    useContentSize: true,
-    resizable: ${options?.resizable ? 'true' : 'false'},
-    autoHideMenuBar: true,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true
-    }
-  })
-  
-  try {
-    win.setAspectRatio(${width} / ${height})
-  } catch (e) {
-    // Ignore if not supported on this platform
-  }
-
-  win.loadFile('index.html')
-})
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
-`
-            await fs.writeFile(path.join(distPath, 'main.js'), mainJsContent, 'utf-8')
-
-            console.log('[IDE] Ensuring electron and electron-builder are installed...')
-            await new Promise<void>((res, rej) => {
-              execFile(npmCmd, ['install', '--save-dev', 'electron', 'electron-builder'], { cwd: targetDir, shell: true }, (installErr, installStdout, installStderr) => {
-                if (installErr) {
-                  console.error('[IDE] Failed to install electron/builder:', installStderr)
-                  rej(installErr)
-                } else {
-                  res()
-                }
-              })
-            })
-
-            console.log('[IDE] Running electron-builder...')
-            const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-            await new Promise<void>((res, rej) => {
-              const packagerArgs = [
-                'electron-builder',
-                '--project',
-                `./${outDir}`,
-                '--win'
-              ]
-              
-              execFile(npxCmd, packagerArgs, { cwd: targetDir, shell: true }, (packErr, packStdout, packStderr) => {
-                if (packErr) {
-                  console.error('[IDE] electron-builder failed:', packStderr)
-                  rej(packErr)
-                } else {
-                  res()
-                }
-              })
-            })
-
-            resolve('dist/windows_build')
-          } catch (err) {
-            reject(err)
-          }
-        } else {
           await copyProjectAssets(targetDir, outDir)
           resolve(outDir)
+        } catch (e) {
+          reject(e)
         }
+      } else if (isWindows) {
+        try {
+          await copyProjectAssets(targetDir, outDir)
+          log('[IDE] Starting Windows Packaging...')
+
+          let width = 1920
+          let height = 1080
+          try {
+            const configContent = await fs.readFile(path.join(targetDir, 'novel.config.ts'), 'utf-8')
+            const widthMatch = configContent.match(/width:\s*(\d+)/)
+            if (widthMatch) width = parseInt(widthMatch[1])
+
+            const heightMatch = configContent.match(/height:\s*(\d+)/)
+            if (heightMatch) height = parseInt(heightMatch[1])
+          } catch (e) {
+            log(`[IDE] Failed to parse novel.config.ts for build: ${e}`)
+          }
+
+          const distPath = path.join(targetDir, outDir)
+          // 앱 런타임 구동용 package.json
+          await fs.writeFile(path.join(distPath, 'package.json'), getAppPackageJsonContent(), 'utf-8')
+
+          // electron 버전 추출
+          let electronVersion = '28.2.0'
+          try {
+            const pkgContent = await fs.readFile(path.join(targetDir, 'node_modules', 'electron', 'package.json'), 'utf-8')
+            electronVersion = JSON.parse(pkgContent).version
+          } catch (e) {
+            log(`[IDE] Warning: Could not detect electron version, fallback to ${electronVersion}`)
+          }
+
+          const outWindowsDir = `dist/${timestamp}_windows`
+
+          // 패키징 전용 빌드 설정 파일 (루트에 임시 생성)
+          const builderConfigPath = path.join(targetDir, 'electron-builder.json')
+          await fs.writeFile(builderConfigPath, getElectronBuilderConfigContent(electronVersion, outDir, outWindowsDir, !!options?.installer), 'utf-8')
+
+          const mainJsContent = getElectronMainContent(width, height, !!options?.resizable)
+          await fs.writeFile(path.join(distPath, 'main.js'), mainJsContent, 'utf-8')
+
+          log('[IDE] Ensuring electron and electron-builder are installed...')
+          try {
+            await runCommandLive(npmCmd, ['install', '--save-dev', 'electron', 'electron-builder'], { cwd: targetDir }, onLog)
+          } catch (installErr: any) {
+            log(`[IDE] Failed to install electron/builder: ${installErr.message}`)
+            throw installErr
+          }
+
+          log('[IDE] Running electron-builder...')
+          const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
+          try {
+            const packagerArgs = [
+              'electron-builder',
+              '--config',
+              'electron-builder.json',
+              '--win'
+            ]
+            await runCommandLive(npxCmd, packagerArgs, { cwd: targetDir }, onLog)
+            try {
+              await fs.unlink(builderConfigPath)
+            } catch (e) {}
+            
+            // 빌드 결과물 정리 로직
+            const fullOutWindowsDir = path.join(targetDir, outWindowsDir)
+            
+            // 무설치판(dir)일 경우 win-unpacked의 모든 파일을 바깥으로 꺼내고 폴더 삭제
+            if (!options?.installer) {
+              const unpackedDir = path.join(fullOutWindowsDir, 'win-unpacked')
+              try {
+                const files = await fs.readdir(unpackedDir)
+                for (const file of files) {
+                  await fs.rename(path.join(unpackedDir, file), path.join(fullOutWindowsDir, file))
+                }
+                await fs.rm(unpackedDir, { recursive: true, force: true })
+              } catch (e) {
+                log(`[IDE] Warning: Failed to cleanup win-unpacked folder: ${e}`)
+              }
+            }
+
+            // 디버그용 yml 찌꺼기 파일 삭제
+            try {
+              const filesInOut = await fs.readdir(fullOutWindowsDir)
+              for (const file of filesInOut) {
+                if (file.endsWith('.yml') || file.endsWith('.yaml')) {
+                  await fs.unlink(path.join(fullOutWindowsDir, file)).catch(() => {})
+                }
+              }
+            } catch (e) {}
+
+          } catch (packErr: any) {
+            try {
+              await fs.unlink(builderConfigPath)
+            } catch (e) {}
+            log(`[IDE] electron-builder failed: ${packErr.message}`)
+            throw packErr
+          }
+
+          resolve(outWindowsDir)
+        } catch (err) {
+          reject(err)
+        }
+      } else {
+        await copyProjectAssets(targetDir, outDir)
+        resolve(outDir)
       }
+    }).catch(err => {
+      log(`[IDE] Build failed: ${err.message}`)
+      reject(err)
     })
   })
 }

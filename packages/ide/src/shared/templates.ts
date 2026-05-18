@@ -210,6 +210,70 @@ export function getIndexHtmlContent(gameName: string): string {
 `
 }
 
+export function getElectronMainContent(width: number, height: number, resizable: boolean): string {
+  return `const { app, BrowserWindow } = require('electron')
+
+app.whenReady().then(() => {
+  const win = new BrowserWindow({
+    width: ${width},
+    height: ${height},
+    useContentSize: true,
+    resizable: ${resizable ? 'true' : 'false'},
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  })
+  
+  try {
+    win.setAspectRatio(${width} / ${height})
+  } catch (e) {
+    // Ignore if not supported on this platform
+  }
+
+  win.loadFile('index.html')
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
+`
+}
+
+export function getAppPackageJsonContent(): string {
+  return JSON.stringify({
+    name: 'fumika-game',
+    version: '1.0.0',
+    main: 'main.js',
+    author: 'Fumika',
+    description: 'Fumika Visual Novel'
+  }, null, 2)
+}
+
+export function getElectronBuilderConfigContent(
+  electronVersion: string,
+  appDir: string,
+  outWindowsDir: string,
+  isInstaller: boolean
+): string {
+  return JSON.stringify({
+    appId: 'com.fumika.game',
+    productName: 'FumikaGame',
+    electronVersion,
+    directories: {
+      app: appDir,
+      output: outWindowsDir
+    },
+    win: {
+      target: isInstaller ? ['nsis'] : ['dir'],
+      icon: 'public/icon.png'
+    },
+    asar: true
+  }, null, 2)
+}
+
+
 export function getViteConfigContent(options?: { pwa?: boolean }): string {
   const pwaImport = options?.pwa ? `\nimport { VitePWA } from 'vite-plugin-pwa'` : ''
   const pwaPlugin = options?.pwa ? `\n    plugins: [
