@@ -118,7 +118,7 @@ export async function ensureProjectDependencies(targetDir: string, processName?:
           console.error('[IDE] npm install fumika failed:', stderr)
           reject(err)
         } else {
-          execFile(npmCmd, ['install', '--save-dev', 'vite', 'typescript@6', 'vite-plugin-pwa'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
+          execFile(npmCmd, ['install', '--save-dev', 'vite', 'typescript@6', 'vite-plugin-pwa', '@types/node'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
             if (err) {
               console.error('[IDE] npm install vite failed:', stderr)
               reject(err)
@@ -290,14 +290,14 @@ export async function buildProject(targetDir: string, options?: { target: string
   } catch (e) {
     console.warn('[IDE] Failed to verify package.json for build script:', e)
   }
-  
+
   return new Promise<string>((resolve, reject) => {
     const env = { ...process.env }
     let isLibraryTs = false
 
     const now = new Date()
     const pad = (n: number) => n.toString().padStart(2, '0')
-    const timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
     env.BUILD_TIME = timestamp
     const outDir = `dist/${timestamp}`
 
@@ -307,7 +307,7 @@ export async function buildProject(targetDir: string, options?: { target: string
       } else {
         env.BUILD_TARGET = options.target
       }
-      
+
       if (options.target === 'library-ts') {
         isLibraryTs = true
       }
@@ -319,7 +319,7 @@ export async function buildProject(targetDir: string, options?: { target: string
         reject(err)
       } else {
         console.log('[IDE] Vite build success:', stdout)
-        
+
         if (isLibraryTs) {
           try {
             console.log('[IDE] Starting TSC declaration generation...')
@@ -336,7 +336,7 @@ export async function buildProject(targetDir: string, options?: { target: string
               include: ["**/*.ts"]
             }, null, 2)
             await fs.writeFile(tsconfigBuildPath, tsconfigBuildContent, 'utf-8')
-            
+
             const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
             execFile(npxCmd, ['tsc', '-p', 'tsconfig.build.json'], { cwd: targetDir, env, shell: true }, async (tscErr, tscStdout, tscStderr) => {
               try {
@@ -344,7 +344,7 @@ export async function buildProject(targetDir: string, options?: { target: string
               } catch (e) {
                 console.warn('[IDE] Failed to cleanup tsconfig.build.json:', e)
               }
-              
+
               if (tscErr) {
                 console.warn('[IDE] TSC build finished with warnings/errors:', tscStderr || tscStdout)
               } else {
