@@ -209,15 +209,18 @@ export function getIndexHtmlContent(gameName: string): string {
 `
 }
 
-export function getViteConfigContent(): string {
-  return `import { defineConfig } from 'vite'
+export function getViteConfigContent(options?: { pwa?: boolean }): string {
+  const pwaImport = options?.pwa ? `\nimport { VitePWA } from 'vite-plugin-pwa'` : ''
+  const pwaPlugin = options?.pwa ? `\n    plugins: [\n      VitePWA({\n        registerType: 'autoUpdate',\n        manifest: {\n          name: 'Fumika Game',\n          short_name: 'Fumika',\n          theme_color: '#000000',\n          background_color: '#000000',\n          display: 'standalone'\n        }\n      })\n    ],` : ''
+
+  return `import { defineConfig } from 'vite'${pwaImport}
 
 export default defineConfig(({ mode }) => {
   const isLibrary = process.env.BUILD_TARGET === 'library'
   const outDir = process.env.BUILD_TIME ? \`dist/\${process.env.BUILD_TIME}\` : 'dist'
 
   return {
-    base: './',
+    base: './',${pwaPlugin}
     build: {
       outDir,
       emptyOutDir: true,

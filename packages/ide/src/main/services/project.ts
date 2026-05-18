@@ -118,7 +118,7 @@ export async function ensureProjectDependencies(targetDir: string, processName?:
           console.error('[IDE] npm install fumika failed:', stderr)
           reject(err)
         } else {
-          execFile(npmCmd, ['install', '--save-dev', 'vite', 'typescript@6'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
+          execFile(npmCmd, ['install', '--save-dev', 'vite', 'typescript@6', 'vite-plugin-pwa'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
             if (err) {
               console.error('[IDE] npm install vite failed:', stderr)
               reject(err)
@@ -256,9 +256,26 @@ async function copyProjectAssets(targetDir: string, outDir: string) {
  * 프로젝트 빌드 (Vite 정적 웹 빌드)
  */
 export async function buildProject(targetDir: string, options?: { target: string }): Promise<string> {
+  const isPwa = options?.target === 'pwa'
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+
+  if (isPwa) {
+    console.log('[IDE] Ensuring vite-plugin-pwa is installed for PWA build...')
+    await new Promise<void>((resolve, reject) => {
+      execFile(npmCmd, ['install', '--save-dev', 'vite-plugin-pwa'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
+        if (err) {
+          console.error('[IDE] npm install vite-plugin-pwa failed:', stderr)
+          reject(err)
+        } else {
+          resolve()
+        }
+      })
+    })
+  }
+
   // 항상 최신 템플릿으로 vite.config.ts를 덮어씁니다. (구버전 충돌 방지)
   const viteConfigPath = path.join(targetDir, 'vite.config.ts')
-  await fs.writeFile(viteConfigPath, getViteConfigContent(), 'utf-8')
+  await fs.writeFile(viteConfigPath, getViteConfigContent({ pwa: isPwa }), 'utf-8')
 
   // 하위 호환성을 위해 package.json에 build 스크립트가 없다면 추가
   const packageJsonPath = path.join(targetDir, 'package.json')
@@ -273,8 +290,6 @@ export async function buildProject(targetDir: string, options?: { target: string
   } catch (e) {
     console.warn('[IDE] Failed to verify package.json for build script:', e)
   }
-
-  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
   
   return new Promise<string>((resolve, reject) => {
     const env = { ...process.env }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
-export type BuildTarget = 'static' | 'library-js' | 'library-ts'
+export type BuildTarget = 'static' | 'library-js' | 'library-ts' | 'pwa'
 
 interface BuildDialogProps {
   isOpen: boolean
@@ -32,7 +32,8 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
         
         <div className="flex flex-col gap-4">
           <p className="text-sm text-surface-400">
-            프로젝트를 어떤 형태로 빌드할지 선택하세요. 빌드 결과물은 자동으로 에셋과 분리되어 최적화됩니다.
+            프로젝트를 어떤 형태로 빌드할지 선택하세요. <br />
+            빌드 결과물은 자동으로 에셋과 분리되어 최적화됩니다.
           </p>
 
           <div className="flex flex-col gap-3">
@@ -51,7 +52,7 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
               <div>
                 <div className="text-sm font-semibold text-surface-200">Static Web Build</div>
                 <div className="text-xs text-surface-400 mt-1">
-                  자체 웹 호스팅이나 데스크톱 앱(Electron) 패키징에 적합한 HTML/JS/CSS 기반의 완전한 독립형 정적 빌드입니다.
+                  자체 웹 호스팅에 적합한 HTML/JS/CSS 기반의 완전한 독립형 정적 빌드입니다.
                 </div>
               </div>
             </label>
@@ -96,13 +97,33 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
               </div>
             </label>
 
+            {/* PWA Build Option */}
+            <label className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-colors ${selectedTarget === 'pwa' ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 bg-surface-800 hover:border-surface-600'}`}>
+              <div className="mt-0.5">
+                <input
+                  type="radio"
+                  name="buildTarget"
+                  value="pwa"
+                  checked={selectedTarget === 'pwa'}
+                  onChange={() => setSelectedTarget('pwa')}
+                  className="w-4 h-4 text-primary-500 bg-surface-900 border-surface-600"
+                />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-surface-200">Progressive Web App (PWA)</div>
+                <div className="text-xs text-surface-400 mt-1">
+                  모바일 및 데스크톱에서 설치 가능한 웹 앱(PWA) 형태로 빌드합니다. 오프라인 캐싱이 지원됩니다.
+                </div>
+              </div>
+            </label>
+
             {/* Disabled Options for Future */}
             <label className="flex items-start gap-3 p-3 rounded border border-surface-800 bg-surface-900 opacity-50 cursor-not-allowed">
               <div className="mt-0.5">
                 <input type="radio" disabled className="w-4 h-4 bg-surface-800 border-surface-700" />
               </div>
               <div>
-                <div className="text-sm font-semibold text-surface-500">PWA / IFrame / Headless</div>
+                <div className="text-sm font-semibold text-surface-500">IFrame / Headless</div>
                 <div className="text-xs text-surface-600 mt-1">
                   Coming Soon. 추후 업데이트를 통해 지원될 예정입니다.
                 </div>
