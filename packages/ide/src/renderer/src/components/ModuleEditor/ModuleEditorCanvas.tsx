@@ -50,8 +50,7 @@ function getPinMeta(handleId: string): { pinType: 'exec' | 'data'; dataType: Pin
 }
 
 const TABS: GraphTab[] = [
-  'command', 'view', 'view:show', 'view:hide',
-  'view:onUpdate', 'view:onCleanup', 'boot',
+  'command', 'view', 'boot',
 ]
 
 interface ModuleEditorCanvasProps {
@@ -64,6 +63,7 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
     activeTab,
     setActiveTab,
     graphs,
+    definitions,
     setSelectedNodeId,
     onNodesChange,
     onEdgesChange,
@@ -80,6 +80,8 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
   const edges = currentGraph.edges
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
+  const isLoadingFromFile = useRef(false)
+  const lastSerialized = useRef('')
 
   // ─── 파일 -> 스토어 단방향 동기화 (마운트 및 외부 로드 시) ──────
   useEffect(() => {
@@ -87,26 +89,30 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
     try {
       const parsed = JSON.parse(content)
       if (parsed.graphs && parsed.activeTab) {
-        const currentData = {
-          activeTab: useModuleStore.getState().activeTab,
-          graphs: useModuleStore.getState().graphs,
-        }
-        if (JSON.stringify(currentData) !== JSON.stringify(parsed)) {
-          loadData(parsed)
-        }
+        // 자신이 방금 저장한 내용과 동일하면 skip
+        if (content === lastSerialized.current) return
+
+        isLoadingFromFile.current = true
+        loadData(parsed)
+        // 다음 틱에서 플래그 해제
+        requestAnimationFrame(() => {
+          isLoadingFromFile.current = false
+        })
       }
-    } catch (e) {
+    } catch {
       // 파싱 실패 시 초기 빈 상태 유지
     }
   }, [content, loadData])
 
   // ─── 스토어 -> 파일 저장 동기화 ─────────────────────────────
   useEffect(() => {
-    const serialized = JSON.stringify({ activeTab, graphs }, null, 2)
-    if (serialized !== content) {
-      onChange(serialized)
-    }
-  }, [activeTab, graphs, content, onChange])
+    // loadData 직후 트리거된 경우 skip (순환 방지)
+    if (isLoadingFromFile.current) return
+
+    const serialized = JSON.stringify({ activeTab, graphs, definitions }, null, 2)
+    lastSerialized.current = serialized
+    onChange(serialized)
+  }, [activeTab, graphs, definitions, onChange])
 
   // ─── 연결 검증 ─────────────────────────────────────────────
   const isValidConnection = useCallback((connection: Connection | Edge) => {
@@ -199,7 +205,6 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
         <div className="flex bg-[#141414] border-b border-surface-800 shrink-0 overflow-x-auto custom-scrollbar">
           {TABS.map(tab => {
             const isActive = tab === activeTab
-            const isViewSub = tab.startsWith('view:')
 
             return (
               <button
@@ -208,10 +213,9 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
                   isActive
                     ? 'bg-surface-800 text-primary-400 border-b-2 border-b-primary-500'
                     : 'text-surface-500 hover:text-surface-300 hover:bg-surface-800/30 border-b-2 border-b-transparent'
-                } ${isViewSub ? 'pl-5' : ''}`}
+                }`}
                 onClick={() => setActiveTab(tab)}
               >
-                {isViewSub && <span className="text-surface-600 mr-1">└</span>}
                 {GRAPH_TAB_LABELS[tab]}
               </button>
             )

@@ -2,6 +2,37 @@
 // blueprint.ts — 블루프린트 모듈 에디터 타입 정의
 // =============================================================
 
+// ─── 모듈 정의 데이터 (Schema / Cmd / Hook) ──────────────────
+
+export type FieldType = 'string' | 'number' | 'boolean' | 'object' | 'array'
+
+export interface PropertyDef {
+  name: string
+  type: FieldType
+  defaultValue?: unknown
+  optional?: boolean
+  description?: string
+}
+
+export interface HookSignatureDef {
+  key: string
+  paramTypes: PropertyDef[]
+  returnType: string
+  description?: string
+}
+
+/** define<TCmd, TSchema, THook>(schema) 에 대응하는 정의 데이터 */
+export interface ModuleDefinitions {
+  /** 모듈 이름 (모듈 키) */
+  moduleName: string
+  /** TSchema — 세이브에 저장되는 직렬화 가능 상태 필드 */
+  schemaDef: PropertyDef[]
+  /** TCmd — 씬 커맨드의 props 필드 */
+  commandDef: PropertyDef[]
+  /** THook — 훅 시그니처 맵 */
+  hookDef: HookSignatureDef[]
+}
+
 // ─── 핀 타입 ─────────────────────────────────────────────────
 
 export type PinDataType =
@@ -65,19 +96,11 @@ export interface BlueprintNodeDef {
 export type GraphTab =
   | 'command'
   | 'view'
-  | 'view:show'
-  | 'view:hide'
-  | 'view:onUpdate'
-  | 'view:onCleanup'
   | 'boot'
 
 export const GRAPH_TAB_LABELS: Record<GraphTab, string> = {
   command: 'Command',
-  view: 'View (Mount)',
-  'view:show': 'show()',
-  'view:hide': 'hide()',
-  'view:onUpdate': 'onUpdate()',
-  'view:onCleanup': 'onCleanup()',
+  view: 'View',
   boot: 'Boot',
 }
 
@@ -365,27 +388,6 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'y', label: 'Y', direction: 'input', pinType: 'data', dataType: 'number' },
       { id: 'z', label: 'Z', direction: 'input', pinType: 'data', dataType: 'number' },
       { id: 'result', label: 'Position', direction: 'output', pinType: 'data', dataType: 'vec3' },
-    ],
-  },
-  {
-    type: 'GetViewVar',
-    label: 'Get View Var',
-    category: 'data',
-    description: 'View 스코프 로컬 변수 읽기',
-    pins: [
-      { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' },
-    ],
-  },
-  {
-    type: 'SetViewVar',
-    label: 'Set View Var',
-    category: 'action',
-    description: 'View 스코프 로컬 변수에 저장',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'name', label: 'Name', direction: 'input', pinType: 'data', dataType: 'string' },
-      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
   },
 ]

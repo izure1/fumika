@@ -16,6 +16,9 @@ import {
 import {
   NODE_CATALOG,
   type GraphTab,
+  type ModuleDefinitions,
+  type PropertyDef,
+  type HookSignatureDef,
 } from '../types/blueprint'
 
 interface GraphState {
@@ -33,9 +36,24 @@ interface ModuleStoreState {
   // ── 선택된 노드 ID ─────────────────────────────────────────
   selectedNodeId: string | null
 
+  // ── 모듈 정의 (Schema / Cmd / Hook) ─────────────────────────
+  definitions: ModuleDefinitions
+
   // ── 액션 ───────────────────────────────────────────────────
   setActiveTab: (tab: GraphTab) => void
   setSelectedNodeId: (id: string | null) => void
+
+  // ── 모듈 정의 CRUD ──────────────────────────────────────────
+  setModuleName: (name: string) => void
+  addSchemaDef: (field: PropertyDef) => void
+  updateSchemaDef: (index: number, field: PropertyDef) => void
+  removeSchemaDef: (index: number) => void
+  addCommandDef: (field: PropertyDef) => void
+  updateCommandDef: (index: number, field: PropertyDef) => void
+  removeCommandDef: (index: number) => void
+  addHookDef: (hook: HookSignatureDef) => void
+  updateHookDef: (index: number, hook: HookSignatureDef) => void
+  removeHookDef: (index: number) => void
 
   // ── React Flow 변경 액션 ────────────────────────────────────
   onNodesChange: (changes: NodeChange[]) => void
@@ -45,15 +63,21 @@ interface ModuleStoreState {
   deleteSelectedNode: () => void
 
   // ── 파일 로드 ──────────────────────────────────────────────
-  loadData: (data: { activeTab: GraphTab; graphs: Record<GraphTab, GraphState> }) => void
+  loadData: (data: { activeTab: GraphTab; graphs: Record<GraphTab, GraphState>; definitions?: ModuleDefinitions }) => void
 }
 
 const createEmptyGraph = (): GraphState => ({ nodes: [], edges: [] })
 
 const ALL_TABS: GraphTab[] = [
-  'command', 'view', 'view:show', 'view:hide',
-  'view:onUpdate', 'view:onCleanup', 'boot',
+  'command', 'view', 'boot',
 ]
+
+const createEmptyDefinitions = (): ModuleDefinitions => ({
+  moduleName: '',
+  schemaDef: [],
+  commandDef: [],
+  hookDef: [],
+})
 
 export const useModuleStore = create<ModuleStoreState>((set) => ({
   activeTab: 'command',
@@ -64,9 +88,64 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
 
   selectedNodeId: null,
 
+  definitions: createEmptyDefinitions(),
+
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+
+  // ── 모듈 정의 CRUD ──────────────────────────────────────────
+  setModuleName: (name) => set((s) => ({
+    definitions: { ...s.definitions, moduleName: name },
+  })),
+
+  addSchemaDef: (field) => set((s) => ({
+    definitions: { ...s.definitions, schemaDef: [...s.definitions.schemaDef, field] },
+  })),
+  updateSchemaDef: (index, field) => set((s) => ({
+    definitions: {
+      ...s.definitions,
+      schemaDef: s.definitions.schemaDef.map((f, i) => i === index ? field : f),
+    },
+  })),
+  removeSchemaDef: (index) => set((s) => ({
+    definitions: {
+      ...s.definitions,
+      schemaDef: s.definitions.schemaDef.filter((_, i) => i !== index),
+    },
+  })),
+
+  addCommandDef: (field) => set((s) => ({
+    definitions: { ...s.definitions, commandDef: [...s.definitions.commandDef, field] },
+  })),
+  updateCommandDef: (index, field) => set((s) => ({
+    definitions: {
+      ...s.definitions,
+      commandDef: s.definitions.commandDef.map((f, i) => i === index ? field : f),
+    },
+  })),
+  removeCommandDef: (index) => set((s) => ({
+    definitions: {
+      ...s.definitions,
+      commandDef: s.definitions.commandDef.filter((_, i) => i !== index),
+    },
+  })),
+
+  addHookDef: (hook) => set((s) => ({
+    definitions: { ...s.definitions, hookDef: [...s.definitions.hookDef, hook] },
+  })),
+  updateHookDef: (index, hook) => set((s) => ({
+    definitions: {
+      ...s.definitions,
+      hookDef: s.definitions.hookDef.map((h, i) => i === index ? hook : h),
+    },
+  })),
+  removeHookDef: (index) => set((s) => ({
+    definitions: {
+      ...s.definitions,
+      hookDef: s.definitions.hookDef.filter((_, i) => i !== index),
+    },
+  })),
 
   onNodesChange: (changes) => set((s) => {
     const tab = s.activeTab
@@ -166,6 +245,7 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
   loadData: (data) => set({
     activeTab: data.activeTab,
     graphs: data.graphs,
+    definitions: data.definitions ?? createEmptyDefinitions(),
     selectedNodeId: null,
   }),
 }))

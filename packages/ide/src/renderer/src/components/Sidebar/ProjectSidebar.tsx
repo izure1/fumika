@@ -447,11 +447,13 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
           graphs: {
             command: { nodes: [], edges: [] },
             view: { nodes: [], edges: [] },
-            'view:show': { nodes: [], edges: [] },
-            'view:hide': { nodes: [], edges: [] },
-            'view:onUpdate': { nodes: [], edges: [] },
-            'view:onCleanup': { nodes: [], edges: [] },
             boot: { nodes: [], edges: [] }
+          },
+          definitions: {
+            moduleName: safeName,
+            schemaDef: [],
+            commandDef: [],
+            hookDef: []
           }
         }, null, 2)
       } else {
