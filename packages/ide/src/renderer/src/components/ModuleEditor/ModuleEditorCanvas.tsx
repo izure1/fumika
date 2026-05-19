@@ -80,39 +80,48 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
   const edges = currentGraph.edges
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
-  const isLoadingFromFile = useRef(false)
-  const lastSerialized = useRef('')
+  const isMounted = useRef(false)
+  const skipNextSave = useRef(false)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
 
-  // ─── 파일 -> 스토어 단방향 동기화 (마운트 및 외부 로드 시) ──────
+  // ─── 파일 -> 스토어 단방향 동기화 (마운트 시 1회) ──────────────
   useEffect(() => {
-    if (!content) return
+    if (!content) {
+      isMounted.current = true
+      return
+    }
     try {
       const parsed = JSON.parse(content)
       if (parsed.graphs && parsed.activeTab) {
-        // 자신이 방금 저장한 내용과 동일하면 skip
-        if (content === lastSerialized.current) return
-
-        isLoadingFromFile.current = true
+        skipNextSave.current = true
         loadData(parsed)
-        // 다음 틱에서 플래그 해제
-        requestAnimationFrame(() => {
-          isLoadingFromFile.current = false
-        })
       }
     } catch {
       // 파싱 실패 시 초기 빈 상태 유지
     }
-  }, [content, loadData])
+    isMounted.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ─── 언마운트 시 저장 중단 ─────────────────────────────────
+  useEffect(() => {
+    return () => { isMounted.current = false }
+  }, [])
 
   // ─── 스토어 -> 파일 저장 동기화 ─────────────────────────────
   useEffect(() => {
-    // loadData 직후 트리거된 경우 skip (순환 방지)
-    if (isLoadingFromFile.current) return
+    if (!isMounted.current) return
+    if (skipNextSave.current) {
+      skipNextSave.current = false
+      return
+    }
 
     const serialized = JSON.stringify({ activeTab, graphs, definitions }, null, 2)
-    lastSerialized.current = serialized
-    onChange(serialized)
-  }, [activeTab, graphs, definitions, onChange])
+    onChangeRef.current(serialized)
+    // onChange를 ref로 안정화했으므로 deps에서 제외
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, graphs, definitions])
 
   // ─── 연결 검증 ─────────────────────────────────────────────
   const isValidConnection = useCallback((connection: Connection | Edge) => {
