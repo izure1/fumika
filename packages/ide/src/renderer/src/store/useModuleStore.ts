@@ -199,6 +199,19 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
     const catalog = NODE_CATALOG.find(n => n.type === nodeType)
     if (!catalog) return {}
 
+    // ─── 탭 허용 여부 체크 ─────────────────────────────────────
+    if (catalog.allowedTabs && !catalog.allowedTabs.includes(tab)) {
+      return {}
+    }
+
+    // ─── 싱글톤 체크 (그래프에 이미 동일 타입의 노드가 존재하는지) ─
+    if (catalog.singleton) {
+      const exists = currentGraph.nodes.some(n => n.data?.nodeType === nodeType)
+      if (exists) {
+        return {}
+      }
+    }
+
     const id = `${nodeType}_${Date.now()}`
     const pos = position ?? { x: 250 + Math.random() * 200, y: 150 + Math.random() * 200 }
 

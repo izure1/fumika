@@ -89,6 +89,10 @@ export interface BlueprintNodeDef {
   category: NodeCategory
   description: string
   pins: PinDef[]
+  /** 이 노드를 사용할 수 있는 탭 목록. 미지정 시 모든 탭에서 사용 가능 */
+  allowedTabs?: GraphTab[]
+  /** true면 해당 그래프에서 1개만 존재 가능 (Entry 노드용) */
+  singleton?: boolean
 }
 
 // ─── 그래프 탭 ───────────────────────────────────────────────
@@ -120,6 +124,8 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'state', label: 'state', direction: 'output', pinType: 'data', dataType: 'object' },
       { id: 'setState', label: 'setState', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
+    allowedTabs: ['command'],
+    singleton: true,
   },
   {
     type: 'ViewMountEntry',
@@ -132,6 +138,8 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'state', label: 'state', direction: 'output', pinType: 'data', dataType: 'object' },
       { id: 'setState', label: 'setState', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
+    allowedTabs: ['view'],
+    singleton: true,
   },
   {
     type: 'ShowEntry',
@@ -142,6 +150,8 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
       { id: 'duration', label: 'duration', direction: 'output', pinType: 'data', dataType: 'number' },
     ],
+    allowedTabs: ['view'],
+    singleton: true,
   },
   {
     type: 'HideEntry',
@@ -152,6 +162,8 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
       { id: 'duration', label: 'duration', direction: 'output', pinType: 'data', dataType: 'number' },
     ],
+    allowedTabs: ['view'],
+    singleton: true,
   },
   {
     type: 'OnUpdateEntry',
@@ -164,6 +176,8 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'state', label: 'state', direction: 'output', pinType: 'data', dataType: 'object' },
       { id: 'setState', label: 'setState', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
+    allowedTabs: ['view'],
+    singleton: true,
   },
   {
     type: 'OnCleanupEntry',
@@ -173,6 +187,8 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     pins: [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
+    allowedTabs: ['view'],
+    singleton: true,
   },
 
   // ── Condition ──────────────────────────────────────────────

@@ -3,6 +3,7 @@
 // =============================================================
 
 import { useState, useCallback } from 'react'
+import { useModuleStore } from '../../store/useModuleStore'
 import {
   NODE_CATALOG,
   NODE_CATEGORY_COLORS,
@@ -27,6 +28,10 @@ export function ModuleSidebar({ onAddNode }: Props) {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('definitions')
   const [search, setSearch] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+
+  const { activeTab, graphs } = useModuleStore()
+  const currentGraph = graphs[activeTab]
+  const currentNodes = currentGraph?.nodes || []
 
   const toggleCategory = useCallback((key: string) => {
     setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
@@ -120,29 +125,68 @@ export function ModuleSidebar({ onAddNode }: Props) {
 
                   {!isCollapsed && (
                     <div className="pb-1">
-                      {nodes.map(node => (
-                        <div
-                          key={node.type}
-                          className="flex items-center gap-2 mx-1.5 px-2 py-1 rounded cursor-grab hover:bg-surface-800/50 active:cursor-grabbing transition-colors"
-                          draggable
-                          onDragStart={(e) => onDragStart(e, node.type)}
-                          onClick={() => onAddNode(node.type)}
-                          title={node.description}
-                        >
+                      {nodes.map(node => {
+                        const isTabNotAllowed = node.allowedTabs && !node.allowedTabs.includes(activeTab)
+                        const isSingletonExists = node.singleton && currentNodes.some(n => n.data?.nodeType === node.type)
+                        const isDisabled = isTabNotAllowed || isSingletonExists
+
+                        let tooltip = node.description
+                        if (isTabNotAllowed) {
+                          tooltip = `[${node.allowedTabs?.map(t => t.toUpperCase()).join(', ')} 탭 전용] ${node.description}`
+                        } else if (isSingletonExists) {
+                          tooltip = `[중복 생성 제한] 이 노드는 그래프당 하나만 존재할 수 있습니다.`
+                        }
+
+                        return (
                           <div
-                            className="w-1 h-4 rounded-full shrink-0"
-                            style={{ background: `${colors.border}80` }}
-                          />
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[11px] font-medium text-surface-200 truncate">
-                              {node.label}
-                            </span>
-                            <span className="text-[9px] text-surface-500 truncate">
-                              {node.description}
-                            </span>
+                            key={node.type}
+                            className={`flex items-center gap-2 mx-1.5 px-2 py-1 rounded transition-colors ${
+                              isDisabled
+                                ? 'opacity-30 cursor-not-allowed select-none bg-surface-900/10'
+                                : 'cursor-grab hover:bg-surface-800/50 active:cursor-grabbing'
+                            }`}
+                            draggable={!isDisabled}
+                            onDragStart={(e) => {
+                              if (isDisabled) {
+                                e.preventDefault()
+                                return
+                              }
+                              onDragStart(e, node.type)
+                            }}
+                            onClick={() => {
+                              if (!isDisabled) {
+                                onAddNode(node.type)
+                              }
+                            }}
+                            title={tooltip}
+                          >
+                            <div
+                              className="w-1 h-4 rounded-full shrink-0"
+                              style={{ background: `${colors.border}80` }}
+                            />
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="text-[11px] font-medium text-surface-200 truncate">
+                                  {node.label}
+                                </span>
+                                {isTabNotAllowed && (
+                                  <span className="text-[8px] text-red-400 bg-red-950/40 border border-red-900/50 rounded px-1 shrink-0 scale-90 origin-right">
+                                    {node.allowedTabs?.join(', ')} only
+                                  </span>
+                                )}
+                                {isSingletonExists && (
+                                  <span className="text-[8px] text-amber-400 bg-amber-950/40 border border-amber-900/50 rounded px-1 shrink-0 scale-90 origin-right">
+                                    exists
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[9px] text-surface-500 truncate">
+                                {node.description}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
