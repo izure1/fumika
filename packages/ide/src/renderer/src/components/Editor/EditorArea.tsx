@@ -5,6 +5,7 @@ import { ConfirmDialogBox } from '../UI/ConfirmDialogBox'
 import { BackgroundFormEditor } from './BackgroundFormEditor'
 import { CharacterFormEditor } from './CharacterFormEditor'
 import { EffectFormEditor } from './EffectFormEditor'
+import { ModuleEditorCanvas } from '../ModuleEditor/ModuleEditorCanvas'
 
 interface TabData {
   content: string
@@ -439,12 +440,24 @@ export function EditorArea() {
           const pathParts = normalizedPath.split('/')
 
           const isTs = extension === 'ts'
+          const isBlueprint = fileName.endsWith('.fbp.json')
           const isEditable = isTs || extension === 'json' || extension === 'md'
           
           const isBackground = isTs && pathParts.includes('backgrounds')
           const isCharacter = isTs && pathParts.includes('characters')
           const isEffect = isTs && pathParts.includes('effects')
           
+          if (isBlueprint && !data.isLoading) {
+            return (
+              <div className="absolute inset-0">
+                <ModuleEditorCanvas 
+                  content={data.content}
+                  onChange={(val) => handleContentChange(activeFile, val)}
+                />
+              </div>
+            )
+          }
+
           if (isBackground && !data.isLoading) {
             return (
               <div className="absolute inset-0">

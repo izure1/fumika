@@ -435,12 +435,30 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     if (action === 'create_folder') {
       await window.api.fs.mkdir(`${projectPath}/${targetFolder}/${safeName}`)
     } else if (action === 'create_file') {
-      const filePath = `${projectPath}/${targetFolder}/${safeName}.ts`
+      const isBlueprint = targetFolder.startsWith('modules')
+      const ext = isBlueprint ? '.fbp.json' : '.ts'
+      const filePath = `${projectPath}/${targetFolder}/${safeName}${ext}`
       const relativeDots = Array(targetFolder.split(/[/\\]/).length).fill('..').join('/')
 
-      const template = getFileTemplate(rootType, safeName, relativeDots)
-      const formatRes = await window.api.fs.formatCode(template)
-      const content = formatRes.success && formatRes.content ? formatRes.content : template
+      let content = ''
+      if (isBlueprint) {
+        content = JSON.stringify({
+          activeTab: 'command',
+          graphs: {
+            command: { nodes: [], edges: [] },
+            view: { nodes: [], edges: [] },
+            'view:show': { nodes: [], edges: [] },
+            'view:hide': { nodes: [], edges: [] },
+            'view:onUpdate': { nodes: [], edges: [] },
+            'view:onCleanup': { nodes: [], edges: [] },
+            boot: { nodes: [], edges: [] }
+          }
+        }, null, 2)
+      } else {
+        const template = getFileTemplate(rootType, safeName, relativeDots)
+        const formatRes = await window.api.fs.formatCode(template)
+        content = formatRes.success && formatRes.content ? formatRes.content : template
+      }
 
       await window.api.fs.writeFile(filePath, content)
       setActiveFile(filePath)
@@ -449,7 +467,11 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
       setExpanded(prev => ({ ...prev, [fullDir]: true, [targetFolder]: true }))
     } else if (action === 'rename' && targetNode) {
       const oldPath = `${projectPath}/${targetFolder}/${targetNode.path}`
-      const ext = targetNode.isDirectory ? '' : targetNode.name.match(/\.[^/.]+$/)?.[0] || '.ts'
+      const ext = targetNode.isDirectory
+        ? ''
+        : targetNode.name.endsWith('.fbp.json')
+          ? '.fbp.json'
+          : targetNode.name.match(/\.[^/.]+$/)?.[0] || '.ts'
       const newName = `${safeName}${ext}`
       const dirPath = oldPath.substring(0, oldPath.lastIndexOf('/'))
       const newPath = `${dirPath}/${newName}`

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import {
   ReactFlow,
   MiniMap,
@@ -113,14 +113,17 @@ function SceneBlockComponent({ data, id }: NodeProps) {
   const [hoveredParentLine, setHoveredParentLine] = useState<{ sourceRi: number, targetRi: number, color: string } | null>(null)
   const [hoveredCondition, setHoveredCondition] = useState<{ ri: number, expr: string, raw: string, color: string } | null>(null)
 
+  const rowCount = Math.max(1, rows.length)
+  const totalHeight = HEADER_H + ROWS_PAD_TOP * 2 + rowCount * ROW_STRIDE
+
   return (
     <div
-      className={`group relative backdrop-blur-md border rounded-lg shadow-xl transition-all duration-300 hover:shadow-primary-500/15 hover:border-primary-500/40 ${
+      className={`group relative backdrop-blur-md border rounded-lg shadow-xl transition-[border-color,box-shadow,background-color] duration-300 hover:shadow-primary-500/15 hover:border-primary-500/40 ${
         data.highlighted
-          ? 'bg-surface-800 border-primary-500 shadow-primary-500/50 scale-[1.02] z-50'
-          : 'bg-surface-900/95 border-surface-700/60 scale-100 z-10'
+          ? 'bg-surface-800 border-primary-500 shadow-lg shadow-primary-500/30 z-50'
+          : 'bg-surface-900/95 border-surface-700/60 z-10'
       }`}
-      style={{ width: NODE_W }}
+      style={{ width: NODE_W, height: totalHeight }}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-lg pointer-events-none" />
 
@@ -439,11 +442,14 @@ function SceneBlockComponent({ data, id }: NodeProps) {
 
 function MissingNodeComponent({ data }: NodeProps) {
   return (
-    <div className={`group relative flex items-center min-w-[220px] px-4 py-3 backdrop-blur-md border rounded-md shadow-lg transition-all duration-300 hover:shadow-red-500/20 hover:border-red-500/50 hover:-translate-y-0.5 ${
-      data.highlighted
-        ? 'bg-red-900/40 border-red-400 shadow-red-500/50 scale-[1.02] z-50'
-        : 'bg-red-950/60 border-red-900/50 scale-100 z-10'
-    }`}>
+    <div
+      className={`group relative flex items-center min-w-[220px] px-4 py-3 backdrop-blur-md border rounded-md shadow-lg transition-[border-color,box-shadow] duration-300 hover:shadow-red-500/20 hover:border-red-500/50 ${
+        data.highlighted
+          ? 'bg-red-900/40 border-red-400 shadow-lg shadow-red-500/30 z-50'
+          : 'bg-red-950/60 border-red-900/50 z-10'
+      }`}
+      style={{ width: 220, height: 65 }}
+    >
       <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-md pointer-events-none" />
       <Handle
         type="target"
@@ -501,20 +507,24 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], direction = 'LR') {
 
   dagre.layout(g)
 
-  for (const node of nodes) {
+  const layoutedNodes = nodes.map(node => {
     const pos = g.node(node.id)
     const w = node.type === 'missing' ? 220 : NODE_W
     const rowCount = Math.max(1, ((node.data?.rows as RowItem[])?.length ?? 0))
     const h = node.type === 'missing' ? 65 : HEADER_H + ROWS_PAD_TOP * 2 + rowCount * ROW_STRIDE
-    node.targetPosition = isHorizontal ? Position.Left : Position.Top
-    node.sourcePosition = isHorizontal ? Position.Right : Position.Bottom
-    node.position = {
-      x: pos.x - w / 2,
-      y: pos.y - h / 2,
+    
+    return {
+      ...node,
+      targetPosition: isHorizontal ? Position.Left : Position.Top,
+      sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+      position: {
+        x: pos ? pos.x - w / 2 : 0,
+        y: pos ? pos.y - h / 2 : 0,
+      }
     }
-  }
+  })
 
-  return { nodes, edges }
+  return { nodes: layoutedNodes, edges }
 }
 
 // ─── Bracket-depth-tracking scene parser ─────────────────────
@@ -830,9 +840,11 @@ export function SceneGraphViewer() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [isLoading, setIsLoading] = useState(true)
+  const loadedPathRef = useRef<string | null>(null)
 
   const processFiles = useCallback(async () => {
-    if (!projectPath) return
+    if (!projectPath || loadedPathRef.current === projectPath) return
+    loadedPathRef.current = projectPath
     setIsLoading(true)
 
     const scenesPath = `${projectPath}/scenes`
@@ -1023,14 +1035,17 @@ export function SceneGraphViewer() {
       setEdges(laidE)
     } catch (e) {
       console.error('Failed to parse scenes for graph', e)
+      loadedPathRef.current = null
     } finally {
       setIsLoading(false)
     }
   }, [projectPath, setNodes, setEdges])
 
   useEffect(() => {
-    processFiles()
-  }, [processFiles])
+    if (projectPath && loadedPathRef.current !== projectPath) {
+      processFiles()
+    }
+  }, [projectPath, processFiles])
 
   // Double-click node → open in editor
   const onNodeDoubleClick = useCallback((_: unknown, node: Node) => {
