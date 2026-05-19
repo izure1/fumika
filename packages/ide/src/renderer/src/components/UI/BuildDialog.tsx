@@ -245,7 +245,8 @@ export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {
                 <div>
                   <div className="text-sm font-semibold text-surface-200">Windows (.exe) 빌드</div>
                   <div className="text-xs text-surface-400 mt-1">
-                    Windows 환경에서 단독으로 실행 가능한 애플리케이션으로 패키징합니다. (ASAR 포함)<br/>
+                    Windows 환경에서 단독으로 실행 가능한 애플리케이션으로 패키징합니다. 
+                    <br/>
                     빌드 옵션에서 포터블(무설치) 또는 설치 파일 포맷을 선택할 수 있습니다.
                   </div>
                 </div>
