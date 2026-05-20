@@ -2,7 +2,7 @@
 // ModuleInspector.tsx — 선택된 노드의 속성 편집 패널
 // =============================================================
 
-import { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { useModuleStore } from '../../store/useModuleStore'
 import { NODE_CATALOG, NODE_CATEGORY_COLORS, type NodeCategory, LEVIAR_STYLE_PROPERTIES } from '../../types/blueprint'
 
@@ -11,19 +11,14 @@ import { NODE_CATALOG, NODE_CATEGORY_COLORS, type NodeCategory, LEVIAR_STYLE_PRO
 interface InspectorField {
   key: string
   label: string
-  type: 'text' | 'number' | 'select' | 'boolean'
+  type: 'text' | 'number' | 'select' | 'boolean' | 'typed'
   options?: { value: string, label: string }[]
   placeholder?: string
 }
 
 const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   Constant: [
-    { key: 'constantType', label: 'Type', type: 'select', options: [
-      { value: 'string', label: 'String' },
-      { value: 'number', label: 'Number' },
-      { value: 'boolean', label: 'Boolean' },
-    ]},
-    { key: 'inlineValue', label: 'Value', type: 'text', placeholder: 'value' },
+    { key: 'value', label: 'Constant Value', type: 'typed', placeholder: 'value' },
   ],
   Branch: [
     { key: 'condition', label: 'Condition', type: 'boolean' },
@@ -37,8 +32,8 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
       { value: '>=', label: '>=' },
       { value: '<=', label: '<=' },
     ]},
-    { key: 'a', label: 'A (Left)', type: 'text', placeholder: 'value A' },
-    { key: 'b', label: 'B (Right)', type: 'text', placeholder: 'value B' },
+    { key: 'a', label: 'A (Left)', type: 'typed', placeholder: 'value A' },
+    { key: 'b', label: 'B (Right)', type: 'typed', placeholder: 'value B' },
   ],
   MathOp: [
     { key: 'operator', label: 'Operator', type: 'select', options: [
@@ -72,16 +67,30 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
       { value: 'env', label: 'Env ($)' },
     ]},
     { key: 'name', label: 'Variable Name', type: 'text', placeholder: 'name' },
-    { key: 'value', label: 'Variable Value', type: 'text', placeholder: 'value' },
+    { key: 'value', label: 'Variable Value', type: 'typed', placeholder: 'value' },
   ],
   SetState: [],
   BindEvent: [
     { key: 'eventType', label: 'Event', type: 'select', options: [
       { value: 'click', label: 'click' },
-      { value: 'pointerdown', label: 'pointerdown' },
-      { value: 'pointerup', label: 'pointerup' },
-      { value: 'pointerenter', label: 'pointerenter' },
-      { value: 'pointerleave', label: 'pointerleave' },
+      { value: 'dblclick', label: 'dblclick' },
+      { value: 'contextmenu', label: 'contextmenu' },
+      { value: 'mousedown', label: 'mousedown' },
+      { value: 'mouseup', label: 'mouseup' },
+      { value: 'mousemove', label: 'mousemove' },
+      { value: 'mouseover', label: 'mouseover' },
+      { value: 'mouseout', label: 'mouseout' },
+      { value: 'cssmodified', label: 'cssmodified' },
+      { value: 'attrmodified', label: 'attrmodified' },
+      { value: 'datamodified', label: 'datamodified' },
+      { value: 'positionmodified', label: 'positionmodified' },
+      { value: 'rotationmodified', label: 'rotationmodified' },
+      { value: 'scalemodified', label: 'scalemodified' },
+      { value: 'pivotmodified', label: 'pivotmodified' },
+      { value: 'play', label: 'play' },
+      { value: 'pause', label: 'pause' },
+      { value: 'ended', label: 'ended' },
+      { value: 'repeat', label: 'repeat' }
     ]},
     { key: 'handlerId', label: 'Handler ID', type: 'text', placeholder: 'handler name' },
   ],
@@ -115,6 +124,126 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   FadeOut: [
     { key: 'duration', label: 'Duration (ms)', type: 'number' },
   ],
+  AddChild: [],
+  GetCamera: [],
+  RemoveChild: [],
+  RemoveFromParent: [],
+  HasClass: [],
+  AddClass: [],
+  RemoveClass: [],
+  ApplyForce: [],
+  SetVelocity: [],
+  SetAngularVelocity: [],
+  ApplyTorque: [],
+  Follow: [],
+  Unfollow: [],
+  Kick: [],
+}
+
+// ─── 스마트 타입 기입 컴포넌트 (TypedInput) ───────────────────
+interface TypedInputProps {
+  label?: string
+  value: unknown
+  onChange: (newValue: unknown) => void
+}
+
+function TypedInput({ label, value, onChange }: TypedInputProps): React.JSX.Element {
+  let currentType: 'string' | 'number' | 'boolean' | 'json' = 'string'
+  if (typeof value === 'number') {
+    currentType = 'number'
+  } else if (typeof value === 'boolean') {
+    currentType = 'boolean'
+  } else if (typeof value === 'object' && value !== null) {
+    currentType = 'json'
+  }
+
+  const handleTypeChange = (newType: 'string' | 'number' | 'boolean' | 'json') => {
+    if (newType === currentType) return
+
+    if (newType === 'string') {
+      onChange(String(value ?? ''))
+    } else if (newType === 'number') {
+      const num = Number(value)
+      onChange(isNaN(num) ? 0 : num)
+    } else if (newType === 'boolean') {
+      onChange(Boolean(value))
+    } else if (newType === 'json') {
+      onChange({})
+    }
+  }
+
+  return (
+    <div className="space-y-1 mt-1 p-1.5 rounded bg-surface-900/35 border border-surface-800/60">
+      <div className="flex items-center justify-between gap-1.5">
+        {label ? (
+          <span className="text-[9px] text-surface-500 uppercase tracking-wider font-bold truncate">
+            {label}
+          </span>
+        ) : <div />}
+        <select
+          className="bg-surface-900 border border-surface-750 rounded px-1 py-0.5 text-[9px] text-primary-400 font-medium outline-none cursor-pointer"
+          value={currentType}
+          onChange={(e) => handleTypeChange(e.target.value as 'string' | 'number' | 'boolean' | 'json')}
+        >
+          <option value="string">String</option>
+          <option value="number">Number</option>
+          <option value="boolean">Boolean</option>
+          <option value="json">JSON</option>
+        </select>
+      </div>
+
+      <div className="mt-1">
+        {currentType === 'number' && (
+          <input
+            type="number"
+            className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/50 font-mono"
+            value={value !== undefined ? Number(value) : 0}
+            onChange={(e) => onChange(Number(e.target.value))}
+          />
+        )}
+
+        {currentType === 'boolean' && (
+          <label className="flex items-center gap-1.5 cursor-pointer py-0.5">
+            <input
+              type="checkbox"
+              className="accent-primary-500 cursor-pointer"
+              checked={Boolean(value)}
+              onChange={(e) => onChange(e.target.checked)}
+            />
+            <span className="text-[9px] text-surface-400 font-mono select-none">
+              {value ? 'true' : 'false'}
+            </span>
+          </label>
+        )}
+
+        {currentType === 'json' && (
+          <textarea
+            className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[9px] text-white font-mono outline-none focus:border-primary-500/50 min-h-[40px] resize-y custom-scrollbar"
+            value={JSON.stringify(value, null, 2)}
+            onChange={(e) => {
+              try {
+                const parsed = JSON.parse(e.target.value)
+                onChange(parsed)
+              } catch {
+                // 타이핑 중의 임시 파싱 오류는 무시하고 상태 유실 방지
+              }
+            }}
+            placeholder="{}"
+          />
+        )}
+
+        {currentType === 'string' && (
+          <input
+            type="text"
+            className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50 font-mono"
+            value={String(value ?? '')}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="value"
+          />
+        )}
+      </div>
+    </div>
+  )
 }
 
 // ─── 메인 컴포넌트 ──────────────────────────────────────────
@@ -152,26 +281,12 @@ export function ModuleInspector() {
     return edges.filter(e => e.target === selectedNodeId).map(e => e.targetHandle)
   }, [edges, selectedNodeId])
 
+  const storeUpdateNodeData = useModuleStore((s) => s.updateNodeData)
+
   const updateNodeData = useCallback((keyOrData: string | Record<string, unknown>, value?: unknown) => {
     if (!selectedNodeId) return
-    const store = useModuleStore.getState()
-    const tab = store.activeTab
-    const graph = store.graphs[tab]
-    const updatedNodes = graph.nodes.map(n => {
-      if (n.id !== selectedNodeId) return n
-      const newData = typeof keyOrData === 'string'
-        ? { ...n.data, [keyOrData]: value }
-        : { ...n.data, ...keyOrData }
-      return { ...n, data: newData }
-    })
-
-    useModuleStore.setState({
-      graphs: {
-        ...store.graphs,
-        [tab]: { ...graph, nodes: updatedNodes },
-      },
-    })
-  }, [selectedNodeId])
+    storeUpdateNodeData(selectedNodeId, keyOrData, value)
+  }, [selectedNodeId, storeUpdateNodeData])
 
   const removeStyleProperty = useCallback((key: string) => {
     if (!selectedNodeId || !selectedNode) return
@@ -442,11 +557,9 @@ export function ModuleInspector() {
                             ⛓️ Bound to Node
                           </div>
                         ) : (
-                          <input
-                            className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50 font-mono"
-                            value={String(selectedNode.data?.[field] ?? '')}
-                            onChange={(e) => updateNodeData(field, e.target.value)}
-                            placeholder="value"
+                          <TypedInput
+                            value={selectedNode.data?.[field]}
+                            onChange={(newVal) => updateNodeData(field, newVal)}
                           />
                         )}
                       </div>
@@ -511,6 +624,13 @@ export function ModuleInspector() {
                   </div>
                 ) : (
                   <>
+                    {field.type === 'typed' && (
+                      <TypedInput
+                        value={selectedNode.data?.[field.key] !== undefined ? selectedNode.data?.[field.key] : selectedNode.data?.inlineValue}
+                        onChange={(newVal) => updateNodeData(field.key, newVal)}
+                      />
+                    )}
+
                     {field.type === 'text' && (
                       <input
                         className="mt-0.5 w-full bg-surface-900/50 border border-surface-700 rounded px-2 py-1 text-[11px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50"

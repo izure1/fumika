@@ -451,6 +451,7 @@ export function EditorArea() {
             return (
               <div className="absolute inset-0">
                 <ModuleEditorCanvas 
+                  key={activeFile}
                   content={data.content}
                   onChange={(val) => handleContentChange(activeFile, val)}
                 />

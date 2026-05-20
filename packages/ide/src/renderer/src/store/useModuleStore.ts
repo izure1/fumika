@@ -19,6 +19,8 @@ import {
   type ModuleDefinitions,
   type PropertyDef,
   type HookSignatureDef,
+  LEVIAR_STYLE_PROPERTIES,
+  PIN_COLORS,
 } from '../types/blueprint'
 
 interface GraphState {
@@ -61,6 +63,7 @@ interface ModuleStoreState {
   onConnect: (connection: Connection, edgeStyle: { stroke: string; strokeWidth: number }) => void
   addNode: (nodeType: string, position?: { x: number; y: number }) => void
   deleteSelectedNode: () => void
+  updateNodeData: (nodeId: string, keyOrData: string | Record<string, unknown>, value?: unknown) => void
 
   // ── 파일 로드 ──────────────────────────────────────────────
   loadData: (data: { activeTab: GraphTab; graphs: Record<GraphTab, GraphState>; definitions?: ModuleDefinitions }) => void
@@ -78,6 +81,138 @@ const createEmptyDefinitions = (): ModuleDefinitions => ({
   commandDef: [],
   hookDef: [],
 })
+
+function getPinMetaInStore(
+  nodeId: string,
+  pinId: string,
+  nodes: Node[],
+  definitions: ModuleDefinitions
+): { pinType: 'exec' | 'data'; dataType: string } | null {
+  const node = nodes.find(n => n.id === nodeId)
+  const nodeType = node?.data?.nodeType as string | undefined
+  if (!nodeType) return null
+
+  if (pinId.startsWith('prop__')) {
+    const key = pinId.substring(6)
+    const spec = LEVIAR_STYLE_PROPERTIES.find(p => p.key === key)
+    if (spec) {
+      const typeMap: Record<string, string> = {
+        number: 'number',
+        boolean: 'boolean'
+      }
+      return { pinType: 'data', dataType: typeMap[spec.type] ?? 'string' }
+    }
+  }
+
+  if (nodeType === 'SetState' && node?.data) {
+    const fields = (node.data.fields as string[]) || []
+    if (fields.includes(pinId)) {
+      const val = node.data[pinId]
+      let dataType = 'string'
+      if (typeof val === 'number') {
+        dataType = 'number'
+      } else if (typeof val === 'boolean') {
+        dataType = 'boolean'
+      } else if (typeof val === 'object' && val !== null) {
+        dataType = 'object'
+      }
+      return { pinType: 'data', dataType }
+    }
+  }
+
+  if (nodeType === 'GetState' && pinId === 'value' && node?.data) {
+    const fieldName = node.data.fieldName as string | undefined
+    if (fieldName) {
+      const def = definitions.schemaDef.find(d => d.name === fieldName)
+      if (def) {
+        return { pinType: 'data', dataType: def.type }
+      }
+    }
+  }
+
+  if (nodeType === 'GetCmd' && pinId === 'value' && node?.data) {
+    const fieldName = node.data.fieldName as string | undefined
+    if (fieldName) {
+      const def = definitions.commandDef.find(d => d.name === fieldName)
+      if (def) {
+        return { pinType: 'data', dataType: def.type }
+      }
+    }
+  }
+
+  const nodeDef = NODE_CATALOG.find(n => n.type === nodeType)
+  if (nodeDef) {
+    const pin = nodeDef.pins.find(p => p.id === pinId)
+    if (pin) {
+      return { pinType: pin.pinType, dataType: pin.dataType ?? 'exec' }
+    }
+  }
+
+  return null
+}
+
+function validateEdges(nodes: Node[], edges: Edge[], definitions: ModuleDefinitions): Edge[] {
+  return edges.map(edge => {
+    if (!edge.sourceHandle || !edge.targetHandle) {
+      return {
+        ...edge,
+        type: 'blueprint',
+        data: { isInvalid: true },
+        style: { stroke: '#ef4444', strokeWidth: 2.5, strokeDasharray: '5,5' }
+      }
+    }
+
+    const srcIndex = edge.sourceHandle.indexOf('__')
+    const tgtIndex = edge.targetHandle.indexOf('__')
+    if (srcIndex === -1 || tgtIndex === -1) {
+      return {
+        ...edge,
+        type: 'blueprint',
+        data: { isInvalid: true },
+        style: { stroke: '#ef4444', strokeWidth: 2.5, strokeDasharray: '5,5' }
+      }
+    }
+
+    const srcNodeId = edge.sourceHandle.substring(0, srcIndex)
+    const srcPinId = edge.sourceHandle.substring(srcIndex + 2)
+    const tgtNodeId = edge.targetHandle.substring(0, tgtIndex)
+    const tgtPinId = edge.targetHandle.substring(tgtIndex + 2)
+
+    const srcMeta = getPinMetaInStore(srcNodeId, srcPinId, nodes, definitions)
+    const tgtMeta = getPinMetaInStore(tgtNodeId, tgtPinId, nodes, definitions)
+
+    let isInvalid = false
+    if (!srcMeta || !tgtMeta) {
+      isInvalid = true
+    } else if (srcMeta.pinType !== tgtMeta.pinType) {
+      isInvalid = true
+    } else if (srcMeta.pinType === 'data') {
+      if (srcMeta.dataType !== 'any' && tgtMeta.dataType !== 'any') {
+        if (srcMeta.dataType !== tgtMeta.dataType) {
+          isInvalid = true
+        }
+      }
+    }
+
+    if (isInvalid) {
+      return {
+        ...edge,
+        type: 'blueprint',
+        data: { isInvalid: true },
+        style: { stroke: '#ef4444', strokeWidth: 2.5, strokeDasharray: '5,5' }
+      }
+    }
+
+    const dataType = srcMeta?.dataType
+    const originalStroke = dataType ? PIN_COLORS[dataType] : '#3b82f6'
+    return {
+      ...edge,
+      type: 'blueprint',
+      data: { isInvalid: false },
+      style: { stroke: originalStroke, strokeWidth: 2 }
+    }
+  })
+}
 
 export const useModuleStore = create<ModuleStoreState>((set) => ({
   activeTab: 'command',
@@ -102,34 +237,78 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
   addSchemaDef: (field) => set((s) => ({
     definitions: { ...s.definitions, schemaDef: [...s.definitions.schemaDef, field] },
   })),
-  updateSchemaDef: (index, field) => set((s) => ({
-    definitions: {
+  updateSchemaDef: (index, field) => set((s) => {
+    const nextDefs = {
       ...s.definitions,
       schemaDef: s.definitions.schemaDef.map((f, i) => i === index ? field : f),
-    },
-  })),
-  removeSchemaDef: (index) => set((s) => ({
-    definitions: {
+    }
+    const nextGraphs = { ...s.graphs }
+    for (const tab of ALL_TABS) {
+      nextGraphs[tab] = {
+        ...s.graphs[tab],
+        edges: validateEdges(s.graphs[tab].nodes, s.graphs[tab].edges, nextDefs)
+      }
+    }
+    return {
+      definitions: nextDefs,
+      graphs: nextGraphs
+    }
+  }),
+  removeSchemaDef: (index) => set((s) => {
+    const nextDefs = {
       ...s.definitions,
       schemaDef: s.definitions.schemaDef.filter((_, i) => i !== index),
-    },
-  })),
+    }
+    const nextGraphs = { ...s.graphs }
+    for (const tab of ALL_TABS) {
+      nextGraphs[tab] = {
+        ...s.graphs[tab],
+        edges: validateEdges(s.graphs[tab].nodes, s.graphs[tab].edges, nextDefs)
+      }
+    }
+    return {
+      definitions: nextDefs,
+      graphs: nextGraphs
+    }
+  }),
 
   addCommandDef: (field) => set((s) => ({
     definitions: { ...s.definitions, commandDef: [...s.definitions.commandDef, field] },
   })),
-  updateCommandDef: (index, field) => set((s) => ({
-    definitions: {
+  updateCommandDef: (index, field) => set((s) => {
+    const nextDefs = {
       ...s.definitions,
       commandDef: s.definitions.commandDef.map((f, i) => i === index ? field : f),
-    },
-  })),
-  removeCommandDef: (index) => set((s) => ({
-    definitions: {
+    }
+    const nextGraphs = { ...s.graphs }
+    for (const tab of ALL_TABS) {
+      nextGraphs[tab] = {
+        ...s.graphs[tab],
+        edges: validateEdges(s.graphs[tab].nodes, s.graphs[tab].edges, nextDefs)
+      }
+    }
+    return {
+      definitions: nextDefs,
+      graphs: nextGraphs
+    }
+  }),
+  removeCommandDef: (index) => set((s) => {
+    const nextDefs = {
       ...s.definitions,
       commandDef: s.definitions.commandDef.filter((_, i) => i !== index),
-    },
-  })),
+    }
+    const nextGraphs = { ...s.graphs }
+    for (const tab of ALL_TABS) {
+      nextGraphs[tab] = {
+        ...s.graphs[tab],
+        edges: validateEdges(s.graphs[tab].nodes, s.graphs[tab].edges, nextDefs)
+      }
+    }
+    return {
+      definitions: nextDefs,
+      graphs: nextGraphs
+    }
+  }),
 
   addHookDef: (hook) => set((s) => ({
     definitions: { ...s.definitions, hookDef: [...s.definitions.hookDef, hook] },
@@ -179,7 +358,7 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
     const tab = s.activeTab
     const currentGraph = s.graphs[tab]
     const newEdges = rxAddEdge(
-      { ...connection, animated: false, style: edgeStyle },
+      { ...connection, type: 'blueprint', animated: false, style: edgeStyle, data: { isInvalid: false } },
       currentGraph.edges
     )
     return {
@@ -234,7 +413,7 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
     } else if (nodeType === 'FadeIn' || nodeType === 'FadeOut') {
       initialData = { duration: 1000 }
     } else if (nodeType === 'Constant') {
-      initialData = { constantType: 'string', inlineValue: '' }
+      initialData = { value: '' }
     } else if (nodeType === 'Compare') {
       initialData = { operator: '==', a: '', b: '' }
     } else if (nodeType === 'MathOp') {
@@ -290,6 +469,30 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
           edges: nextEdges,
         },
       },
+    }
+  }),
+
+  updateNodeData: (nodeId, keyOrData, value) => set((s) => {
+    const tab = s.activeTab
+    const graph = s.graphs[tab]
+    const updatedNodes = graph.nodes.map(n => {
+      if (n.id !== nodeId) return n
+      const newData = typeof keyOrData === 'string'
+        ? { ...n.data, [keyOrData]: value }
+        : { ...n.data, ...keyOrData }
+      return { ...n, data: newData }
+    })
+    
+    const nextEdges = validateEdges(updatedNodes, graph.edges, s.definitions)
+
+    return {
+      graphs: {
+        ...s.graphs,
+        [tab]: {
+          nodes: updatedNodes,
+          edges: nextEdges,
+        }
+      }
     }
   }),
 

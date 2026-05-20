@@ -11,10 +11,14 @@ import {
   ReactFlowProvider,
   BackgroundVariant,
   useReactFlow,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getBezierPath,
   type NodeTypes,
   type Connection,
   type Node,
   type Edge,
+  type EdgeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -29,6 +33,7 @@ import {
   LEVIAR_STYLE_PROPERTIES,
   type GraphTab,
   type PinDataType,
+  type ModuleDefinitions,
 } from '../../types/blueprint'
 
 // ─── nodeTypes (컴포넌트 외부에 정의하여 re-render 방지) ──────
@@ -36,12 +41,134 @@ const nodeTypes: NodeTypes = {
   blueprint: BlueprintNode,
 }
 
+// ─── BlueprintEdge (커스텀 엣지 컴포넌트) ─────────────────────
+export function BlueprintEdge({
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  markerEnd,
+  data,
+}: EdgeProps) {
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetPosition,
+    targetX,
+    targetY,
+  })
+
+  const isInvalid = data?.isInvalid as boolean | undefined
+
+  return (
+    <>
+      <BaseEdge path={edgePath} style={style} markerEnd={markerEnd} />
+      {isInvalid && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              background: '#ef4444',
+              color: 'white',
+              width: 16,
+              height: 16,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              border: '2px solid #0d0d0d',
+              pointerEvents: 'all',
+              cursor: 'pointer',
+              boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)',
+            }}
+            title="Type Mismatch! This connection is invalid."
+          >
+            ✕
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  )
+}
+
+const edgeTypes = {
+  blueprint: BlueprintEdge,
+}
+
+// ─── 시맨틱 그래프 추출 및 정규화 헬퍼 ────────────────────────
+interface SemanticNode {
+  id: string
+  type: string | undefined
+  position: { x: number; y: number }
+  data: Record<string, unknown>
+}
+
+interface SemanticEdge {
+  id: string
+  source: string
+  sourceHandle: string | null | undefined
+  target: string
+  targetHandle: string | null | undefined
+  style: Record<string, unknown> | undefined
+}
+
+function getSemanticGraphs(graphs: Record<string, { nodes: Node[]; edges: Edge[] } | undefined>) {
+  const clean: Record<string, { nodes: SemanticNode[]; edges: SemanticEdge[] }> = {}
+  for (const tab of Object.keys(graphs)) {
+    const graph = graphs[tab]
+    if (!graph) continue
+
+    const nodes: SemanticNode[] = (graph.nodes || []).map((n) => ({
+      id: n.id,
+      type: n.type,
+      position: n.position ? { x: Math.round(n.position.x), y: Math.round(n.position.y) } : { x: 0, y: 0 },
+      data: (n.data || {}) as Record<string, unknown>,
+    }))
+
+    const edges: SemanticEdge[] = (graph.edges || []).map((e) => ({
+      id: e.id,
+      source: e.source,
+      sourceHandle: e.sourceHandle,
+      target: e.target,
+      targetHandle: e.targetHandle,
+      style: e.style as Record<string, unknown> | undefined,
+    }))
+
+    clean[tab] = { nodes, edges }
+  }
+  return clean
+}
+
+function getSemanticDefinitions(definitions: ModuleDefinitions | undefined): ModuleDefinitions {
+  if (!definitions) {
+    return {
+      moduleName: '',
+      schemaDef: [],
+      commandDef: [],
+      hookDef: [],
+    }
+  }
+  return {
+    moduleName: definitions.moduleName || '',
+    schemaDef: definitions.schemaDef || [],
+    commandDef: definitions.commandDef || [],
+    hookDef: definitions.hookDef || [],
+  }
+}
+
 // ─── 핀 메타 추출 헬퍼 ───────────────────────────────────────
 function getPinMeta(handleId: string): { pinType: 'exec' | 'data'; dataType: PinDataType } | null {
-  const lastIndex = handleId.lastIndexOf('__')
-  if (lastIndex === -1) return null
-  const nodeId = handleId.substring(0, lastIndex)
-  const pinId = handleId.substring(lastIndex + 2)
+  const index = handleId.indexOf('__')
+  if (index === -1) return null
+  const nodeId = handleId.substring(0, index)
+  const pinId = handleId.substring(index + 2)
 
   if (pinId.startsWith('prop__')) {
     const key = pinId.substring(6)
@@ -65,9 +192,38 @@ function getPinMeta(handleId: string): { pinType: 'exec' | 'data'; dataType: Pin
     if (nodeType === 'SetState' && node?.data) {
       const fields = (node.data.fields as string[]) || []
       if (fields.includes(pinId)) {
-        return { pinType: 'data', dataType: 'any' }
+        const val = node.data[pinId]
+        let dataType: PinDataType = 'string'
+        if (typeof val === 'number') {
+          dataType = 'number'
+        } else if (typeof val === 'boolean') {
+          dataType = 'boolean'
+        } else if (typeof val === 'object' && val !== null) {
+          dataType = 'object'
+        }
+        return { pinType: 'data', dataType }
       }
     }
+    // GetState / GetCmd 출력 핀의 dataType 동적 결정
+    if (nodeType === 'GetState' && pinId === 'value' && node?.data) {
+      const fieldName = node.data.fieldName as string | undefined
+      if (fieldName) {
+        const def = store.definitions?.schemaDef.find(d => d.name === fieldName)
+        if (def) {
+          return { pinType: 'data', dataType: def.type }
+        }
+      }
+    }
+    if (nodeType === 'GetCmd' && pinId === 'value' && node?.data) {
+      const fieldName = node.data.fieldName as string | undefined
+      if (fieldName) {
+        const def = store.definitions?.commandDef.find(d => d.name === fieldName)
+        if (def) {
+          return { pinType: 'data', dataType: def.type }
+        }
+      }
+    }
+
     const nodeDef = NODE_CATALOG.find(n => n.type === nodeType)
     if (nodeDef) {
       const pin = nodeDef.pins.find(p => p.id === pinId)
@@ -101,12 +257,12 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
     setActiveTab,
     graphs,
     definitions,
+    selectedNodeId,
     setSelectedNodeId,
     onNodesChange,
     onEdgesChange,
     onConnect,
     addNode,
-    deleteSelectedNode,
     loadData,
   } = useModuleStore()
 
@@ -154,11 +310,36 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
       return
     }
 
+    // ─── 핵심 데이터(graphs, definitions)의 실질적 변경 여부 검증 ───
+    try {
+      if (content) {
+        const parsedOrigin = JSON.parse(content)
+        
+        const semanticOriginGraphs = getSemanticGraphs(parsedOrigin.graphs || {})
+        const semanticCurrentGraphs = getSemanticGraphs(graphs)
+        
+        const semanticOriginDefs = getSemanticDefinitions(parsedOrigin.definitions)
+        const semanticCurrentDefs = getSemanticDefinitions(definitions)
+        
+        const isGraphsEqual = JSON.stringify(semanticOriginGraphs) === JSON.stringify(semanticCurrentGraphs)
+        const isDefsEqual = JSON.stringify(semanticOriginDefs) === JSON.stringify(semanticCurrentDefs)
+        
+        // 핵심 데이터가 원본과 완전히 같고 단순히 활성 탭(activeTab)만 바뀐 경우, 
+        // 탭에 불필요한 Dirty 마킹이 남지 않도록 저장을 생략함!
+        if (isGraphsEqual && isDefsEqual) {
+          return
+        }
+      }
+    } catch {
+      // 파싱 실패 시 안전하게 직렬화 저장 흐름 수행
+    }
+
     const serialized = JSON.stringify({ activeTab, graphs, definitions }, null, 2)
+    if (serialized === content) {
+      return
+    }
     onChangeRef.current(serialized)
-    // onChange를 ref로 안정화했으므로 deps에서 제외
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, graphs, definitions])
+  }, [activeTab, graphs, definitions, content])
 
   // ─── 연결 검증 ─────────────────────────────────────────────
   const isValidConnection = useCallback((connection: Connection | Edge) => {
@@ -194,16 +375,11 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
     onConnect(connection, edgeStyle)
   }, [onConnect])
 
-  // ─── 키보드 단축키 (Delete키로 노드 삭제) ──────────────────────
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Delete') {
-        deleteSelectedNode()
-      }
+  const handleNodesDelete = useCallback((deletedNodes: Node[]) => {
+    if (deletedNodes.some(n => n.id === selectedNodeId)) {
+      setSelectedNodeId(null)
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [deleteSelectedNode])
+  }, [selectedNodeId, setSelectedNodeId])
 
   // ─── 드래그 앤 드롭 ────────────────────────────────────────
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -278,10 +454,12 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
             onConnect={handleConnect}
             isValidConnection={isValidConnection}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onDragOver={onDragOver}
             onDrop={onDrop}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
+            onNodesDelete={handleNodesDelete}
             defaultEdgeOptions={defaultEdgeOptions}
             fitView
             snapToGrid

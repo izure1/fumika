@@ -1,12 +1,9 @@
-// =============================================================
-// BlueprintNode.tsx — 블루프린트 커스텀 노드 컴포넌트
-// =============================================================
-
-import React, { memo, useCallback } from 'react'
+import React, { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { useModuleStore } from '../../store/useModuleStore'
 import {
   type PinDef,
+  type PinDataType,
   type NodeCategory,
   PIN_COLORS,
   NODE_CATEGORY_COLORS,
@@ -79,27 +76,7 @@ function PinHandle({ pin, nodeId }: { pin: PinDef, nodeId: string }): React.JSX.
 function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Element | null {
   const nodeType = data.nodeType as string
   const edges = useModuleStore((s) => s.graphs[s.activeTab]?.edges ?? [])
-  const isTextBound = edges.some((e) => e.target === id && e.targetHandle === `${id}__text`)
-  const isImageBound = edges.some((e) => e.target === id && e.targetHandle === `${id}__image`)
-
-  const updateNodeData = useCallback((keyOrData: string | Record<string, unknown>, value?: unknown) => {
-    const store = useModuleStore.getState()
-    const tab = store.activeTab
-    const graph = store.graphs[tab]
-    const updatedNodes = graph.nodes.map(n => {
-      if (n.id !== id) return n
-      const newData = typeof keyOrData === 'string'
-        ? { ...n.data, [keyOrData]: value }
-        : { ...n.data, ...keyOrData }
-      return { ...n, data: newData }
-    })
-    useModuleStore.setState({
-      graphs: {
-        ...store.graphs,
-        [tab]: { ...graph, nodes: updatedNodes },
-      },
-    })
-  }, [id])
+  const definitions = useModuleStore((s) => s.definitions)
 
   const catalog = NODE_CATALOG.find(n => n.type === nodeType)
   if (!catalog) return null
@@ -115,23 +92,61 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
     const fields = (data.fields as string[]) || []
     inputPins = [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      ...fields.map(field => ({
-        id: field,
-        label: field,
-        direction: 'input' as const,
-        pinType: 'data' as const,
-        dataType: 'any' as const
-      }))
+      ...fields.map(field => {
+        const val = data[field]
+        let dataType: PinDataType = 'string'
+        if (typeof val === 'number') {
+          dataType = 'number'
+        } else if (typeof val === 'boolean') {
+          dataType = 'boolean'
+        } else if (typeof val === 'object' && val !== null) {
+          dataType = 'object'
+        }
+        return {
+          id: field,
+          label: field,
+          direction: 'input' as const,
+          pinType: 'data' as const,
+          dataType
+        }
+      })
     ]
   }
 
-  const outputPins = catalog.pins.filter(p => p.direction === 'output')
+  let outputPins = catalog.pins.filter(p => p.direction === 'output')
+
+  if (nodeType === 'GetState' && data.fieldName) {
+    const fieldName = data.fieldName as string
+    const def = definitions?.schemaDef.find(d => d.name === fieldName)
+    if (def) {
+      outputPins = outputPins.map(p => p.id === 'value' ? { ...p, dataType: def.type } : p)
+    }
+  } else if (nodeType === 'GetCmd' && data.fieldName) {
+    const fieldName = data.fieldName as string
+    const def = definitions?.commandDef.find(d => d.name === fieldName)
+    if (def) {
+      outputPins = outputPins.map(p => p.id === 'value' ? { ...p, dataType: def.type } : p)
+    }
+  }
 
   const maxRows = Math.max(inputPins.length, outputPins.length, 1)
 
   const hasDetails = [
     'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch'
   ].includes(nodeType)
+
+  // 값 포맷터 함수
+  const formatPreviewValue = (val: unknown): string => {
+    if (val === undefined || val === null) return 'Empty'
+    if (typeof val === 'object') {
+      try {
+        return JSON.stringify(val)
+      } catch {
+        return '[Object]'
+      }
+    }
+    return String(val)
+  }
 
   return (
     <div
@@ -187,21 +202,60 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
       {/* Node-specific Custom Details */}
       {hasDetails && (
         <div className="px-3.5 pb-3.5 border-t border-white/5 pt-2.5 flex flex-col gap-2">
-          {nodeType === 'Constant' && (
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider">
-                {String(data.constantType ?? 'string')}
-              </span>
-              <div className="text-[10px] text-surface-300 font-mono bg-black/30 px-2 py-1 rounded-md border border-white/5 truncate select-none">
-                {String(data.inlineValue ?? 'Empty')}
-              </div>
-            </div>
-          )}
+          {nodeType === 'Constant' && (() => {
+            const val = data.value !== undefined ? data.value : data.inlineValue
+            let currentType = data.constantType || 'string'
+            if (data.value !== undefined) {
+              if (typeof val === 'number') currentType = 'number'
+              else if (typeof val === 'boolean') currentType = 'boolean'
+              else if (typeof val === 'object' && val !== null) currentType = 'json'
+            }
 
-          {(nodeType === 'Compare' || nodeType === 'MathOp') && (
+            return (
+              <div className="flex flex-col gap-1">
+                <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider">
+                  {String(currentType)}
+                </span>
+                <div className="text-[10px] text-surface-300 font-mono bg-black/30 px-2 py-1 rounded-md border border-white/5 truncate select-none">
+                  {formatPreviewValue(val)}
+                </div>
+              </div>
+            )
+          })()}
+
+          {nodeType === 'Compare' && (() => {
+            const isABound = edges.some(e => e.target === id && e.targetHandle === `${id}__a`)
+            const isBBound = edges.some(e => e.target === id && e.targetHandle === `${id}__b`)
+            const valA = data.a
+            const valB = data.b
+
+            return (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-center py-0.5">
+                  <span className="px-3.5 py-1 rounded-md bg-black/60 border border-white/5 text-[10px] font-bold font-mono text-primary-400 shadow-inner">
+                    {String(data.operator ?? '==')}
+                  </span>
+                </div>
+                {!isABound && valA !== undefined && valA !== '' && (
+                  <div className="flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded border border-white/5">
+                    <span className="text-[8px] text-surface-500 font-bold font-mono uppercase">A:</span>
+                    <span className="text-[9px] text-surface-300 font-mono truncate">{formatPreviewValue(valA)}</span>
+                  </div>
+                )}
+                {!isBBound && valB !== undefined && valB !== '' && (
+                  <div className="flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded border border-white/5">
+                    <span className="text-[8px] text-surface-500 font-bold font-mono uppercase">B:</span>
+                    <span className="text-[9px] text-surface-300 font-mono truncate">{formatPreviewValue(valB)}</span>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {nodeType === 'MathOp' && (
             <div className="flex justify-center py-0.5">
               <span className="px-3.5 py-1 rounded-md bg-black/60 border border-white/5 text-[10px] font-bold font-mono text-primary-400 shadow-inner">
-                {String(data.operator ?? (nodeType === 'Compare' ? '==' : '+'))}
+                {String(data.operator ?? '+')}
               </span>
             </div>
           )}
@@ -212,6 +266,28 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
               <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.fieldName)}</span>
             </div>
           )}
+
+          {nodeType === 'SetState' && (() => {
+            const fields = (data.fields as string[]) || []
+            const unboundFields = fields.filter(f => !edges.some(e => e.target === id && e.targetHandle === `${id}__${f}`))
+            if (unboundFields.length === 0) return null
+
+            return (
+              <div className="flex flex-col gap-1.5 pt-1.5 border-t border-white/5">
+                <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider">Direct Values</span>
+                {unboundFields.map(f => {
+                  const val = data[f]
+                  if (val === undefined || val === '') return null
+                  return (
+                    <div key={f} className="flex items-center justify-between gap-1.5 bg-black/20 px-2 py-0.5 rounded border border-white/5">
+                      <span className="text-[9px] text-yellow-500 font-bold font-mono truncate max-w-[80px]">{f}:</span>
+                      <span className="text-[9px] text-surface-300 font-mono truncate">{formatPreviewValue(val)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
 
           {nodeType === 'GetCmd' && !!data.fieldName && (
             <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
@@ -231,13 +307,34 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
             </div>
           )}
 
-          {nodeType === 'SetVariable' && (
-            <div className="flex justify-center">
-              <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-950/40 bg-emerald-950/30 text-emerald-400 font-bold font-mono">
-                scope: {data.scope === 'env' ? 'Env ($)' : data.scope === 'local' ? 'Local (_)' : 'Global'}
-              </span>
-            </div>
-          )}
+          {nodeType === 'SetVariable' && (() => {
+            const isNameBound = edges.some(e => e.target === id && e.targetHandle === `${id}__name`)
+            const isValBound = edges.some(e => e.target === id && e.targetHandle === `${id}__value`)
+            const nameVal = data.name
+            const valueVal = data.value
+
+            return (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-center">
+                  <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-950/40 bg-emerald-950/30 text-emerald-400 font-bold font-mono">
+                    scope: {data.scope === 'env' ? 'Env ($)' : data.scope === 'local' ? 'Local (_)' : 'Global'}
+                  </span>
+                </div>
+                {!isNameBound && nameVal !== undefined && nameVal !== '' && (
+                  <div className="flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded border border-white/5">
+                    <span className="text-[8px] text-emerald-500 font-bold font-mono uppercase">Name:</span>
+                    <span className="text-[9px] text-surface-300 font-mono truncate">{formatPreviewValue(nameVal)}</span>
+                  </div>
+                )}
+                {!isValBound && valueVal !== undefined && valueVal !== '' && (
+                  <div className="flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded border border-white/5">
+                    <span className="text-[8px] text-emerald-500 font-bold font-mono uppercase">Value:</span>
+                    <span className="text-[9px] text-surface-300 font-mono truncate">{formatPreviewValue(valueVal)}</span>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {nodeType === 'Return' && (
             <div className="flex justify-center">
