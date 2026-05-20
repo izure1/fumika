@@ -161,16 +161,21 @@ interface TypedInputProps {
   label?: string
   value: unknown
   onChange: (newValue: unknown) => void
+  forceType?: 'string' | 'number' | 'boolean' | 'json'
 }
 
-function TypedInput({ label, value, onChange }: TypedInputProps): React.JSX.Element {
+function TypedInput({ label, value, onChange, forceType }: TypedInputProps): React.JSX.Element {
   let currentType: 'string' | 'number' | 'boolean' | 'json' = 'string'
-  if (typeof value === 'number') {
-    currentType = 'number'
-  } else if (typeof value === 'boolean') {
-    currentType = 'boolean'
-  } else if (typeof value === 'object' && value !== null) {
-    currentType = 'json'
+  if (forceType) {
+    currentType = forceType
+  } else {
+    if (typeof value === 'number') {
+      currentType = 'number'
+    } else if (typeof value === 'boolean') {
+      currentType = 'boolean'
+    } else if (typeof value === 'object' && value !== null) {
+      currentType = 'json'
+    }
   }
 
   const handleTypeChange = (newType: 'string' | 'number' | 'boolean' | 'json') => {
@@ -188,6 +193,37 @@ function TypedInput({ label, value, onChange }: TypedInputProps): React.JSX.Elem
     }
   }
 
+  // Coercion helper for checkboxes
+  const getCoercedBoolean = (val: unknown): boolean => {
+    if (typeof val === 'boolean') return val
+    if (typeof val === 'number') return val !== 0
+    if (typeof val === 'string') {
+      const lower = val.trim().toLowerCase()
+      return lower === 'true' || lower === '1'
+    }
+    return !!val
+  }
+
+  // Coercion helper for JSON
+  const getCoercedJsonString = (val: unknown): string => {
+    if (typeof val === 'object' && val !== null) {
+      return JSON.stringify(val, null, 2)
+    }
+    if (typeof val === 'string') {
+      const trimmed = val.trim()
+      if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        return val
+      }
+    }
+    return JSON.stringify(val)
+  }
+
+  // Coercion helper for numbers
+  const getCoercedNumber = (val: unknown): number => {
+    const num = Number(val)
+    return isNaN(num) ? 0 : num
+  }
+
   return (
     <div className="space-y-1 mt-1 p-1.5 rounded bg-surface-900/35 border border-surface-800/60">
       <div className="flex items-center justify-between gap-1.5">
@@ -196,16 +232,22 @@ function TypedInput({ label, value, onChange }: TypedInputProps): React.JSX.Elem
             {label}
           </span>
         ) : <div />}
-        <select
-          className="bg-surface-900 border border-surface-750 rounded px-1 py-0.5 text-[9px] text-primary-400 font-medium outline-none cursor-pointer"
-          value={currentType}
-          onChange={(e) => handleTypeChange(e.target.value as 'string' | 'number' | 'boolean' | 'json')}
-        >
-          <option value="string">String</option>
-          <option value="number">Number</option>
-          <option value="boolean">Boolean</option>
-          <option value="json">JSON</option>
-        </select>
+        {forceType ? (
+          <span className="text-[8px] bg-primary-950/40 border border-primary-900/50 text-primary-400 px-1.5 py-0.5 rounded font-bold font-mono uppercase tracking-wider">
+            {forceType}
+          </span>
+        ) : (
+          <select
+            className="bg-surface-900 border border-surface-750 rounded px-1 py-0.5 text-[9px] text-primary-400 font-medium outline-none cursor-pointer"
+            value={currentType}
+            onChange={(e) => handleTypeChange(e.target.value as 'string' | 'number' | 'boolean' | 'json')}
+          >
+            <option value="string">String</option>
+            <option value="number">Number</option>
+            <option value="boolean">Boolean</option>
+            <option value="json">JSON</option>
+          </select>
+        )}
       </div>
 
       <div className="mt-1">
@@ -213,7 +255,7 @@ function TypedInput({ label, value, onChange }: TypedInputProps): React.JSX.Elem
           <input
             type="number"
             className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/50 font-mono"
-            value={value !== undefined ? Number(value) : 0}
+            value={getCoercedNumber(value)}
             onChange={(e) => onChange(Number(e.target.value))}
           />
         )}
@@ -223,11 +265,11 @@ function TypedInput({ label, value, onChange }: TypedInputProps): React.JSX.Elem
             <input
               type="checkbox"
               className="accent-primary-500 cursor-pointer"
-              checked={Boolean(value)}
+              checked={getCoercedBoolean(value)}
               onChange={(e) => onChange(e.target.checked)}
             />
             <span className="text-[9px] text-surface-400 font-mono select-none">
-              {value ? 'true' : 'false'}
+              {getCoercedBoolean(value) ? 'true' : 'false'}
             </span>
           </label>
         )}
@@ -235,7 +277,7 @@ function TypedInput({ label, value, onChange }: TypedInputProps): React.JSX.Elem
         {currentType === 'json' && (
           <textarea
             className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[9px] text-white font-mono outline-none focus:border-primary-500/50 min-h-[40px] resize-y custom-scrollbar"
-            value={JSON.stringify(value, null, 2)}
+            value={getCoercedJsonString(value)}
             onChange={(e) => {
               try {
                 const parsed = JSON.parse(e.target.value)
@@ -265,7 +307,7 @@ function TypedInput({ label, value, onChange }: TypedInputProps): React.JSX.Elem
 // ─── 메인 컴포넌트 ──────────────────────────────────────────
 
 export function ModuleInspector() {
-  const { selectedNodeId, graphs, activeTab } = useModuleStore()
+  const { selectedNodeId, graphs, activeTab, definitions } = useModuleStore()
 
   const currentGraph = graphs[activeTab]
   const edges = currentGraph?.edges ?? []
@@ -450,11 +492,26 @@ export function ModuleInspector() {
     if (currentFields.includes(field)) return
     const nextFields = [...currentFields, field]
 
+    const schemaField = definitions?.schemaDef.find(d => d.name === field)
+    let initialValue: unknown = ''
+    if (schemaField) {
+      const t = schemaField.type
+      if (t === 'number') {
+        initialValue = 0
+      } else if (t === 'boolean') {
+        initialValue = false
+      } else if (t === 'object') {
+        initialValue = {}
+      } else if (t === 'array') {
+        initialValue = []
+      }
+    }
+
     updateNodeData({
       fields: nextFields,
-      [field]: '',
+      [field]: initialValue
     })
-  }, [selectedNode, updateNodeData])
+  }, [selectedNode, updateNodeData, definitions])
 
   if (!selectedNode || !catalog) {
     return (
@@ -711,6 +768,21 @@ export function ModuleInspector() {
                   const targetHandleId = `${selectedNode.id}__${field}`
                   const isBound = connectedTargets.includes(targetHandleId)
 
+                  const schemaField = definitions?.schemaDef.find(d => d.name === field)
+                  let forceType: 'string' | 'number' | 'boolean' | 'json' | undefined = undefined
+                  if (schemaField) {
+                    const t = schemaField.type
+                    if (t === 'number') {
+                      forceType = 'number'
+                    } else if (t === 'boolean') {
+                      forceType = 'boolean'
+                    } else if (t === 'object' || t === 'array') {
+                      forceType = 'json'
+                    } else {
+                      forceType = 'string'
+                    }
+                  }
+
                   return (
                     <div key={field} className="p-1.5 rounded bg-[#1c1c1c] border border-surface-800/60 space-y-1">
                       <div className="flex items-center justify-between gap-1">
@@ -737,6 +809,7 @@ export function ModuleInspector() {
                           <TypedInput
                             value={selectedNode.data?.[field]}
                             onChange={(newVal) => updateNodeData(field, newVal)}
+                            forceType={forceType}
                           />
                         )}
                       </div>
@@ -749,37 +822,31 @@ export function ModuleInspector() {
               <div className="pt-2 border-t border-surface-800 flex flex-col gap-1.5">
                 <span className="text-[9px] text-surface-500 font-bold uppercase tracking-wider select-none">Add State Field</span>
                 <div className="flex gap-1">
-                  <input
-                    id="new-state-field-input"
-                    type="text"
-                    className="flex-1 bg-surface-900 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/50 font-mono"
-                    placeholder="field name..."
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const input = e.currentTarget
-                        const val = input.value.trim()
-                        if (val) {
-                          addStateField(val)
-                          input.value = ''
-                        }
-                      }
-                    }}
-                  />
-                  <button
-                    className="bg-primary-600 hover:bg-primary-500 text-white rounded px-2 py-0.5 text-[10px] font-bold transition-colors"
-                    onClick={() => {
-                      const input = document.getElementById('new-state-field-input') as HTMLInputElement | null
-                      if (input) {
-                        const val = input.value.trim()
-                        if (val) {
-                          addStateField(val)
-                          input.value = ''
-                        }
-                      }
-                    }}
-                  >
-                    +
-                  </button>
+                  {(() => {
+                    const availableFields = definitions?.schemaDef.filter(d => !stateFields.includes(d.name)) || []
+                    return (
+                      <select
+                        className="w-full bg-surface-900 border border-surface-750 rounded px-2 py-1 text-[10px] text-surface-300 outline-none focus:border-primary-500/50 cursor-pointer"
+                        value=""
+                        onChange={(e) => {
+                          const val = e.target.value
+                          if (val) {
+                            addStateField(val)
+                          }
+                          e.target.value = ""
+                        }}
+                      >
+                        <option value="" disabled className="bg-[#141414] text-surface-500">
+                          {availableFields.length === 0 ? '-- No state fields available --' : '-- Add State Field --'}
+                        </option>
+                        {availableFields.map(d => (
+                          <option key={d.name} value={d.name} className="bg-[#141414] text-white">
+                            {d.name} ({d.type})
+                          </option>
+                        ))}
+                      </select>
+                    )
+                  })()}
                 </div>
               </div>
             </div>
@@ -801,55 +868,103 @@ export function ModuleInspector() {
                   </div>
                 ) : (
                   <>
-                    {field.type === 'typed' && (
-                      <TypedInput
-                        value={selectedNode.data?.[field.key] !== undefined ? selectedNode.data?.[field.key] : selectedNode.data?.inlineValue}
-                        onChange={(newVal) => updateNodeData(field.key, newVal)}
-                      />
-                    )}
-
-                    {field.type === 'text' && (
-                      <input
-                        className="mt-0.5 w-full bg-surface-900/50 border border-surface-700 rounded px-2 py-1 text-[11px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50"
-                        value={String(selectedNode.data?.[field.key] ?? '')}
-                        placeholder={field.placeholder}
-                        onChange={(e) => updateNodeData(field.key, e.target.value)}
-                      />
-                    )}
-
-                    {field.type === 'number' && (
-                      <input
-                        type="number"
-                        className="mt-0.5 w-full bg-surface-900/50 border border-surface-700 rounded px-2 py-1 text-[11px] text-white outline-none focus:border-primary-500/50"
-                        value={Number(selectedNode.data?.[field.key] ?? 0)}
-                        onChange={(e) => updateNodeData(field.key, Number(e.target.value))}
-                      />
-                    )}
-
-                    {field.type === 'select' && field.options && (
+                    {nodeType === 'GetState' && field.key === 'fieldName' ? (
                       <select
-                        className="mt-0.5 w-full bg-surface-900 border border-surface-700 rounded px-2 py-1 text-[11px] text-white outline-none focus:border-primary-500/50"
-                        value={String(selectedNode.data?.[field.key] ?? field.options[0]?.value ?? '')}
+                        className={`mt-0.5 w-full bg-[#141414] border rounded px-2 py-1 text-[11px] text-white outline-none focus:border-primary-500/50 ${
+                          selectedNode.data?.[field.key] && !definitions?.schemaDef.some(d => d.name === selectedNode.data?.[field.key])
+                            ? 'border-red-500/50 text-red-200 shadow-[0_0_10px_rgba(239,68,68,0.1)]'
+                            : 'border-surface-700'
+                        }`}
+                        value={String(selectedNode.data?.[field.key] ?? '')}
                         onChange={(e) => updateNodeData(field.key, e.target.value)}
                       >
-                        {field.options.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        <option value="" disabled className="bg-[#141414] text-surface-500">-- Select State Field --</option>
+                        {definitions?.schemaDef.map(d => (
+                          <option key={d.name} value={d.name} className="bg-[#141414] text-white">
+                            {d.name} ({d.type})
+                          </option>
                         ))}
+                        {!!selectedNode.data?.[field.key] && !definitions?.schemaDef.some(d => d.name === selectedNode.data?.[field.key]) && (
+                          <option value={String(selectedNode.data?.[field.key])} className="bg-[#141414] text-red-400 font-bold">
+                            {String(selectedNode.data?.[field.key])} (Missing)
+                          </option>
+                        )}
                       </select>
-                    )}
+                    ) : nodeType === 'GetCmd' && field.key === 'fieldName' ? (
+                      <select
+                        className={`mt-0.5 w-full bg-[#141414] border rounded px-2 py-1 text-[11px] text-white outline-none focus:border-primary-500/50 ${
+                          selectedNode.data?.[field.key] && !definitions?.commandDef.some(d => d.name === selectedNode.data?.[field.key])
+                            ? 'border-red-500/50 text-red-200 shadow-[0_0_10px_rgba(239,68,68,0.1)]'
+                            : 'border-surface-700'
+                        }`}
+                        value={String(selectedNode.data?.[field.key] ?? '')}
+                        onChange={(e) => updateNodeData(field.key, e.target.value)}
+                      >
+                        <option value="" disabled className="bg-[#141414] text-surface-500">-- Select Command Prop --</option>
+                        {definitions?.commandDef.map(d => (
+                          <option key={d.name} value={d.name} className="bg-[#141414] text-white">
+                            {d.name} ({d.type})
+                          </option>
+                        ))}
+                        {!!selectedNode.data?.[field.key] && !definitions?.commandDef.some(d => d.name === selectedNode.data?.[field.key]) && (
+                          <option value={String(selectedNode.data?.[field.key])} className="bg-[#141414] text-red-400 font-bold">
+                            {String(selectedNode.data?.[field.key])} (Missing)
+                          </option>
+                        )}
+                      </select>
+                    ) : (
+                      <>
+                        {field.type === 'typed' && (
+                          <TypedInput
+                            value={selectedNode.data?.[field.key] !== undefined ? selectedNode.data?.[field.key] : selectedNode.data?.inlineValue}
+                            onChange={(newVal) => updateNodeData(field.key, newVal)}
+                          />
+                        )}
 
-                    {field.type === 'boolean' && (
-                      <label className="flex items-center gap-1.5 mt-0.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="accent-primary-500"
-                          checked={Boolean(selectedNode.data?.[field.key])}
-                          onChange={(e) => updateNodeData(field.key, e.target.checked)}
-                        />
-                        <span className="text-[10px] text-surface-300">
-                          {selectedNode.data?.[field.key] ? 'true' : 'false'}
-                        </span>
-                      </label>
+                        {field.type === 'text' && (
+                          <input
+                            className="mt-0.5 w-full bg-surface-900/50 border border-surface-700 rounded px-2 py-1 text-[11px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50"
+                            value={String(selectedNode.data?.[field.key] ?? '')}
+                            placeholder={field.placeholder}
+                            onChange={(e) => updateNodeData(field.key, e.target.value)}
+                          />
+                        )}
+
+                        {field.type === 'number' && (
+                          <input
+                            type="number"
+                            className="mt-0.5 w-full bg-surface-900/50 border border-surface-700 rounded px-2 py-1 text-[11px] text-white outline-none focus:border-primary-500/50"
+                            value={Number(selectedNode.data?.[field.key] ?? 0)}
+                            onChange={(e) => updateNodeData(field.key, Number(e.target.value))}
+                          />
+                        )}
+
+                        {field.type === 'select' && field.options && (
+                          <select
+                            className="mt-0.5 w-full bg-surface-900 border border-surface-700 rounded px-2 py-1 text-[11px] text-white outline-none focus:border-primary-500/50"
+                            value={String(selectedNode.data?.[field.key] ?? field.options[0]?.value ?? '')}
+                            onChange={(e) => updateNodeData(field.key, e.target.value)}
+                          >
+                            {field.options.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        )}
+
+                        {field.type === 'boolean' && (
+                          <label className="flex items-center gap-1.5 mt-0.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="accent-primary-500"
+                              checked={Boolean(selectedNode.data?.[field.key])}
+                              onChange={(e) => updateNodeData(field.key, e.target.checked)}
+                            />
+                            <span className="text-[10px] text-surface-300">
+                              {selectedNode.data?.[field.key] ? 'true' : 'false'}
+                            </span>
+                          </label>
+                        )}
+                      </>
                     )}
                   </>
                 )}

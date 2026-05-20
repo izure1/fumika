@@ -142,4 +142,4 @@ console.log(compiledTypeScriptCode.substring(0, 300))
 
 블루프린트의 기능적 목적과 흐름에 따른 구체적인 실무 활용 시나리오를 읽어보고 싶다면 아래 가이드를 탐색해 보세요.  
 
-- [블루프린트 가이드](file:///d:/My_WorkSpace/Programming/Project/fumika/packages/ide/docs/blueprint-guide.md)로 이동하기  
+- [블루프린트 가이드](./blueprint-guide.md)로 이동하기  

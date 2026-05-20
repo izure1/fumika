@@ -109,12 +109,17 @@ function getPinMetaInStore(
     if (fields.includes(pinId)) {
       const val = node.data[pinId]
       let dataType = 'string'
-      if (typeof val === 'number') {
-        dataType = 'number'
-      } else if (typeof val === 'boolean') {
-        dataType = 'boolean'
-      } else if (typeof val === 'object' && val !== null) {
-        dataType = 'object'
+      const def = definitions.schemaDef.find(d => d.name === pinId)
+      if (def) {
+        dataType = def.type
+      } else {
+        if (typeof val === 'number') {
+          dataType = 'number'
+        } else if (typeof val === 'boolean') {
+          dataType = 'boolean'
+        } else if (typeof val === 'object' && val !== null) {
+          dataType = 'object'
+        }
       }
       return { pinType: 'data', dataType }
     }

@@ -84,6 +84,22 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
   const category = catalog.category as NodeCategory
   const colors = NODE_CATEGORY_COLORS[category]
 
+  const hasError = (() => {
+    if (nodeType === 'GetState') {
+      const field = data.fieldName as string
+      return !field || !definitions?.schemaDef.some(d => d.name === field)
+    }
+    if (nodeType === 'SetState') {
+      const fields = (data.fields as string[]) || []
+      return fields.some(f => !definitions?.schemaDef.some(d => d.name === f))
+    }
+    if (nodeType === 'GetCmd') {
+      const field = data.fieldName as string
+      return !field || !definitions?.commandDef.some(d => d.name === field)
+    }
+    return false
+  })()
+
   let inputPins = nodeType === 'MakeStyle'
     ? []
     : catalog.pins.filter(p => p.direction === 'input')
@@ -95,12 +111,17 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
       ...fields.map(field => {
         const val = data[field]
         let dataType: PinDataType = 'string'
-        if (typeof val === 'number') {
-          dataType = 'number'
-        } else if (typeof val === 'boolean') {
-          dataType = 'boolean'
-        } else if (typeof val === 'object' && val !== null) {
-          dataType = 'object'
+        const def = definitions?.schemaDef.find(d => d.name === field)
+        if (def) {
+          dataType = def.type
+        } else {
+          if (typeof val === 'number') {
+            dataType = 'number'
+          } else if (typeof val === 'boolean') {
+            dataType = 'boolean'
+          } else if (typeof val === 'object' && val !== null) {
+            dataType = 'object'
+          }
         }
         return {
           id: field,
@@ -153,11 +174,13 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
       className="blueprint-node-premium rounded-lg"
       style={{
         background: colors.bg,
-        border: `1.2px solid ${selected ? colors.border : 'rgba(255, 255, 255, 0.08)'}`,
+        border: `1.2px solid ${hasError ? '#ef4444' : (selected ? colors.border : 'rgba(255, 255, 255, 0.08)')}`,
         minWidth: 190,
-        boxShadow: selected
-          ? `0 0 20px ${colors.border}40, 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1)`
-          : `0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.03)`,
+        boxShadow: hasError
+          ? `0 0 20px #ef444440, 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1)`
+          : (selected
+            ? `0 0 20px ${colors.border}40, 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1)`
+            : `0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.03)`),
       }}
     >
       {/* Header */}
@@ -170,13 +193,18 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
       >
         <div
           className="w-1.5 h-1.5 rounded-full"
-          style={{ background: colors.border }}
+          style={{ background: hasError ? '#ef4444' : colors.border }}
         />
         <span
           className="text-[11px] font-semibold tracking-tight text-white/95"
         >
           {catalog.label}
         </span>
+        {hasError && (
+          <span className="text-[8px] bg-red-950/60 border border-red-500/30 text-red-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+            Error
+          </span>
+        )}
         <span
           className="ml-auto text-[8px] font-bold uppercase tracking-widest opacity-25"
           style={{ color: colors.text }}
@@ -260,10 +288,13 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
             </div>
           )}
 
-          {(nodeType === 'GetState' || nodeType === 'SetState') && !!data.fieldName && (
-            <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
-              <span className="text-[8px] text-yellow-500 font-bold font-mono">state.</span>
-              <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.fieldName)}</span>
+          {nodeType === 'GetState' && !!data.fieldName && (
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border shadow-inner ${
+              hasError ? 'bg-red-950/20 border-red-500/20' : 'bg-black/30 border-white/5'
+            }`}>
+              <span className={`text-[8px] font-bold font-mono ${hasError ? 'text-red-400' : 'text-yellow-500'}`}>state.</span>
+              <span className={`text-[10px] font-mono truncate ${hasError ? 'text-red-300' : 'text-surface-300'}`}>{String(data.fieldName)}</span>
+              {hasError && <span className="text-red-400 text-[10px] ml-auto">⚠️</span>}
             </div>
           )}
 
@@ -278,10 +309,18 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
                 {unboundFields.map(f => {
                   const val = data[f]
                   if (val === undefined || val === '') return null
+                  const isFieldMissing = !definitions?.schemaDef.some(d => d.name === f)
                   return (
-                    <div key={f} className="flex items-center justify-between gap-1.5 bg-black/20 px-2 py-0.5 rounded border border-white/5">
-                      <span className="text-[9px] text-yellow-500 font-bold font-mono truncate max-w-[80px]">{f}:</span>
-                      <span className="text-[9px] text-surface-300 font-mono truncate">{formatPreviewValue(val)}</span>
+                    <div key={f} className={`flex items-center justify-between gap-1.5 px-2 py-0.5 rounded border ${
+                      isFieldMissing ? 'bg-red-950/20 border-red-500/20' : 'bg-black/20 border-white/5'
+                    }`}>
+                      <span className={`text-[9px] font-bold font-mono truncate max-w-[80px] ${
+                        isFieldMissing ? 'text-red-400' : 'text-yellow-500'
+                      }`}>{f}:</span>
+                      <span className={`text-[9px] font-mono truncate ${
+                        isFieldMissing ? 'text-red-300' : 'text-surface-300'
+                      }`}>{isFieldMissing ? 'Missing Field' : formatPreviewValue(val)}</span>
+                      {isFieldMissing && <span className="text-red-400 text-[10px]">⚠️</span>}
                     </div>
                   )
                 })}
@@ -290,9 +329,12 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
           })()}
 
           {nodeType === 'GetCmd' && !!data.fieldName && (
-            <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
-              <span className="text-[8px] text-blue-500 font-bold font-mono">cmd.</span>
-              <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.fieldName)}</span>
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border shadow-inner ${
+              hasError ? 'bg-red-950/20 border-red-500/20' : 'bg-black/30 border-white/5'
+            }`}>
+              <span className={`text-[8px] font-bold font-mono ${hasError ? 'text-red-400' : 'text-blue-500'}`}>cmd.</span>
+              <span className={`text-[10px] font-mono truncate ${hasError ? 'text-red-300' : 'text-surface-300'}`}>{String(data.fieldName)}</span>
+              {hasError && <span className="text-red-400 text-[10px] ml-auto">⚠️</span>}
             </div>
           )}
 

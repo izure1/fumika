@@ -194,12 +194,17 @@ function getPinMeta(handleId: string): { pinType: 'exec' | 'data'; dataType: Pin
       if (fields.includes(pinId)) {
         const val = node.data[pinId]
         let dataType: PinDataType = 'string'
-        if (typeof val === 'number') {
-          dataType = 'number'
-        } else if (typeof val === 'boolean') {
-          dataType = 'boolean'
-        } else if (typeof val === 'object' && val !== null) {
-          dataType = 'object'
+        const def = store.definitions?.schemaDef.find(d => d.name === pinId)
+        if (def) {
+          dataType = def.type as PinDataType
+        } else {
+          if (typeof val === 'number') {
+            dataType = 'number'
+          } else if (typeof val === 'boolean') {
+            dataType = 'boolean'
+          } else if (typeof val === 'object' && val !== null) {
+            dataType = 'object'
+          }
         }
         return { pinType: 'data', dataType }
       }

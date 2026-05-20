@@ -44,7 +44,7 @@ export default define({
 블루프린트의 가장 단순한 제어 흐름은 `Command Entry`에서 시작해 `Return` 노드로 끝나는 구조입니다.  
 먼저 가장 단순한 연출 흐름을 연결해 볼까요?  
 
-![기본 블루프린트 흐름](file:///packages/ide/docs/assets/basic-flow.png)
+![기본 블루프린트 흐름](./assets/basic-flow.png)
 
 1. **에디터 탭 선택**: 모듈 에디터 상단에서 `Command` 탭을 활성화하세요.  
 2. **진입점 노드 배치**: 화면에 생성되어 있는 `Command Entry` 노드를 확인하세요.  
@@ -65,7 +65,7 @@ export default define({
 두 값을 비교하여 결과에 따라 서로 다른 실행 흐름을 타도록 구성할 수 있습니다.  
 여기서 `Compare` 노드와 `Branch` 노드를 조립해 봅시다.  
 
-![조건 분기 구조](file:///packages/ide/docs/assets/branch-flow.png)
+![조건 분기 구조](./assets/branch-flow.png)
 
 - `Compare` 노드의 `Result` 데이터 핀을 `Branch` 노드의 `Condition` 입력 핀에 연결해 보세요.  
 - 비교 결과가 `True`일 때 실행할 노드와 `False`일 때 실행할 노드를 나누어 연결해 줍니다.  
@@ -101,4 +101,4 @@ ctx.world.createRectangle({
 블루프린트의 기본 흐름을 파악했다면, 이제 상세 사양을 학습할 준비가 완료된 것입니다.  
 다양한 노드들의 세부 핀 종류와 컴파일 데이터 포맷에 대해 알고 싶다면 아래 명세서를 참조해 보세요.  
 
-- [블루프린트 레퍼런스](file:///d:/My_WorkSpace/Programming/Project/fumika/packages/ide/docs/blueprint-reference.md)로 이동하기  
+- [블루프린트 레퍼런스](./blueprint-reference.md)로 이동하기  
