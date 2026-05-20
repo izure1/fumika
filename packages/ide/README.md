@@ -45,6 +45,8 @@ TypeScript 자동 완성 기능을 활용하여 실시간으로 게임을 확인
 
 ## 블루프린트 비주얼 스크립팅
 
+![Blueprint Visual Scripting](./docs/assets/preview_blueprint.png)
+
 Fumika IDE는 코드를 전혀 작성하지 않고도 시각적인 노드 연결을 통해 복잡한 연출 흐름과 시각 요소를 제어할 수 있는 블루프린트 스크립팅 시스템을 지원합니다.  
 기획과 연출에 온전히 집중할 수 있도록 아래 상세 문서를 제공하고 있으니 적극 활용해 보세요.  
 
