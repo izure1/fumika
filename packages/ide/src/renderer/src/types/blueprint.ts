@@ -478,6 +478,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     category: 'variable',
     description: '변수 읽기 (global/local/env)',
     pins: [
+      { id: 'name', label: 'Name', direction: 'input', pinType: 'data', dataType: 'string' },
       { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
   },
@@ -487,6 +488,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     category: 'variable',
     description: '현재 실행 흐름 내의 변수 읽기',
     pins: [
+      { id: 'name', label: 'Name', direction: 'input', pinType: 'data', dataType: 'string' },
       { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
   },
@@ -496,6 +498,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     category: 'variable',
     description: '모든 흐름과 공유되는 변수 읽기',
     pins: [
+      { id: 'name', label: 'Name', direction: 'input', pinType: 'data', dataType: 'string' },
       { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
   },

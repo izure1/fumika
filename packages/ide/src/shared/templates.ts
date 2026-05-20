@@ -598,7 +598,7 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "      const field = node.data?.fieldName",
   "      if (field && runtimeContext.cmd) val = runtimeContext.cmd[field]",
   "    } else if (nodeType === 'GetVariable') {",
-  "      const name = node.data?.varName",
+  "      const name = evaluatePin(nodeId + '__name') || node.data?.varName",
   "      const type = node.data?.varType || 'local'",
   "      if (ctx.variables && name) {",
   "        val = ctx.variables.get(name, type)",

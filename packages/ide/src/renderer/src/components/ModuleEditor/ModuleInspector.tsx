@@ -856,7 +856,9 @@ export function ModuleInspector() {
           )
         })() : (
           fields && fields.map(field => {
-            const fieldHandleId = `${selectedNode.id}__${field.key}`
+            const fieldHandleId = field.key === 'varName' && nodeType === 'GetVariable'
+              ? `${selectedNode.id}__name`
+              : `${selectedNode.id}__${field.key}`
             const isFieldBound = connectedTargets.includes(fieldHandleId)
 
             return (

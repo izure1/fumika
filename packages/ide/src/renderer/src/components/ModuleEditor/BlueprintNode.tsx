@@ -153,7 +153,7 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
   const maxRows = Math.max(inputPins.length, outputPins.length, 1)
 
   const hasDetails = [
-    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield'
+    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'GetConst', 'GetGlobal', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield'
   ].includes(nodeType)
 
   // 값 포맷터 함수
@@ -338,16 +338,40 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
             </div>
           )}
 
-          {nodeType === 'GetVariable' && !!data.varName && (
-            <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
-              {data.scope !== 'global' && (
-                <span className="text-[8px] text-emerald-500 font-bold font-mono">
-                  {data.scope === 'env' ? '$' : '_'}
+          {nodeType === 'GetVariable' && (() => {
+            const isNameBound = edges.some(e => e.target === id && e.targetHandle === `${id}__name`)
+            return (
+              <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
+                {data.scope !== 'global' && (
+                  <span className="text-[8px] text-emerald-500 font-bold font-mono">
+                    {data.scope === 'env' ? '$' : '_'}
+                  </span>
+                )}
+                {isNameBound ? (
+                  <span className="text-[10px] text-primary-400 font-mono italic">⛓️ Bound</span>
+                ) : (
+                  <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.varName ?? 'Empty')}</span>
+                )}
+              </div>
+            )
+          })()}
+
+          {(nodeType === 'GetConst' || nodeType === 'GetGlobal') && (() => {
+            const isNameBound = edges.some(e => e.target === id && e.targetHandle === `${id}__name`)
+            const nameVal = data.name
+            return (
+              <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
+                <span className="text-[8px] text-purple-400 font-bold font-mono">
+                  {nodeType === 'GetConst' ? 'L' : 'G'}
                 </span>
-              )}
-              <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.varName)}</span>
-            </div>
-          )}
+                {isNameBound ? (
+                  <span className="text-[10px] text-primary-400 font-mono italic">⛓️ Bound</span>
+                ) : (
+                  <span className="text-[10px] text-surface-300 font-mono truncate">{String(nameVal ?? 'Empty')}</span>
+                )}
+              </div>
+            )
+          })()}
 
           {nodeType === 'SetVariable' && (() => {
             const isNameBound = edges.some(e => e.target === id && e.targetHandle === `${id}__name`)

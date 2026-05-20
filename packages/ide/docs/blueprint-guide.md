@@ -65,7 +65,10 @@ export default define({
 두 값을 비교하여 결과에 따라 서로 다른 실행 흐름을 타도록 구성할 수 있습니다.  
 여기서 `Compare` 노드와 `Branch` 노드를 조립해 봅시다.  
 
-![조건 분기 구조](./assets/branch-flow.png)
+<p align="center">
+  <img src="./assets/branch-flow_1.png" width="49%" alt="Branch flow_1">
+  <img src="./assets/branch-flow_2.png" width="49%" alt="Branch flow_2">
+</p>
 
 - `Compare` 노드의 `Result` 데이터 핀을 `Branch` 노드의 `Condition` 입력 핀에 연결해 보세요.  
 - 비교 결과가 `True`일 때 실행할 노드와 `False`일 때 실행할 노드를 나누어 연결해 줍니다.  

@@ -2,7 +2,7 @@
 // ModuleEditorCanvas.tsx — 블루프린트 메인 캔버스
 // =============================================================
 
-import { useCallback, useRef, useMemo, useEffect } from 'react'
+import { useCallback, useRef, useMemo, useEffect, useState } from 'react'
 import {
   ReactFlow,
   Controls,
@@ -273,6 +273,8 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
 
   const { screenToFlowPosition } = useReactFlow()
 
+  const [isLoaded, setIsLoaded] = useState(false)
+
   const currentGraph = graphs[activeTab]
   const nodes = currentGraph.nodes
   const edges = currentGraph.edges
@@ -286,6 +288,7 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
   // ─── 파일 -> 스토어 단방향 동기화 (마운트 시 1회) ──────────────
   useEffect(() => {
     if (!content) {
+      setIsLoaded(true)
       isMounted.current = true
       return
     }
@@ -295,21 +298,25 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
         skipNextSave.current = true
         loadData(parsed)
       }
-    } catch {
+    } catch (e) {
       // 파싱 실패 시 초기 빈 상태 유지
     }
+    setIsLoaded(true)
     isMounted.current = true
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ─── 언마운트 시 저장 중단 ─────────────────────────────────
   useEffect(() => {
-    return () => { isMounted.current = false }
+    return () => {
+      isMounted.current = false
+      setIsLoaded(false)
+    }
   }, [])
 
   // ─── 스토어 -> 파일 저장 동기화 ─────────────────────────────
   useEffect(() => {
-    if (!isMounted.current) return
+    if (!isLoaded || !isMounted.current) return
     if (skipNextSave.current) {
       skipNextSave.current = false
       return
@@ -453,6 +460,15 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
   const defaultEdgeOptions = useMemo(() => ({
     style: { strokeWidth: 2 },
   }), [])
+
+  if (!isLoaded) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#0d0d0d] h-full w-full">
+        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-xs text-surface-400 font-medium">블루프린트 데이터를 불러오는 중...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-full w-full bg-[#0d0d0d]">
