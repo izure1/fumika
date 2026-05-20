@@ -3,6 +3,7 @@ import path from 'path'
 import { promises as fs } from 'fs'
 import type { BrowserWindow } from 'electron'
 import { WATCHER_DECL, getDeclarationTemplate } from '../../shared/templates'
+import { compileBlueprint } from './compiler'
 
 const WATCH_FOLDERS = [
   'assets',
@@ -47,15 +48,25 @@ export class ProjectWatcher {
     })
 
     this.watcher
-      .on('add', (filePath) => this.handleFileChange(filePath))
+      .on('add', (filePath) => {
+        handleBlueprintChange(filePath).then(() => {
+          this.handleFileChange(filePath)
+        })
+      })
+      .on('change', (filePath) => {
+        handleBlueprintChange(filePath).then(() => {
+          this.handleFileChange(filePath)
+        })
+      })
       .on('unlink', (filePath) => {
-        this.handleFileChange(filePath)
-        this.notifyFileDeleted(filePath)
+        handleBlueprintDelete(filePath).then(() => {
+          this.handleFileChange(filePath)
+          this.notifyFileDeleted(filePath)
+        })
       })
       .on('unlinkDir', (dirPath) => {
         this.notifyDirDeleted(dirPath)
       })
-    // 'change'는 export 구조가 바뀌지 않으면 선언 재생성 불필요
 
     // ── 2. 캐시 watcher: 모든 .ts 파일 내용을 메모리에 유지 ──
     this.cacheReadyPromise = new Promise((resolve) => {
@@ -424,4 +435,28 @@ function buildSceneKeysDecl(files: FileEntry[]): string {
     .map((f) => `  '${removeExt(f.rel).replace(/\\/g, '/')}'`)
     .join(',\n')
   return `export default [\n${keys}\n] as const\n`
+}
+
+async function handleBlueprintChange(filePath: string): Promise<void> {
+  if (!filePath.endsWith('.fbp.json')) return
+  const tsPath = filePath.replace(/\.fbp\.json$/, '.ts')
+  try {
+    const content = await fs.readFile(filePath, 'utf-8')
+    const compiled = compileBlueprint(content)
+    await fs.writeFile(tsPath, compiled, 'utf-8')
+    console.log(`[IDE] Compiled blueprint: ${filePath} -> ${tsPath}`)
+  } catch (err) {
+    console.error(`[IDE] Failed to compile blueprint ${filePath}:`, err)
+  }
+}
+
+async function handleBlueprintDelete(filePath: string): Promise<void> {
+  if (!filePath.endsWith('.fbp.json')) return
+  const tsPath = filePath.replace(/\.fbp\.json$/, '.ts')
+  try {
+    await fs.unlink(tsPath)
+    console.log(`[IDE] Deleted compiled blueprint helper: ${tsPath}`)
+  } catch (err) {
+    // 이미 지워졌거나 없으면 무시
+  }
 }

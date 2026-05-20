@@ -116,6 +116,19 @@ export function EditorArea() {
           // 원본 로드
           window.api.fs.readFile(activeFile)
             .then(res => {
+              if (res.success && res.content !== undefined && res.content.startsWith('// @fumika-blueprint-generated')) {
+                const jsonPath = activeFile.replace(/\.ts$/, '.fbp.json')
+                setOpenTabs(prev => prev.filter(t => t !== activeFile))
+                setTabData(prev => {
+                  const next = { ...prev }
+                  delete next[activeFile]
+                  return next
+                })
+                fetchedTabs.current.delete(activeFile)
+                setActiveFile(jsonPath)
+                return
+              }
+
               let content = ''
               let isDirty = false
               if (res.success && res.content !== undefined) {

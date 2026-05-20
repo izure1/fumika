@@ -256,13 +256,21 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
             })
             nodes.forEach(n => n.children && sortNodes(n.children))
           }
-          const filterHidden = (nodes: FileNode[]): FileNode[] => {
-            return nodes.filter(n => !n.name.startsWith('.')).map(n => ({
+          const filterHidden = (nodes: FileNode[], folderName: string): FileNode[] => {
+            return nodes.filter(n => {
+              if (n.name.startsWith('.')) return false
+              if (folderName === 'modules' && n.name.endsWith('.ts')) {
+                const baseName = n.name.slice(0, -3)
+                const hasBlueprint = nodes.some(sibling => sibling.name === `${baseName}.fbp.json`)
+                if (hasBlueprint) return false
+              }
+              return true
+            }).map(n => ({
               ...n,
-              children: n.children ? filterHidden(n.children) : undefined
+              children: n.children ? filterHidden(n.children, folderName) : undefined
             }))
           }
-          const filtered = filterHidden(res.files)
+          const filtered = filterHidden(res.files, folder)
           sortNodes(filtered)
           newFiles[folder] = filtered
         } else {
