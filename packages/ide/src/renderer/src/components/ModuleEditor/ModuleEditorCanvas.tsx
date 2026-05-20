@@ -363,27 +363,37 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
   }, [])
 
   const handleConnect = useCallback((connection: Connection) => {
+    const currentEdges = useModuleStore.getState().graphs[activeTab]?.edges || []
+    const toRemoveIds = new Set<string>()
+
     if (connection.sourceHandle) {
       const meta = getPinMeta(connection.sourceHandle)
       if (meta && meta.pinType === 'exec') {
-        const currentEdges = useModuleStore.getState().graphs[activeTab]?.edges || []
         const existingEdges = currentEdges.filter(
           (e) => e.source === connection.source && e.sourceHandle === connection.sourceHandle
         )
-        if (existingEdges.length > 0) {
-          const existingIds = existingEdges.map((e) => e.id)
-          const nextEdges = currentEdges.filter((e) => !existingIds.includes(e.id))
-          useModuleStore.setState({
-            graphs: {
-              ...graphs,
-              [activeTab]: {
-                ...graphs[activeTab],
-                edges: nextEdges,
-              },
-            },
-          })
-        }
+        existingEdges.forEach((e) => toRemoveIds.add(e.id))
       }
+    }
+
+    if (connection.targetHandle) {
+      const existingEdges = currentEdges.filter(
+        (e) => e.target === connection.target && e.targetHandle === connection.targetHandle
+      )
+      existingEdges.forEach((e) => toRemoveIds.add(e.id))
+    }
+
+    if (toRemoveIds.size > 0) {
+      const nextEdges = currentEdges.filter((e) => !toRemoveIds.has(e.id))
+      useModuleStore.setState({
+        graphs: {
+          ...graphs,
+          [activeTab]: {
+            ...graphs[activeTab],
+            edges: nextEdges,
+          },
+        },
+      })
     }
 
     const edgeStyle = {

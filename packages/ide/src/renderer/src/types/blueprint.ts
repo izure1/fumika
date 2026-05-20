@@ -282,6 +282,44 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     ],
   },
   {
+    type: 'SetGlobal',
+    label: 'Set Global',
+    category: 'variable',
+    description: '전체 공유 글로벌 변수 저장',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'name', label: 'Name', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+  },
+  {
+    type: 'SetStyle',
+    label: 'Set Style',
+    category: 'leviar-element',
+    description: '오브젝트의 Style 설정',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
+      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+    allowedTabs: ['view'],
+  },
+  {
+    type: 'SetAttribute',
+    label: 'Set Attribute',
+    category: 'leviar-element',
+    description: '오브젝트의 Attribute 설정',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
+      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+    allowedTabs: ['view'],
+  },
+  {
     type: 'CreateRectangle',
     label: 'Create Rectangle',
     category: 'leviar-element',
@@ -447,6 +485,15 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     label: 'Get Const',
     category: 'variable',
     description: '임시 Const 변수 읽기',
+    pins: [
+      { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' },
+    ],
+  },
+  {
+    type: 'GetGlobal',
+    label: 'Get Global',
+    category: 'variable',
+    description: '전체 공유 글로벌 변수 읽기',
     pins: [
       { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' },
     ],

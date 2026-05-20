@@ -2,6 +2,8 @@
 // compiler.ts — 블루프린트 컴파일러 (fbp.json -> .ts 트랜스파일)
 // =============================================================
 
+import { BLUEPRINT_RUNTIME_CODE } from '../../shared/templates'
+
 export interface BlueprintDefinitionField {
   name: string
   type: string
@@ -81,7 +83,6 @@ export function compileBlueprint(jsonStr: string): string {
 
   return `// @fumika-blueprint-generated
 import { define } from 'fumika'
-import { runBlueprintFlow } from '../declarations/blueprintRuntime'
 
 interface MySchema {
 ${schemaProps}
@@ -135,11 +136,11 @@ ${schemaDefaults}
       }
     }
 
-    const runUpdate = () => {
+    const runUpdate = (uCtx?: any, uState?: any, uSetState?: any) => {
       const gen = runBlueprintFlow('view', blueprintData.graphs, 'OnUpdateEntry', {
-        ctx,
-        state,
-        setState,
+        ctx: uCtx ?? ctx,
+        state: uState ?? state,
+        setState: uSetState ?? setState,
         outputs
       })
       if (gen) {
@@ -150,11 +151,11 @@ ${schemaDefaults}
       }
     }
 
-    const runCleanup = () => {
+    const runCleanup = (uCtx?: any, uState?: any, uSetState?: any) => {
       const gen = runBlueprintFlow('view', blueprintData.graphs, 'OnCleanupEntry', {
-        ctx,
-        state,
-        setState,
+        ctx: uCtx ?? ctx,
+        state: uState ?? state,
+        setState: uSetState ?? setState,
         outputs
       })
       if (gen) {
@@ -165,11 +166,11 @@ ${schemaDefaults}
       }
     }
 
-    const runShow = () => {
+    const runShow = (uCtx?: any, uState?: any, uSetState?: any) => {
       const gen = runBlueprintFlow('view', blueprintData.graphs, 'ShowEntry', {
-        ctx,
-        state,
-        setState,
+        ctx: uCtx ?? ctx,
+        state: uState ?? state,
+        setState: uSetState ?? setState,
         outputs
       })
       if (gen) {
@@ -180,11 +181,11 @@ ${schemaDefaults}
       }
     }
 
-    const runHide = () => {
+    const runHide = (uCtx?: any, uState?: any, uSetState?: any) => {
       const gen = runBlueprintFlow('view', blueprintData.graphs, 'HideEntry', {
-        ctx,
-        state,
-        setState,
+        ctx: uCtx ?? ctx,
+        state: uState ?? state,
+        setState: uSetState ?? setState,
         outputs
       })
       if (gen) {
@@ -201,6 +202,10 @@ ${schemaDefaults}
       onUpdate: runUpdate,
       onCleanup: runCleanup
     }
+
   })
+
+// ─── BLUEPRINT RUNTIME UTILITY (INLINED) ───
+${BLUEPRINT_RUNTIME_CODE}
 `
 }

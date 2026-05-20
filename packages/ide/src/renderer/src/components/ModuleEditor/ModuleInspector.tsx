@@ -76,6 +76,13 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   GetConst: [
     { key: 'name', label: 'Const Name', type: 'text', placeholder: 'const variable name' },
   ],
+  SetGlobal: [
+    { key: 'name', label: 'Global Name', type: 'text', placeholder: 'global variable name' },
+    { key: 'value', label: 'Global Value', type: 'typed', placeholder: 'value' },
+  ],
+  GetGlobal: [
+    { key: 'name', label: 'Global Name', type: 'text', placeholder: 'global variable name' },
+  ],
   SetState: [],
   BindEvent: [
     { key: 'eventType', label: 'Event', type: 'select', options: [
@@ -119,6 +126,8 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   ],
   CreateRectangle: [],
   CreateEllipse: [],
+  SetStyle: [],
+  SetAttribute: [],
   CreateText: [
     { key: 'text', label: 'Text Content', type: 'text', placeholder: 'Enter text...' },
   ],
