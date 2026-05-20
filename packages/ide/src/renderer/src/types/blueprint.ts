@@ -240,9 +240,10 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     type: 'Yield',
     label: 'Yield',
     category: 'control',
-    description: '사용자 입력 대기 후 재개',
+    description: '사용자 입력 대기 후 재개 (true=완료, false=대기)',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'boolean' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
     allowedTabs: ['command'],

@@ -119,6 +119,9 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   Return: [
     { key: 'value', label: 'Return Value', type: 'boolean' },
   ],
+  Yield: [
+    { key: 'value', label: 'Value', type: 'boolean' },
+  ],
   MakePosition: [
     { key: 'x', label: 'X Coordinate', type: 'number' },
     { key: 'y', label: 'Y Coordinate', type: 'number' },

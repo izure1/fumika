@@ -153,7 +153,7 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
   const maxRows = Math.max(inputPins.length, outputPins.length, 1)
 
   const hasDetails = [
-    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch'
+    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield'
   ].includes(nodeType)
 
   // 값 포맷터 함수
@@ -390,6 +390,14 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
             <div className="flex justify-center">
               <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-950/40 bg-emerald-950/30 text-emerald-400 font-bold font-mono">
                 condition: {String(data.condition ?? 'false')}
+              </span>
+            </div>
+          )}
+
+          {nodeType === 'Yield' && (
+            <div className="flex justify-center">
+              <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-sky-950/40 bg-sky-950/30 text-sky-400 font-bold font-mono">
+                value: {String(data.value ?? 'false')}
               </span>
             </div>
           )}
