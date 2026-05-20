@@ -271,9 +271,9 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   },
   {
     type: 'SetConst',
-    label: 'Set Const',
+    label: 'Set Const (Local)',
     category: 'variable',
-    description: '임시 런타임 Const 변수 저장',
+    description: '현재 실행 흐름 내에서 유지되는 변수 저장',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'name', label: 'Name', direction: 'input', pinType: 'data', dataType: 'string' },
@@ -283,9 +283,9 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   },
   {
     type: 'SetGlobal',
-    label: 'Set Global',
+    label: 'Set Const (Global)',
     category: 'variable',
-    description: '전체 공유 글로벌 변수 저장',
+    description: '모든 흐름과 공유되는 변수 저장',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'name', label: 'Name', direction: 'input', pinType: 'data', dataType: 'string' },
@@ -482,18 +482,18 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   },
   {
     type: 'GetConst',
-    label: 'Get Const',
+    label: 'Get Const (Local)',
     category: 'variable',
-    description: '임시 Const 변수 읽기',
+    description: '현재 실행 흐름 내의 변수 읽기',
     pins: [
       { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
   },
   {
     type: 'GetGlobal',
-    label: 'Get Global',
+    label: 'Get Const (Global)',
     category: 'variable',
-    description: '전체 공유 글로벌 변수 읽기',
+    description: '모든 흐름과 공유되는 변수 읽기',
     pins: [
       { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
@@ -734,11 +734,13 @@ export interface StylePropertySpec {
 export const LEVIAR_STYLE_PROPERTIES: StylePropertySpec[] = [
   { key: 'color', label: 'Color (Text)', type: 'text', placeholder: '#ffffff', defaultValue: '#ffffff' },
   { key: 'background', label: 'Background', type: 'text', placeholder: '#3498db', defaultValue: '#3498db' },
-  { key: 'backgroundSize', label: 'Bg Size', type: 'select', options: [
-    { value: 'cover', label: 'cover' },
-    { value: 'contain', label: 'contain' },
-    { value: 'auto', label: 'auto' }
-  ], defaultValue: 'cover' },
+  {
+    key: 'backgroundSize', label: 'Bg Size', type: 'select', options: [
+      { value: 'cover', label: 'cover' },
+      { value: 'contain', label: 'contain' },
+      { value: 'auto', label: 'auto' }
+    ], defaultValue: 'cover'
+  },
   { key: 'opacity', label: 'Opacity', type: 'number', placeholder: '1', defaultValue: 1 },
   { key: 'width', label: 'Width', type: 'number', placeholder: '100', defaultValue: 100 },
   { key: 'height', label: 'Height', type: 'number', placeholder: '100', defaultValue: 100 },
@@ -754,20 +756,26 @@ export const LEVIAR_STYLE_PROPERTIES: StylePropertySpec[] = [
   { key: 'fontSize', label: 'Font Size', type: 'number', placeholder: '16', defaultValue: 16 },
   { key: 'fontFamily', label: 'Font Family', type: 'text', placeholder: 'Inter', defaultValue: 'Inter' },
   { key: 'fontWeight', label: 'Font Weight', type: 'text', placeholder: 'normal', defaultValue: 'normal' },
-  { key: 'fontStyle', label: 'Font Style', type: 'select', options: [
-    { value: 'normal', label: 'normal' },
-    { value: 'italic', label: 'italic' }
-  ], defaultValue: 'normal' },
-  { key: 'textAlign', label: 'Text Align', type: 'select', options: [
-    { value: 'left', label: 'left' },
-    { value: 'center', label: 'center' },
-    { value: 'right', label: 'right' }
-  ], defaultValue: 'left' },
+  {
+    key: 'fontStyle', label: 'Font Style', type: 'select', options: [
+      { value: 'normal', label: 'normal' },
+      { value: 'italic', label: 'italic' }
+    ], defaultValue: 'normal'
+  },
+  {
+    key: 'textAlign', label: 'Text Align', type: 'select', options: [
+      { value: 'left', label: 'left' },
+      { value: 'center', label: 'center' },
+      { value: 'right', label: 'right' }
+    ], defaultValue: 'left'
+  },
   { key: 'lineHeight', label: 'Line Height', type: 'number', defaultValue: 1.2 },
-  { key: 'display', label: 'Display', type: 'select', options: [
-    { value: 'block', label: 'block' },
-    { value: 'none', label: 'none' }
-  ], defaultValue: 'block' },
+  {
+    key: 'display', label: 'Display', type: 'select', options: [
+      { value: 'block', label: 'block' },
+      { value: 'none', label: 'none' }
+    ], defaultValue: 'block'
+  },
   { key: 'pointerEvents', label: 'Pointer Events', type: 'boolean', defaultValue: true },
   { key: 'margin', label: 'Margin', type: 'text', placeholder: '0px', defaultValue: '0px' },
   { key: 'textShadowColor', label: 'Text Shadow Color', type: 'text', placeholder: '#000000', defaultValue: '#000000' },
@@ -782,34 +790,40 @@ export const LEVIAR_STYLE_PROPERTIES: StylePropertySpec[] = [
   { key: 'zIndex', label: 'Z Index', type: 'number', defaultValue: 0 },
   { key: 'letterSpacing', label: 'Letter Spacing', type: 'number', defaultValue: 0 },
   { key: 'borderRadius', label: 'Border Radius', type: 'number', placeholder: '0', defaultValue: 0 },
-  { key: 'cursor', label: 'Cursor', type: 'select', options: [
-    { value: 'default', label: 'default' },
-    { value: 'pointer', label: 'pointer' },
-    { value: 'grab', label: 'grab' },
-    { value: 'text', label: 'text' }
-  ], defaultValue: 'default' },
-  { key: 'overflow', label: 'Overflow', type: 'select', options: [
-    { value: 'hidden', label: 'hidden' },
-    { value: 'visible', label: 'visible' }
-  ], defaultValue: 'hidden' },
-  { key: 'blendMode', label: 'Blend Mode', type: 'select', options: [
-    { value: 'source-over', label: 'source-over' },
-    { value: 'source-in', label: 'source-in' },
-    { value: 'source-out', label: 'source-out' },
-    { value: 'source-atop', label: 'source-atop' },
-    { value: 'destination-over', label: 'destination-over' },
-    { value: 'destination-in', label: 'destination-in' },
-    { value: 'destination-out', label: 'destination-out' },
-    { value: 'lighter', label: 'lighter' },
-    { value: 'copy', label: 'copy' },
-    { value: 'xor', label: 'xor' },
-    { value: 'multiply', label: 'multiply' },
-    { value: 'screen', label: 'screen' },
-    { value: 'lighten', label: 'lighten' },
-    { value: 'darken', label: 'darken' },
-    { value: 'exclusion', label: 'exclusion' },
-    { value: 'difference', label: 'difference' }
-  ], defaultValue: 'source-over' }
+  {
+    key: 'cursor', label: 'Cursor', type: 'select', options: [
+      { value: 'default', label: 'default' },
+      { value: 'pointer', label: 'pointer' },
+      { value: 'grab', label: 'grab' },
+      { value: 'text', label: 'text' }
+    ], defaultValue: 'default'
+  },
+  {
+    key: 'overflow', label: 'Overflow', type: 'select', options: [
+      { value: 'hidden', label: 'hidden' },
+      { value: 'visible', label: 'visible' }
+    ], defaultValue: 'hidden'
+  },
+  {
+    key: 'blendMode', label: 'Blend Mode', type: 'select', options: [
+      { value: 'source-over', label: 'source-over' },
+      { value: 'source-in', label: 'source-in' },
+      { value: 'source-out', label: 'source-out' },
+      { value: 'source-atop', label: 'source-atop' },
+      { value: 'destination-over', label: 'destination-over' },
+      { value: 'destination-in', label: 'destination-in' },
+      { value: 'destination-out', label: 'destination-out' },
+      { value: 'lighter', label: 'lighter' },
+      { value: 'copy', label: 'copy' },
+      { value: 'xor', label: 'xor' },
+      { value: 'multiply', label: 'multiply' },
+      { value: 'screen', label: 'screen' },
+      { value: 'lighten', label: 'lighten' },
+      { value: 'darken', label: 'darken' },
+      { value: 'exclusion', label: 'exclusion' },
+      { value: 'difference', label: 'difference' }
+    ], defaultValue: 'source-over'
+  }
 ]
 
 export interface AttributePropertySpec {
@@ -824,11 +838,13 @@ export interface AttributePropertySpec {
 export const LEVIAR_ATTRIBUTE_PROPERTIES: AttributePropertySpec[] = [
   { key: 'name', label: 'Name', type: 'text', placeholder: 'object-name', defaultValue: '' },
   { key: 'className', label: 'Class Name', type: 'text', placeholder: 'class-name', defaultValue: '' },
-  { key: 'physics', label: 'Physics', type: 'select', options: [
-    { value: 'none', label: 'none' },
-    { value: 'dynamic', label: 'dynamic' },
-    { value: 'static', label: 'static' }
-  ], defaultValue: 'none' },
+  {
+    key: 'physics', label: 'Physics', type: 'select', options: [
+      { value: 'none', label: 'none' },
+      { value: 'dynamic', label: 'dynamic' },
+      { value: 'static', label: 'static' }
+    ], defaultValue: 'none'
+  },
   { key: 'density', label: 'Density', type: 'number', defaultValue: 0.001 },
   { key: 'friction', label: 'Friction', type: 'number', defaultValue: 0.1 },
   { key: 'frictionAir', label: 'Friction Air', type: 'number', defaultValue: 0.01 },
