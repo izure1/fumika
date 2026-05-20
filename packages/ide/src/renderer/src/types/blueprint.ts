@@ -119,10 +119,6 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     description: 'defineCommand의 진입점',
     pins: [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'cmd', label: 'cmd', direction: 'output', pinType: 'data', dataType: 'object' },
-      { id: 'ctx', label: 'ctx', direction: 'output', pinType: 'data', dataType: 'object' },
-      { id: 'state', label: 'state', direction: 'output', pinType: 'data', dataType: 'object' },
-      { id: 'setState', label: 'setState', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
     allowedTabs: ['command'],
     singleton: true,
@@ -134,9 +130,6 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     description: 'defineView 호출 시 실행 (마운트)',
     pins: [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'ctx', label: 'ctx', direction: 'output', pinType: 'data', dataType: 'object' },
-      { id: 'state', label: 'state', direction: 'output', pinType: 'data', dataType: 'object' },
-      { id: 'setState', label: 'setState', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
     allowedTabs: ['view'],
     singleton: true,
@@ -172,9 +165,6 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     description: 'setState 호출 시 자동 실행',
     pins: [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'ctx', label: 'ctx', direction: 'output', pinType: 'data', dataType: 'object' },
-      { id: 'state', label: 'state', direction: 'output', pinType: 'data', dataType: 'object' },
-      { id: 'setState', label: 'setState', direction: 'output', pinType: 'data', dataType: 'any' },
     ],
     allowedTabs: ['view'],
     singleton: true,
@@ -244,8 +234,6 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     description: 'setState({ field: value })',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'field', label: 'Field', direction: 'input', pinType: 'data', dataType: 'string' },
-      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
   },

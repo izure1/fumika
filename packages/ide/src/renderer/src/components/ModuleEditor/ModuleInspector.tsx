@@ -25,6 +25,9 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
     ]},
     { key: 'inlineValue', label: 'Value', type: 'text', placeholder: 'value' },
   ],
+  Branch: [
+    { key: 'condition', label: 'Condition', type: 'boolean' },
+  ],
   Compare: [
     { key: 'operator', label: 'Operator', type: 'select', options: [
       { value: '==', label: '==' },
@@ -34,6 +37,8 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
       { value: '>=', label: '>=' },
       { value: '<=', label: '<=' },
     ]},
+    { key: 'a', label: 'A (Left)', type: 'text', placeholder: 'value A' },
+    { key: 'b', label: 'B (Right)', type: 'text', placeholder: 'value B' },
   ],
   MathOp: [
     { key: 'operator', label: 'Operator', type: 'select', options: [
@@ -43,6 +48,8 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
       { value: '/', label: '÷' },
       { value: '%', label: '%' },
     ]},
+    { key: 'a', label: 'Operand A', type: 'number' },
+    { key: 'b', label: 'Operand B', type: 'number' },
   ],
   GetState: [
     { key: 'fieldName', label: 'Field', type: 'text', placeholder: 'state field name' },
@@ -64,10 +71,10 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
       { value: 'local', label: 'Local (_)' },
       { value: 'env', label: 'Env ($)' },
     ]},
+    { key: 'name', label: 'Variable Name', type: 'text', placeholder: 'name' },
+    { key: 'value', label: 'Variable Value', type: 'text', placeholder: 'value' },
   ],
-  SetState: [
-    { key: 'fieldName', label: 'Field', type: 'text', placeholder: 'state field name' },
-  ],
+  SetState: [],
   BindEvent: [
     { key: 'eventType', label: 'Event', type: 'select', options: [
       { value: 'click', label: 'click' },
@@ -87,10 +94,12 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
     { key: 'message', label: 'Message', type: 'text', placeholder: 'log message...' },
   ],
   Return: [
-    { key: 'defaultValue', label: 'Default', type: 'select', options: [
-      { value: 'true', label: 'true (완료)' },
-      { value: 'false', label: 'false (대기)' },
-    ]},
+    { key: 'value', label: 'Return Value', type: 'boolean' },
+  ],
+  MakePosition: [
+    { key: 'x', label: 'X Coordinate', type: 'number' },
+    { key: 'y', label: 'Y Coordinate', type: 'number' },
+    { key: 'z', label: 'Z Coordinate', type: 'number' },
   ],
   CreateRectangle: [],
   CreateEllipse: [],
@@ -208,6 +217,50 @@ export function ModuleInspector() {
     updateNodeData({
       styleKeys: nextKeys,
       [key]: defaultValue,
+    })
+  }, [selectedNode, updateNodeData])
+
+  const removeStateField = useCallback((field: string) => {
+    if (!selectedNodeId || !selectedNode) return
+    const currentFields = (selectedNode.data?.fields as string[]) ?? []
+    const nextFields = currentFields.filter(f => f !== field)
+
+    const store = useModuleStore.getState()
+    const tab = store.activeTab
+    const graph = store.graphs[tab]
+
+    const targetHandleId = `${selectedNodeId}__${field}`
+    const nextEdges = graph.edges.filter(e => e.targetHandle !== targetHandleId)
+
+    const updatedNodes = graph.nodes.map(n => {
+      if (n.id !== selectedNodeId) return n
+      const nextData = { ...n.data }
+      delete nextData[field]
+      nextData.fields = nextFields
+      return { ...n, data: nextData }
+    })
+
+    useModuleStore.setState({
+      graphs: {
+        ...store.graphs,
+        [tab]: {
+          ...graph,
+          nodes: updatedNodes,
+          edges: nextEdges,
+        }
+      }
+    })
+  }, [selectedNodeId, selectedNode])
+
+  const addStateField = useCallback((field: string) => {
+    if (!field || !selectedNode) return
+    const currentFields = (selectedNode.data?.fields as string[]) ?? []
+    if (currentFields.includes(field)) return
+    const nextFields = [...currentFields, field]
+
+    updateNodeData({
+      fields: nextFields,
+      [field]: '',
     })
   }, [selectedNode, updateNodeData])
 
@@ -354,6 +407,91 @@ export function ModuleInspector() {
                   </select>
                 </div>
               )}
+            </div>
+          )
+        })() : nodeType === 'SetState' ? (() => {
+          const stateFields = (selectedNode.data?.fields as string[]) ?? []
+          return (
+            <div className="space-y-3">
+              <div className="text-[9px] text-surface-500 uppercase tracking-wider font-bold">State Fields</div>
+              <div className="space-y-2 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
+                {stateFields.map(field => {
+                  const targetHandleId = `${selectedNode.id}__${field}`
+                  const isBound = connectedTargets.includes(targetHandleId)
+
+                  return (
+                    <div key={field} className="p-1.5 rounded bg-[#1c1c1c] border border-surface-800/60 space-y-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] font-bold text-surface-300 font-mono truncate" title={field}>
+                          {field}
+                        </span>
+                        <button
+                          className="text-surface-500 hover:text-red-400 text-[10px] transition-colors p-0.5"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeStateField(field)
+                          }}
+                          title="Remove field"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div>
+                        {isBound ? (
+                          <div className="text-[9px] text-primary-400 font-medium italic flex items-center gap-1 py-0.5 select-none font-mono">
+                            ⛓️ Bound to Node
+                          </div>
+                        ) : (
+                          <input
+                            className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50 font-mono"
+                            value={String(selectedNode.data?.[field] ?? '')}
+                            onChange={(e) => updateNodeData(field, e.target.value)}
+                            placeholder="value"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Add Field Input */}
+              <div className="pt-2 border-t border-surface-800 flex flex-col gap-1.5">
+                <span className="text-[9px] text-surface-500 font-bold uppercase tracking-wider select-none">Add State Field</span>
+                <div className="flex gap-1">
+                  <input
+                    id="new-state-field-input"
+                    type="text"
+                    className="flex-1 bg-surface-900 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/50 font-mono"
+                    placeholder="field name..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const input = e.currentTarget
+                        const val = input.value.trim()
+                        if (val) {
+                          addStateField(val)
+                          input.value = ''
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    className="bg-primary-600 hover:bg-primary-500 text-white rounded px-2 py-0.5 text-[10px] font-bold transition-colors"
+                    onClick={() => {
+                      const input = document.getElementById('new-state-field-input') as HTMLInputElement | null
+                      if (input) {
+                        const val = input.value.trim()
+                        if (val) {
+                          addStateField(val)
+                          input.value = ''
+                        }
+                      }
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
             </div>
           )
         })() : (

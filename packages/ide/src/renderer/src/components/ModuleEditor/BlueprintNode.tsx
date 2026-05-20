@@ -107,16 +107,30 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
   const category = catalog.category as NodeCategory
   const colors = NODE_CATEGORY_COLORS[category]
 
-  const inputPins = nodeType === 'MakeStyle'
+  let inputPins = nodeType === 'MakeStyle'
     ? []
     : catalog.pins.filter(p => p.direction === 'input')
+
+  if (nodeType === 'SetState') {
+    const fields = (data.fields as string[]) || []
+    inputPins = [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      ...fields.map(field => ({
+        id: field,
+        label: field,
+        direction: 'input' as const,
+        pinType: 'data' as const,
+        dataType: 'any' as const
+      }))
+    ]
+  }
 
   const outputPins = catalog.pins.filter(p => p.direction === 'output')
 
   const maxRows = Math.max(inputPins.length, outputPins.length, 1)
 
   const hasDetails = [
-    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'SetVariable', 'BindEvent', 'Log', 'Return'
+    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch'
   ].includes(nodeType)
 
   return (
@@ -228,7 +242,15 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
           {nodeType === 'Return' && (
             <div className="flex justify-center">
               <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-red-950/40 bg-red-950/30 text-red-400 font-bold font-mono">
-                default: {String(data.defaultValue ?? 'true')}
+                value: {String(data.value ?? 'true')}
+              </span>
+            </div>
+          )}
+
+          {nodeType === 'Branch' && (
+            <div className="flex justify-center">
+              <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-950/40 bg-emerald-950/30 text-emerald-400 font-bold font-mono">
+                condition: {String(data.condition ?? 'false')}
               </span>
             </div>
           )}

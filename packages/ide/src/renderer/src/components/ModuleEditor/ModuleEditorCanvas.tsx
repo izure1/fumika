@@ -62,6 +62,12 @@ function getPinMeta(handleId: string): { pinType: 'exec' | 'data'; dataType: Pin
   const nodeType = node?.data.nodeType as string | undefined
 
   if (nodeType) {
+    if (nodeType === 'SetState' && node?.data) {
+      const fields = (node.data.fields as string[]) || []
+      if (fields.includes(pinId)) {
+        return { pinType: 'data', dataType: 'any' }
+      }
+    }
     const nodeDef = NODE_CATALOG.find(n => n.type === nodeType)
     if (nodeDef) {
       const pin = nodeDef.pins.find(p => p.id === pinId)

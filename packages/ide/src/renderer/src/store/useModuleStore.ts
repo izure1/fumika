@@ -236,13 +236,21 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
     } else if (nodeType === 'Constant') {
       initialData = { constantType: 'string', inlineValue: '' }
     } else if (nodeType === 'Compare') {
-      initialData = { operator: '==' }
+      initialData = { operator: '==', a: '', b: '' }
     } else if (nodeType === 'MathOp') {
-      initialData = { operator: '+' }
+      initialData = { operator: '+', a: 0, b: 0 }
     } else if (nodeType === 'Return') {
-      initialData = { defaultValue: 'true' }
+      initialData = { value: true }
     } else if (nodeType === 'BindEvent') {
       initialData = { eventType: 'click', handlerId: '' }
+    } else if (nodeType === 'SetState') {
+      initialData = { fields: [] }
+    } else if (nodeType === 'SetVariable') {
+      initialData = { scope: 'global', name: '', value: '' }
+    } else if (nodeType === 'MakePosition') {
+      initialData = { x: 0, y: 0, z: 0 }
+    } else if (nodeType === 'Branch') {
+      initialData = { condition: false }
     }
 
     const newNode: Node = {
