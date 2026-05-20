@@ -14,6 +14,7 @@ import { ModuleDefPanel } from './ModuleDefPanel'
 const CATEGORY_ORDER: { key: NodeCategory, label: string }[] = [
   { key: 'event', label: 'Event' },
   { key: 'control', label: 'Control Flow' },
+  { key: 'math-util', label: 'Math & Utility' },
   { key: 'variable', label: 'Variable & State' },
   { key: 'leviar-element', label: 'Leviar: Element' },
   { key: 'leviar-hierarchy', label: 'Leviar: Hierarchy' },
@@ -21,7 +22,6 @@ const CATEGORY_ORDER: { key: NodeCategory, label: string }[] = [
   { key: 'leviar-physics', label: 'Leviar: Physics' },
   { key: 'leviar-tracking', label: 'Leviar: Tracking' },
   { key: 'leviar-class', label: 'Leviar: Style Class' },
-  { key: 'math-util', label: 'Math & Utility' },
 ]
 
 type SidebarTab = 'definitions' | 'nodes'

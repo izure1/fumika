@@ -507,6 +507,7 @@ export interface BlueprintRuntimeContext {
   state: any
   setState: (updates: any) => void
   outputs: Map<string, any>
+  constVariables?: Map<string, any>
 }
 
 /**
@@ -526,6 +527,9 @@ export function runBlueprintFlow(
   if (!entryNode) return
 
   const { ctx, state, setState, outputs } = runtimeContext
+  if (!runtimeContext.constVariables) {
+    runtimeContext.constVariables = new Map<string, any>()
+  }
 
   // 데이터 핀 의존성 역방향 재귀 연산
   function evaluatePin(handleId: string): any {
@@ -551,8 +555,16 @@ export function runBlueprintFlow(
 
     // 연결선이 없는 경우 노드 자체의 리터럴 데이터 반환
     const node = graph.nodes.find((n) => n.id === nodeId)
-    if (node && node.data && pinId in node.data) {
-      return node.data[pinId]
+    if (node && node.data) {
+      if (pinId.startsWith('prop__')) {
+        const originalKey = pinId.substring(6)
+        if (originalKey in node.data) {
+          return node.data[originalKey]
+        }
+      }
+      if (pinId in node.data) {
+        return node.data[pinId]
+      }
     }
 
     return undefined
@@ -583,6 +595,11 @@ export function runBlueprintFlow(
       if (ctx.variables && name) {
         val = ctx.variables.get(name, type)
       }
+    } else if (nodeType === 'GetConst') {
+      const name = evaluatePin(nodeId + '__name') || node.data?.name || node.data?.varName
+      if (name && runtimeContext.constVariables) {
+        val = runtimeContext.constVariables.get(name)
+      }
     } else if (nodeType === 'GetCamera') {
       val = ctx.world?.camera
     } else if (nodeType === 'Constant') {
@@ -610,6 +627,13 @@ export function runBlueprintFlow(
       const y = Number(evaluatePin(nodeId + '__y') || 0)
       const z = Number(evaluatePin(nodeId + '__z') || 0)
       val = { x, y, z }
+    } else if (nodeType === 'MakeStyle') {
+      const styleKeys = (node.data?.styleKeys as string[]) ?? ['width', 'height', 'background']
+      const styleObj: Record<string, any> = {}
+      for (const key of styleKeys) {
+        styleObj[key] = evaluatePin(nodeId + '__prop__' + key)
+      }
+      val = styleObj
     } else if (nodeType === 'CreateRectangle') {
       const style = evaluatePin(nodeId + '__style') || {}
       const position = evaluatePin(nodeId + '__position')
@@ -677,6 +701,12 @@ export function runBlueprintFlow(
       const type = node.data?.varType || 'local'
       if (ctx.variables && name) {
         ctx.variables.set(name, val, type)
+      }
+    } else if (nodeType === 'SetConst') {
+      const name = evaluatePin(currentNodeId + '__name') || node.data?.name || node.data?.varName
+      const val = evaluatePin(currentNodeId + '__value')
+      if (name && runtimeContext.constVariables) {
+        runtimeContext.constVariables.set(name, val)
       }
     } else if (nodeType === 'AddChild') {
       const parent = evaluatePin(currentNodeId + '__parent')

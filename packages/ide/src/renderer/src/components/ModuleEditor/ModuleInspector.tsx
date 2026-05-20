@@ -69,6 +69,13 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
     { key: 'name', label: 'Variable Name', type: 'text', placeholder: 'name' },
     { key: 'value', label: 'Variable Value', type: 'typed', placeholder: 'value' },
   ],
+  SetConst: [
+    { key: 'name', label: 'Const Name', type: 'text', placeholder: 'const variable name' },
+    { key: 'value', label: 'Const Value', type: 'typed', placeholder: 'value' },
+  ],
+  GetConst: [
+    { key: 'name', label: 'Const Name', type: 'text', placeholder: 'const variable name' },
+  ],
   SetState: [],
   BindEvent: [
     { key: 'eventType', label: 'Event', type: 'select', options: [

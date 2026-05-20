@@ -268,6 +268,18 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     ],
   },
   {
+    type: 'SetConst',
+    label: 'Set Const',
+    category: 'variable',
+    description: '임시 런타임 Const 변수 저장',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'name', label: 'Name', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+  },
+  {
     type: 'CreateRectangle',
     label: 'Create Rectangle',
     category: 'leviar-element',
@@ -420,6 +432,15 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     label: 'Get Variable',
     category: 'variable',
     description: '변수 읽기 (global/local/env)',
+    pins: [
+      { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' },
+    ],
+  },
+  {
+    type: 'GetConst',
+    label: 'Get Const',
+    category: 'variable',
+    description: '임시 Const 변수 읽기',
     pins: [
       { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' },
     ],

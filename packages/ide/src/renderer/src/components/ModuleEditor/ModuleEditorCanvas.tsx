@@ -363,6 +363,29 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
   }, [])
 
   const handleConnect = useCallback((connection: Connection) => {
+    if (connection.sourceHandle) {
+      const meta = getPinMeta(connection.sourceHandle)
+      if (meta && meta.pinType === 'exec') {
+        const currentEdges = useModuleStore.getState().graphs[activeTab]?.edges || []
+        const existingEdges = currentEdges.filter(
+          (e) => e.source === connection.source && e.sourceHandle === connection.sourceHandle
+        )
+        if (existingEdges.length > 0) {
+          const existingIds = existingEdges.map((e) => e.id)
+          const nextEdges = currentEdges.filter((e) => !existingIds.includes(e.id))
+          useModuleStore.setState({
+            graphs: {
+              ...graphs,
+              [activeTab]: {
+                ...graphs[activeTab],
+                edges: nextEdges,
+              },
+            },
+          })
+        }
+      }
+    }
+
     const edgeStyle = {
       stroke: (() => {
         if (!connection.sourceHandle) return '#666'
@@ -373,7 +396,7 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
       strokeWidth: 2,
     }
     onConnect(connection, edgeStyle)
-  }, [onConnect])
+  }, [onConnect, activeTab, graphs])
 
   const handleNodesDelete = useCallback((deletedNodes: Node[]) => {
     if (deletedNodes.some(n => n.id === selectedNodeId)) {
