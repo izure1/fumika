@@ -181,3 +181,50 @@ body {
   min-width: 160px;
   text-align: center;
 }
+
+/* ─── React Flow Edge Premium Custom Styles ─────────────────── */
+
+.react-flow__edge-path {
+  transition: stroke 0.15s, stroke-width 0.15s, filter 0.15s;
+}
+
+/* Hover State */
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #a78bfa !important;
+  stroke-width: 2.5px !important;
+  cursor: pointer;
+  filter: drop-shadow(0 0 3px rgba(167, 139, 250, 0.4));
+}
+
+/* Selected State - Glowing Neon Flowing Dash Animation */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #8b5cf6 !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.8));
+  animation: edge-flow 1s linear infinite;
+  stroke-dasharray: 6;
+}
+
+@keyframes edge-flow {
+  from {
+    stroke-dashoffset: 12;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ─── Blueprint Premium Node Animations ──────────────────── */
+
+.blueprint-node-premium {
+  transition: box-shadow 0.06s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.06s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: box-shadow, border-color;
+}
+
+.blueprint-node-premium:hover {
+  /* scale 및 translateY 모션 완벽 제거 */
+}
+
+.blueprint-node-premium:active {
+  /* scale 및 translateY 모션 완벽 제거 */
+}

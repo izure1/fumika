@@ -21,10 +21,12 @@ import '@xyflow/react/dist/style.css'
 import { useModuleStore } from '../../store/useModuleStore'
 import { BlueprintNode } from './BlueprintNode'
 import { ModuleSidebar } from './ModuleSidebar'
+import { ModuleInspector } from './ModuleInspector'
 import {
   GRAPH_TAB_LABELS,
   NODE_CATALOG,
   PIN_COLORS,
+  LEVIAR_STYLE_PROPERTIES,
   type GraphTab,
   type PinDataType,
 } from '../../types/blueprint'
@@ -39,6 +41,18 @@ function getPinMeta(handleId: string): { pinType: 'exec' | 'data'; dataType: Pin
   const parts = handleId.split('__')
   if (parts.length < 2) return null
   const pinId = parts[parts.length - 1]
+
+  if (pinId.startsWith('prop__')) {
+    const key = pinId.substring(6)
+    const spec = LEVIAR_STYLE_PROPERTIES.find(p => p.key === key)
+    if (spec) {
+      const typeMap: Record<string, PinDataType> = {
+        number: 'number',
+        boolean: 'boolean'
+      }
+      return { pinType: 'data', dataType: typeMap[spec.type] ?? 'string' }
+    }
+  }
 
   for (const nodeDef of NODE_CATALOG) {
     const pin = nodeDef.pins.find(p => p.id === pinId)
@@ -283,6 +297,9 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
           </ReactFlow>
         </div>
       </div>
+
+      {/* Inspector */}
+      <ModuleInspector />
     </div>
   )
 }

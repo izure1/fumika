@@ -2,14 +2,17 @@
 // BlueprintNode.tsx — 블루프린트 커스텀 노드 컴포넌트
 // =============================================================
 
-import { memo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { useModuleStore } from '../../store/useModuleStore'
 import {
   type PinDef,
   type NodeCategory,
   PIN_COLORS,
   NODE_CATEGORY_COLORS,
   NODE_CATALOG,
+  LEVIAR_STYLE_PROPERTIES,
+  type PinDataType,
 } from '../../types/blueprint'
 
 // ─── 핀 핸들 컴포넌트 ────────────────────────────────────────
@@ -23,10 +26,10 @@ function PinHandle({ pin, nodeId }: { pin: PinDef, nodeId: string }) {
 
   return (
     <div
-      className="relative flex items-center gap-1.5 py-0.5"
+      className="relative flex w-full items-center gap-1.5 py-0.5"
       style={{
         flexDirection: isInput ? 'row' : 'row-reverse',
-        justifyContent: isInput ? 'flex-start' : 'flex-end',
+        justifyContent: 'flex-start',
       }}
     >
       <Handle
@@ -35,24 +38,35 @@ function PinHandle({ pin, nodeId }: { pin: PinDef, nodeId: string }) {
         id={handleId}
         className="!border-none"
         style={{
-          width: isExec ? 10 : 8,
-          height: isExec ? 10 : 8,
-          background: color,
-          borderRadius: isExec ? 2 : '50%',
-          transform: isExec ? 'rotate(45deg)' : undefined,
-          [isInput ? 'left' : 'right']: -4,
+          width: 12,
+          height: 12,
+          background: 'transparent',
+          [isInput ? 'left' : 'right']: 6,
           position: 'absolute',
           top: '50%',
-          marginTop: isExec ? -5 : -4,
+          transform: 'translateY(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
-      />
+      >
+        <div
+          style={{
+            width: isExec ? 11 : 7,
+            height: isExec ? 10 : 7,
+            background: color,
+            borderRadius: isExec ? undefined : '50%',
+            clipPath: isExec ? 'polygon(0% 0%, 60% 0%, 100% 50%, 60% 100%, 0% 100%)' : undefined,
+          }}
+        />
+      </Handle>
       {pin.label !== '▶' && (
         <span
           className="text-[10px] font-medium select-none"
           style={{
             color: isExec ? '#ccc' : color,
-            paddingLeft: isInput ? 8 : 0,
-            paddingRight: isInput ? 0 : 8,
+            paddingLeft: isInput ? 24 : 0,
+            paddingRight: isInput ? 0 : 24,
           }}
         >
           {pin.label}
@@ -72,46 +86,84 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps) {
   const category = catalog.category as NodeCategory
   const colors = NODE_CATEGORY_COLORS[category]
 
-  const inputPins = catalog.pins.filter(p => p.direction === 'input')
+  const inputPins = nodeType === 'MakeStyle'
+    ? []
+    : catalog.pins.filter(p => p.direction === 'input')
+
   const outputPins = catalog.pins.filter(p => p.direction === 'output')
 
   const maxRows = Math.max(inputPins.length, outputPins.length, 1)
 
+  const edges = useModuleStore(s => s.graphs[s.activeTab].edges)
+  const connectedTargets = useMemo(() => {
+    return edges.filter(e => e.target === id).map(e => e.targetHandle)
+  }, [edges, id])
+
+  const updateNodeData = useCallback((keyOrData: string | Record<string, unknown>, value?: unknown) => {
+    const store = useModuleStore.getState()
+    const tab = store.activeTab
+    const graph = store.graphs[tab]
+    const updatedNodes = graph.nodes.map(n => {
+      if (n.id !== id) return n
+      const newData = typeof keyOrData === 'string'
+        ? { ...n.data, [keyOrData]: value }
+        : { ...n.data, ...keyOrData }
+      return { ...n, data: newData }
+    })
+    useModuleStore.setState({
+      graphs: {
+        ...store.graphs,
+        [tab]: { ...graph, nodes: updatedNodes },
+      },
+    })
+  }, [id])
+
+  const hasDetails = [
+    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'SetVariable', 'BindEvent', 'Log', 'Return',
+    'CreateRectangle', 'CreateText', 'FadeIn', 'FadeOut'
+  ].includes(nodeType)
+
   return (
     <div
-      className="rounded-lg shadow-xl transition-shadow"
+      className="blueprint-node-premium rounded-lg"
       style={{
         background: colors.bg,
-        border: `1.5px solid ${selected ? '#fff' : colors.border}`,
-        minWidth: 180,
+        border: `1.2px solid ${selected ? colors.border : 'rgba(255, 255, 255, 0.08)'}`,
+        minWidth: 190,
         boxShadow: selected
-          ? `0 0 16px ${colors.border}60`
-          : `0 4px 12px rgba(0,0,0,0.4)`,
+          ? `0 0 20px ${colors.border}40, 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1)`
+          : `0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.03)`,
       }}
     >
       {/* Header */}
       <div
-        className="flex items-center gap-2 px-3 py-1.5 rounded-t-lg"
-        style={{ background: `${colors.header}cc` }}
+        className="flex items-center gap-2 px-3.5 py-3 rounded-t-[7px] border-b border-white/[0.04]"
+        style={{
+          background: colors.header,
+          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+        }}
       >
+        <div
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: colors.border }}
+        />
         <span
-          className="text-[9px] font-bold uppercase tracking-wider"
-          style={{ color: `${colors.text}aa` }}
-        >
-          {category}
-        </span>
-        <span
-          className="text-[11px] font-bold"
-          style={{ color: colors.text }}
+          className="text-[11px] font-semibold tracking-tight text-white/95"
         >
           {catalog.label}
+        </span>
+        <span
+          className="ml-auto text-[8px] font-bold uppercase tracking-widest opacity-25"
+          style={{ color: colors.text }}
+        >
+          {category}
         </span>
       </div>
 
       {/* Pins Area */}
-      <div className="px-1 py-1.5">
+      <div className="px-2.5 py-2.5 flex flex-col gap-1">
         {Array.from({ length: maxRows }).map((_, i) => (
-          <div key={i} className="flex justify-between items-center min-h-[20px]">
+          <div key={i} className="flex justify-between items-center min-h-[22px]">
             <div className="flex-1">
               {inputPins[i] && <PinHandle pin={inputPins[i]} nodeId={id} />}
             </div>
@@ -122,17 +174,208 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps) {
         ))}
       </div>
 
-      {/* Inspector inline data */}
-      {data.inlineValue !== undefined && (
-        <div className="px-3 pb-2">
-          <input
-            className="w-full bg-black/30 border border-white/10 rounded px-2 py-0.5 text-[10px] text-white outline-none focus:border-white/30"
-            value={String(data.inlineValue ?? '')}
-            onChange={() => {
-              // noop — 실제 업데이트는 스토어를 통해 처리
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
+      {/* Node-specific Custom Details */}
+      {hasDetails && (
+        <div className="px-3.5 pb-3.5 border-t border-white/5 pt-2.5 flex flex-col gap-2">
+          {nodeType === 'Constant' && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider">
+                {String(data.constantType ?? 'string')}
+              </span>
+              <input
+                className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-2 py-1 text-[10px] text-white outline-none focus:border-primary-500/40 transition-colors"
+                value={String(data.inlineValue ?? '')}
+                onChange={(e) => updateNodeData('inlineValue', e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="value"
+              />
+            </div>
+          )}
+
+          {(nodeType === 'Compare' || nodeType === 'MathOp') && (
+            <div className="flex justify-center py-0.5">
+              <span className="px-3.5 py-1 rounded-md bg-black/60 border border-white/5 text-[10px] font-bold font-mono text-primary-400 shadow-inner">
+                {String(data.operator ?? (nodeType === 'Compare' ? '==' : '+'))}
+              </span>
+            </div>
+          )}
+
+          {(nodeType === 'GetState' || nodeType === 'SetState') && !!data.fieldName && (
+            <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
+              <span className="text-[8px] text-yellow-500 font-bold font-mono">state.</span>
+              <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.fieldName)}</span>
+            </div>
+          )}
+
+          {nodeType === 'GetCmd' && !!data.fieldName && (
+            <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
+              <span className="text-[8px] text-blue-500 font-bold font-mono">cmd.</span>
+              <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.fieldName)}</span>
+            </div>
+          )}
+
+          {nodeType === 'GetVariable' && !!data.varName && (
+            <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
+              {data.scope !== 'global' && (
+                <span className="text-[8px] text-emerald-500 font-bold font-mono">
+                  {data.scope === 'env' ? '$' : '_'}
+                </span>
+              )}
+              <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.varName)}</span>
+            </div>
+          )}
+
+          {nodeType === 'SetVariable' && (
+            <div className="flex justify-center">
+              <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-950/40 bg-emerald-950/30 text-emerald-400 font-bold font-mono">
+                scope: {data.scope === 'env' ? 'Env ($)' : data.scope === 'local' ? 'Local (_)' : 'Global'}
+              </span>
+            </div>
+          )}
+
+          {nodeType === 'Return' && (
+            <div className="flex justify-center">
+              <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-red-950/40 bg-red-950/30 text-red-400 font-bold font-mono">
+                default: {String(data.defaultValue ?? 'true')}
+              </span>
+            </div>
+          )}
+
+          {nodeType === 'BindEvent' && !!data.eventType && (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
+                <span className="text-[8px] text-purple-400 font-bold uppercase">Event</span>
+                <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.eventType)}</span>
+              </div>
+              {!!data.handlerId && (
+                <span className="text-[8px] text-surface-500 font-mono italic truncate px-0.5">
+                  ↳ handler: {String(data.handlerId)}
+                </span>
+              )}
+            </div>
+          )}
+
+          {nodeType === 'Log' && (
+            <div className="flex flex-col gap-1.5">
+              {!!data.logLevel && (
+                <div className="flex justify-center">
+                  <span className={`text-[8px] uppercase tracking-wider px-2 py-0.5 rounded-md border font-bold ${
+                    data.logLevel === 'error'
+                      ? 'text-red-400 bg-red-950/30 border-red-950/40'
+                      : data.logLevel === 'warn'
+                        ? 'text-amber-400 bg-amber-950/30 border-amber-950/40'
+                        : 'text-surface-400 bg-surface-900/30 border-surface-900'
+                  }`}>
+                    log level: {String(data.logLevel)}
+                  </span>
+                </div>
+              )}
+              <input
+                className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-2 py-1 text-[10px] text-white outline-none focus:border-primary-500/40 transition-colors"
+                value={String(data.message ?? '')}
+                onChange={(e) => updateNodeData('message', e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="log message..."
+              />
+            </div>
+          )}
+
+          {nodeType === 'CreateRectangle' && (
+            <div className="flex flex-col gap-1.5">
+              <div className="grid grid-cols-3 gap-1">
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] text-red-400 font-mono font-bold">X</span>
+                  <input
+                    type="number"
+                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
+                    value={data.posX !== undefined ? Number(data.posX) : 0}
+                    onChange={(e) => updateNodeData('posX', Number(e.target.value))}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] text-emerald-400 font-mono font-bold">Y</span>
+                  <input
+                    type="number"
+                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
+                    value={data.posY !== undefined ? Number(data.posY) : 0}
+                    onChange={(e) => updateNodeData('posY', Number(e.target.value))}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] text-blue-400 font-mono font-bold">Z</span>
+                  <input
+                    type="number"
+                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
+                    value={data.posZ !== undefined ? Number(data.posZ) : 0}
+                    onChange={(e) => updateNodeData('posZ', Number(e.target.value))}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {nodeType === 'CreateText' && (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider">Text:</span>
+                <input
+                  className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-2 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/40 transition-colors"
+                  value={String(data.text ?? '')}
+                  onChange={(e) => updateNodeData('text', e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Enter text..."
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] text-red-400 font-mono font-bold">X</span>
+                  <input
+                    type="number"
+                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
+                    value={data.posX !== undefined ? Number(data.posX) : 0}
+                    onChange={(e) => updateNodeData('posX', Number(e.target.value))}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] text-emerald-400 font-mono font-bold">Y</span>
+                  <input
+                    type="number"
+                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
+                    value={data.posY !== undefined ? Number(data.posY) : 0}
+                    onChange={(e) => updateNodeData('posY', Number(e.target.value))}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] text-blue-400 font-mono font-bold">Z</span>
+                  <input
+                    type="number"
+                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
+                    value={data.posZ !== undefined ? Number(data.posZ) : 0}
+                    onChange={(e) => updateNodeData('posZ', Number(e.target.value))}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(nodeType === 'FadeIn' || nodeType === 'FadeOut') && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider shrink-0">Duration (ms):</span>
+              <input
+                type="number"
+                className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-2 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/40 transition-colors"
+                value={data.duration !== undefined ? Number(data.duration) : 0}
+                onChange={(e) => updateNodeData('duration', Number(e.target.value))}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

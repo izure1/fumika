@@ -2,9 +2,9 @@
 // ModuleInspector.tsx — 선택된 노드의 속성 편집 패널
 // =============================================================
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useModuleStore } from '../../store/useModuleStore'
-import { NODE_CATALOG, NODE_CATEGORY_COLORS, type NodeCategory } from '../../types/blueprint'
+import { NODE_CATALOG, NODE_CATEGORY_COLORS, type NodeCategory, LEVIAR_STYLE_PROPERTIES } from '../../types/blueprint'
 
 // ─── 노드별 편집 가능 필드 룩업 테이블 ──────────────────────────
 
@@ -52,17 +52,17 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   ],
   GetVariable: [
     { key: 'scope', label: 'Scope', type: 'select', options: [
-      { value: 'global', label: 'Global ($)' },
-      { value: 'local', label: 'Local (%)' },
-      { value: 'env', label: 'Env (@)' },
+      { value: 'global', label: 'Global' },
+      { value: 'local', label: 'Local (_)' },
+      { value: 'env', label: 'Env ($)' },
     ]},
     { key: 'varName', label: 'Name', type: 'text', placeholder: 'variable name' },
   ],
   SetVariable: [
     { key: 'scope', label: 'Scope', type: 'select', options: [
-      { value: 'global', label: 'Global ($)' },
-      { value: 'local', label: 'Local (%)' },
-      { value: 'env', label: 'Env (@)' },
+      { value: 'global', label: 'Global' },
+      { value: 'local', label: 'Local (_)' },
+      { value: 'env', label: 'Env ($)' },
     ]},
   ],
   SetState: [
@@ -84,12 +84,30 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
       { value: 'warn', label: 'warn' },
       { value: 'error', label: 'error' },
     ]},
+    { key: 'message', label: 'Message', type: 'text', placeholder: 'log message...' },
   ],
   Return: [
     { key: 'defaultValue', label: 'Default', type: 'select', options: [
       { value: 'true', label: 'true (완료)' },
       { value: 'false', label: 'false (대기)' },
     ]},
+  ],
+  CreateRectangle: [
+    { key: 'posX', label: 'Position X', type: 'number' },
+    { key: 'posY', label: 'Position Y', type: 'number' },
+    { key: 'posZ', label: 'Position Z', type: 'number' },
+  ],
+  CreateText: [
+    { key: 'text', label: 'Text Content', type: 'text', placeholder: 'Enter text...' },
+    { key: 'posX', label: 'Position X', type: 'number' },
+    { key: 'posY', label: 'Position Y', type: 'number' },
+    { key: 'posZ', label: 'Position Z', type: 'number' },
+  ],
+  FadeIn: [
+    { key: 'duration', label: 'Duration (ms)', type: 'number' },
+  ],
+  FadeOut: [
+    { key: 'duration', label: 'Duration (ms)', type: 'number' },
   ],
 }
 
@@ -99,22 +117,46 @@ export function ModuleInspector() {
   const { selectedNodeId, graphs, activeTab } = useModuleStore()
 
   const currentGraph = graphs[activeTab]
+  const edges = currentGraph?.edges ?? []
   const selectedNode = selectedNodeId
     ? currentGraph.nodes.find(n => n.id === selectedNodeId)
     : null
 
   const nodeType = selectedNode?.data?.nodeType as string | undefined
   const catalog = nodeType ? NODE_CATALOG.find(n => n.type === nodeType) : null
-  const fields = nodeType ? NODE_INSPECTOR_FIELDS[nodeType] : null
+  
+  let fields = nodeType ? NODE_INSPECTOR_FIELDS[nodeType] : null
 
-  const updateNodeData = useCallback((key: string, value: unknown) => {
+  if (nodeType === 'MakeStyle' && selectedNode) {
+    const styleKeys = (selectedNode.data?.styleKeys as string[]) ?? ['width', 'height', 'background']
+    fields = styleKeys.map(key => {
+      const spec = LEVIAR_STYLE_PROPERTIES.find(p => p.key === key)
+      return {
+        key,
+        label: spec?.label ?? key,
+        type: spec?.type ?? 'text',
+        options: spec?.options,
+        placeholder: spec?.placeholder
+      }
+    })
+  }
+
+  const connectedTargets = useMemo(() => {
+    if (!selectedNodeId) return []
+    return edges.filter(e => e.target === selectedNodeId).map(e => e.targetHandle)
+  }, [edges, selectedNodeId])
+
+  const updateNodeData = useCallback((keyOrData: string | Record<string, unknown>, value?: unknown) => {
     if (!selectedNodeId) return
     const store = useModuleStore.getState()
     const tab = store.activeTab
     const graph = store.graphs[tab]
     const updatedNodes = graph.nodes.map(n => {
       if (n.id !== selectedNodeId) return n
-      return { ...n, data: { ...n.data, [key]: value } }
+      const newData = typeof keyOrData === 'string'
+        ? { ...n.data, [keyOrData]: value }
+        : { ...n.data, ...keyOrData }
+      return { ...n, data: newData }
     })
 
     useModuleStore.setState({
@@ -124,6 +166,53 @@ export function ModuleInspector() {
       },
     })
   }, [selectedNodeId])
+
+  const removeStyleProperty = useCallback((key: string) => {
+    if (!selectedNodeId || !selectedNode) return
+    const currentKeys = (selectedNode.data?.styleKeys as string[]) ?? ['width', 'height', 'background']
+    const nextKeys = currentKeys.filter(k => k !== key)
+
+    const store = useModuleStore.getState()
+    const tab = store.activeTab
+    const graph = store.graphs[tab]
+
+    const targetHandleId = `${selectedNodeId}__prop__${key}`
+    const nextEdges = graph.edges.filter(e => e.targetHandle !== targetHandleId)
+
+    const updatedNodes = graph.nodes.map(n => {
+      if (n.id !== selectedNodeId) return n
+      const nextData = { ...n.data }
+      delete nextData[key]
+      nextData.styleKeys = nextKeys
+      return { ...n, data: nextData }
+    })
+
+    useModuleStore.setState({
+      graphs: {
+        ...store.graphs,
+        [tab]: {
+          ...graph,
+          nodes: updatedNodes,
+          edges: nextEdges,
+        }
+      }
+    })
+  }, [selectedNodeId, selectedNode])
+
+  const addStyleProperty = useCallback((key: string) => {
+    if (!key || !selectedNode) return
+    const currentKeys = (selectedNode.data?.styleKeys as string[]) ?? ['width', 'height', 'background']
+    if (currentKeys.includes(key)) return
+    const nextKeys = [...currentKeys, key]
+
+    const spec = LEVIAR_STYLE_PROPERTIES.find(p => p.key === key)
+    const defaultValue = spec ? spec.defaultValue : ''
+
+    updateNodeData({
+      styleKeys: nextKeys,
+      [key]: defaultValue,
+    })
+  }, [selectedNode, updateNodeData])
 
   if (!selectedNode || !catalog) {
     return (
@@ -152,7 +241,7 @@ export function ModuleInspector() {
       </div>
 
       {/* Fields */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2.5">
         {/* Node ID */}
         <div>
           <label className="text-[9px] text-surface-500 uppercase tracking-wider font-bold">ID</label>
@@ -169,60 +258,175 @@ export function ModuleInspector() {
           </div>
         </div>
 
-        {/* Editable Fields */}
-        {fields && fields.map(field => (
-          <div key={field.key}>
-            <label className="text-[9px] text-surface-500 uppercase tracking-wider font-bold">
-              {field.label}
-            </label>
+        {/* Editable Fields or MakeStyle Spec */}
+        {nodeType === 'MakeStyle' ? (() => {
+          const styleKeys = (selectedNode.data?.styleKeys as string[]) ?? ['width', 'height', 'background']
+          const remainingProperties = LEVIAR_STYLE_PROPERTIES.filter(p => !styleKeys.includes(p.key))
+          return (
+            <div className="space-y-3">
+              <div className="text-[9px] text-surface-500 uppercase tracking-wider font-bold">Style Properties</div>
+              <div className="space-y-2 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
+                {styleKeys.map(key => {
+                  const spec = LEVIAR_STYLE_PROPERTIES.find(p => p.key === key)
+                  if (!spec) return null
+                  const targetHandleId = `${selectedNode.id}__prop__${key}`
+                  const isBound = connectedTargets.includes(targetHandleId)
 
-            {field.type === 'text' && (
-              <input
-                className="mt-0.5 w-full bg-surface-900/50 border border-surface-700 rounded px-2 py-1 text-[11px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50"
-                value={String(selectedNode.data?.[field.key] ?? '')}
-                placeholder={field.placeholder}
-                onChange={(e) => updateNodeData(field.key, e.target.value)}
-              />
-            )}
+                  return (
+                    <div key={key} className="p-1.5 rounded bg-[#1c1c1c] border border-surface-800/60 space-y-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] font-bold text-surface-300 font-mono truncate" title={spec.label}>
+                          {spec.label}
+                        </span>
+                        <button
+                          className="text-surface-500 hover:text-red-400 text-[10px] transition-colors p-0.5"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeStyleProperty(key)
+                          }}
+                          title="Remove property"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div>
+                        {isBound ? (
+                          <div className="text-[9px] text-primary-400 font-medium italic flex items-center gap-1 py-0.5 select-none font-mono">
+                            ⛓️ Bound to Node
+                          </div>
+                        ) : (
+                          spec.type === 'number' ? (
+                            <input
+                              type="number"
+                              className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/50 font-mono"
+                              value={selectedNode.data?.[key] !== undefined ? Number(selectedNode.data?.[key]) : Number(spec.defaultValue ?? 0)}
+                              onChange={(e) => updateNodeData(key, Number(e.target.value))}
+                            />
+                          ) : spec.type === 'boolean' ? (
+                            <label className="flex items-center gap-1.5 cursor-pointer py-0.5">
+                              <input
+                                type="checkbox"
+                                className="accent-primary-500"
+                                checked={selectedNode.data?.[key] !== undefined ? Boolean(selectedNode.data?.[key]) : Boolean(spec.defaultValue ?? false)}
+                                onChange={(e) => updateNodeData(key, e.target.checked)}
+                              />
+                              <span className="text-[9px] text-surface-400 font-mono select-none">
+                                {selectedNode.data?.[key] ? 'true' : 'false'}
+                              </span>
+                            </label>
+                          ) : spec.type === 'select' ? (
+                            <select
+                              className="w-full bg-surface-900 border border-surface-750 rounded px-1 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/50 font-mono"
+                              value={String(selectedNode.data?.[key] ?? spec.defaultValue ?? '')}
+                              onChange={(e) => updateNodeData(key, e.target.value)}
+                            >
+                              {spec.options?.map(opt => (
+                                <option key={opt.value} value={opt.value} className="bg-[#141414] text-white">{opt.label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50 font-mono"
+                              value={String(selectedNode.data?.[key] ?? '')}
+                              onChange={(e) => updateNodeData(key, e.target.value)}
+                              placeholder={spec.placeholder}
+                            />
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
 
-            {field.type === 'number' && (
-              <input
-                type="number"
-                className="mt-0.5 w-full bg-surface-900/50 border border-surface-700 rounded px-2 py-1 text-[11px] text-white outline-none focus:border-primary-500/50"
-                value={Number(selectedNode.data?.[field.key] ?? 0)}
-                onChange={(e) => updateNodeData(field.key, Number(e.target.value))}
-              />
-            )}
+              {remainingProperties.length > 0 && (
+                <div className="pt-2 border-t border-surface-800 flex flex-col gap-1">
+                  <span className="text-[9px] text-surface-500 font-bold uppercase tracking-wider select-none">Add Property</span>
+                  <select
+                    className="w-full bg-surface-900 border border-surface-750 rounded px-2 py-1 text-[10px] text-surface-300 outline-none focus:border-primary-500/50 cursor-pointer"
+                    value=""
+                    onChange={(e) => {
+                      addStyleProperty(e.target.value)
+                      e.target.value = ""
+                    }}
+                  >
+                    <option value="" disabled className="bg-[#141414] text-surface-500">-- Select Style Property --</option>
+                    {remainingProperties.map(p => (
+                      <option key={p.key} value={p.key} className="bg-[#141414] text-white">{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )
+        })() : (
+          fields && fields.map(field => {
+            const fieldHandleId = `${selectedNode.id}__${field.key}`
+            const isFieldBound = connectedTargets.includes(fieldHandleId)
 
-            {field.type === 'select' && field.options && (
-              <select
-                className="mt-0.5 w-full bg-surface-900 border border-surface-700 rounded px-2 py-1 text-[11px] text-white outline-none focus:border-primary-500/50"
-                value={String(selectedNode.data?.[field.key] ?? field.options[0]?.value ?? '')}
-                onChange={(e) => updateNodeData(field.key, e.target.value)}
-              >
-                {field.options.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            )}
+            return (
+              <div key={field.key}>
+                <label className="text-[9px] text-surface-500 uppercase tracking-wider font-bold">
+                  {field.label}
+                </label>
 
-            {field.type === 'boolean' && (
-              <label className="flex items-center gap-1.5 mt-0.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="accent-primary-500"
-                  checked={Boolean(selectedNode.data?.[field.key])}
-                  onChange={(e) => updateNodeData(field.key, e.target.checked)}
-                />
-                <span className="text-[10px] text-surface-300">
-                  {selectedNode.data?.[field.key] ? 'true' : 'false'}
-                </span>
-              </label>
-            )}
-          </div>
-        ))}
+                {isFieldBound ? (
+                  <div className="text-[10px] text-primary-400 font-medium italic flex items-center gap-1 py-1 select-none font-mono">
+                    ⛓️ Bound to Node
+                  </div>
+                ) : (
+                  <>
+                    {field.type === 'text' && (
+                      <input
+                        className="mt-0.5 w-full bg-surface-900/50 border border-surface-700 rounded px-2 py-1 text-[11px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50"
+                        value={String(selectedNode.data?.[field.key] ?? '')}
+                        placeholder={field.placeholder}
+                        onChange={(e) => updateNodeData(field.key, e.target.value)}
+                      />
+                    )}
 
-        {!fields && (
+                    {field.type === 'number' && (
+                      <input
+                        type="number"
+                        className="mt-0.5 w-full bg-surface-900/50 border border-surface-700 rounded px-2 py-1 text-[11px] text-white outline-none focus:border-primary-500/50"
+                        value={Number(selectedNode.data?.[field.key] ?? 0)}
+                        onChange={(e) => updateNodeData(field.key, Number(e.target.value))}
+                      />
+                    )}
+
+                    {field.type === 'select' && field.options && (
+                      <select
+                        className="mt-0.5 w-full bg-surface-900 border border-surface-700 rounded px-2 py-1 text-[11px] text-white outline-none focus:border-primary-500/50"
+                        value={String(selectedNode.data?.[field.key] ?? field.options[0]?.value ?? '')}
+                        onChange={(e) => updateNodeData(field.key, e.target.value)}
+                      >
+                        {field.options.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    )}
+
+                    {field.type === 'boolean' && (
+                      <label className="flex items-center gap-1.5 mt-0.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="accent-primary-500"
+                          checked={Boolean(selectedNode.data?.[field.key])}
+                          onChange={(e) => updateNodeData(field.key, e.target.checked)}
+                        />
+                        <span className="text-[10px] text-surface-300">
+                          {selectedNode.data?.[field.key] ? 'true' : 'false'}
+                        </span>
+                      </label>
+                    )}
+                  </>
+                )}
+              </div>
+            )
+          })
+        )}
+
+        {!fields && nodeType !== 'MakeStyle' && (
           <div className="text-[10px] text-surface-600 italic">
             No editable properties
           </div>

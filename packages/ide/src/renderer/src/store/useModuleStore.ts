@@ -215,11 +215,39 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
     const id = `${nodeType}_${Date.now()}`
     const pos = position ?? { x: 250 + Math.random() * 200, y: 150 + Math.random() * 200 }
 
+    let initialData: Record<string, unknown> = {}
+    if (nodeType === 'CreateRectangle') {
+      initialData = { style: '#ffffff', posX: 0, posY: 0, posZ: 0 }
+    } else if (nodeType === 'CreateText') {
+      initialData = { text: 'Hello', style: '#ffffff', posX: 0, posY: 0, posZ: 0 }
+    } else if (nodeType === 'MakeStyle') {
+      initialData = {
+        styleKeys: ['width', 'height', 'background'],
+        width: 100,
+        height: 100,
+        background: '#3498db'
+      }
+    } else if (nodeType === 'Log') {
+      initialData = { logLevel: 'log', message: '' }
+    } else if (nodeType === 'FadeIn' || nodeType === 'FadeOut') {
+      initialData = { duration: 1000 }
+    } else if (nodeType === 'Constant') {
+      initialData = { constantType: 'string', inlineValue: '' }
+    } else if (nodeType === 'Compare') {
+      initialData = { operator: '==' }
+    } else if (nodeType === 'MathOp') {
+      initialData = { operator: '+' }
+    } else if (nodeType === 'Return') {
+      initialData = { defaultValue: 'true' }
+    } else if (nodeType === 'BindEvent') {
+      initialData = { eventType: 'click', handlerId: '' }
+    }
+
     const newNode: Node = {
       id,
       type: 'blueprint',
       position: pos,
-      data: { nodeType, label: catalog.label },
+      data: { nodeType, label: catalog.label, ...initialData },
     }
 
     return {

@@ -58,16 +58,16 @@ export interface PinDef {
 // ─── 핀 색상 룩업 테이블 ──────────────────────────────────────
 
 export const PIN_COLORS: Record<PinDataType, string> = {
-  exec: '#ffffff',
-  number: '#4CAF50',
-  string: '#2196F3',
-  boolean: '#F44336',
-  object: '#9E9E9E',
-  array: '#FF9800',
-  style: '#9C27B0',
-  vec3: '#00BCD4',
-  leviarObj: '#FF9800',
-  any: '#9E9E9E',
+  exec: '#f1f5f9',
+  number: '#10b981',
+  string: '#3b82f6',
+  boolean: '#ef4444',
+  object: '#94a3b8',
+  array: '#f59e0b',
+  style: '#a855f7',
+  vec3: '#06b6d4',
+  leviarObj: '#fb923c',
+  any: '#cbd5e1',
 }
 
 // ─── 노드 카테고리 ───────────────────────────────────────────
@@ -75,10 +75,10 @@ export const PIN_COLORS: Record<PinDataType, string> = {
 export type NodeCategory = 'event' | 'condition' | 'action' | 'data'
 
 export const NODE_CATEGORY_COLORS: Record<NodeCategory, { bg: string, border: string, header: string, text: string }> = {
-  event: { bg: '#1a0a0a', border: '#dc2626', header: '#7f1d1d', text: '#fca5a5' },
-  condition: { bg: '#0a1a0a', border: '#16a34a', header: '#14532d', text: '#86efac' },
-  action: { bg: '#0a0a1a', border: '#2563eb', header: '#1e3a8a', text: '#93c5fd' },
-  data: { bg: '#1a1a0a', border: '#ca8a04', header: '#713f12', text: '#fde047' },
+  event: { bg: 'rgba(20, 20, 23, 0.85)', border: '#f43f5e', header: 'rgba(28, 28, 33, 0.45)', text: '#fda4af' },
+  condition: { bg: 'rgba(20, 20, 23, 0.85)', border: '#10b981', header: 'rgba(28, 28, 33, 0.45)', text: '#a7f3d0' },
+  action: { bg: 'rgba(20, 20, 23, 0.85)', border: '#3b82f6', header: 'rgba(28, 28, 33, 0.45)', text: '#bfdbfe' },
+  data: { bg: 'rgba(20, 20, 23, 0.85)', border: '#d97706', header: 'rgba(28, 28, 33, 0.45)', text: '#fde68a' },
 }
 
 // ─── 블루프린트 노드 타입 정의 ────────────────────────────────
@@ -406,4 +406,103 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'result', label: 'Position', direction: 'output', pinType: 'data', dataType: 'vec3' },
     ],
   },
+  {
+    type: 'MakeStyle',
+    label: 'Make Style',
+    category: 'data',
+    description: '시각적 스타일 객체 조립기',
+    pins: [
+      { id: 'style', label: 'Style', direction: 'output', pinType: 'data', dataType: 'style' },
+    ],
+  },
+]
+
+export interface StylePropertySpec {
+  key: string
+  label: string
+  type: 'text' | 'number' | 'select' | 'boolean'
+  options?: { value: string, label: string }[]
+  placeholder?: string
+  defaultValue: unknown
+}
+
+export const LEVIAR_STYLE_PROPERTIES: StylePropertySpec[] = [
+  { key: 'color', label: 'Color (Text)', type: 'text', placeholder: '#ffffff', defaultValue: '#ffffff' },
+  { key: 'background', label: 'Background', type: 'text', placeholder: '#3498db', defaultValue: '#3498db' },
+  { key: 'backgroundSize', label: 'Bg Size', type: 'select', options: [
+    { value: 'cover', label: 'cover' },
+    { value: 'contain', label: 'contain' },
+    { value: 'auto', label: 'auto' }
+  ], defaultValue: 'cover' },
+  { key: 'opacity', label: 'Opacity', type: 'number', placeholder: '1', defaultValue: 1 },
+  { key: 'width', label: 'Width', type: 'number', placeholder: '100', defaultValue: 100 },
+  { key: 'height', label: 'Height', type: 'number', placeholder: '100', defaultValue: 100 },
+  { key: 'minWidth', label: 'Min Width', type: 'number', defaultValue: 0 },
+  { key: 'maxWidth', label: 'Max Width', type: 'number', defaultValue: 1000 },
+  { key: 'minHeight', label: 'Min Height', type: 'number', defaultValue: 0 },
+  { key: 'maxHeight', label: 'Max Height', type: 'number', defaultValue: 1000 },
+  { key: 'blur', label: 'Blur (px)', type: 'number', placeholder: '0', defaultValue: 0 },
+  { key: 'borderColor', label: 'Border Color', type: 'text', placeholder: '#ffffff', defaultValue: '#ffffff' },
+  { key: 'borderWidth', label: 'Border Width', type: 'number', placeholder: '0', defaultValue: 0 },
+  { key: 'outlineColor', label: 'Outline Color', type: 'text', placeholder: '#ffffff', defaultValue: '#ffffff' },
+  { key: 'outlineWidth', label: 'Outline Width', type: 'number', placeholder: '0', defaultValue: 0 },
+  { key: 'fontSize', label: 'Font Size', type: 'number', placeholder: '16', defaultValue: 16 },
+  { key: 'fontFamily', label: 'Font Family', type: 'text', placeholder: 'Inter', defaultValue: 'Inter' },
+  { key: 'fontWeight', label: 'Font Weight', type: 'text', placeholder: 'normal', defaultValue: 'normal' },
+  { key: 'fontStyle', label: 'Font Style', type: 'select', options: [
+    { value: 'normal', label: 'normal' },
+    { value: 'italic', label: 'italic' }
+  ], defaultValue: 'normal' },
+  { key: 'textAlign', label: 'Text Align', type: 'select', options: [
+    { value: 'left', label: 'left' },
+    { value: 'center', label: 'center' },
+    { value: 'right', label: 'right' }
+  ], defaultValue: 'left' },
+  { key: 'lineHeight', label: 'Line Height', type: 'number', defaultValue: 1.2 },
+  { key: 'display', label: 'Display', type: 'select', options: [
+    { value: 'block', label: 'block' },
+    { value: 'none', label: 'none' }
+  ], defaultValue: 'block' },
+  { key: 'pointerEvents', label: 'Pointer Events', type: 'boolean', defaultValue: true },
+  { key: 'margin', label: 'Margin', type: 'text', placeholder: '0px', defaultValue: '0px' },
+  { key: 'textShadowColor', label: 'Text Shadow Color', type: 'text', placeholder: '#000000', defaultValue: '#000000' },
+  { key: 'textShadowBlur', label: 'Text Shadow Blur', type: 'number', defaultValue: 0 },
+  { key: 'textShadowOffsetX', label: 'Text Shadow Offset X', type: 'number', defaultValue: 0 },
+  { key: 'textShadowOffsetY', label: 'Text Shadow Offset Y', type: 'number', defaultValue: 0 },
+  { key: 'boxShadowColor', label: 'Box Shadow Color', type: 'text', placeholder: '#000000', defaultValue: '#000000' },
+  { key: 'boxShadowBlur', label: 'Box Shadow Blur', type: 'number', defaultValue: 0 },
+  { key: 'boxShadowSpread', label: 'Box Shadow Spread', type: 'number', defaultValue: 0 },
+  { key: 'boxShadowOffsetX', label: 'Box Shadow Offset X', type: 'number', defaultValue: 0 },
+  { key: 'boxShadowOffsetY', label: 'Box Shadow Offset Y', type: 'number', defaultValue: 0 },
+  { key: 'zIndex', label: 'Z Index', type: 'number', defaultValue: 0 },
+  { key: 'letterSpacing', label: 'Letter Spacing', type: 'number', defaultValue: 0 },
+  { key: 'borderRadius', label: 'Border Radius', type: 'number', placeholder: '0', defaultValue: 0 },
+  { key: 'cursor', label: 'Cursor', type: 'select', options: [
+    { value: 'default', label: 'default' },
+    { value: 'pointer', label: 'pointer' },
+    { value: 'grab', label: 'grab' },
+    { value: 'text', label: 'text' }
+  ], defaultValue: 'default' },
+  { key: 'overflow', label: 'Overflow', type: 'select', options: [
+    { value: 'hidden', label: 'hidden' },
+    { value: 'visible', label: 'visible' }
+  ], defaultValue: 'hidden' },
+  { key: 'blendMode', label: 'Blend Mode', type: 'select', options: [
+    { value: 'source-over', label: 'source-over' },
+    { value: 'source-in', label: 'source-in' },
+    { value: 'source-out', label: 'source-out' },
+    { value: 'source-atop', label: 'source-atop' },
+    { value: 'destination-over', label: 'destination-over' },
+    { value: 'destination-in', label: 'destination-in' },
+    { value: 'destination-out', label: 'destination-out' },
+    { value: 'lighter', label: 'lighter' },
+    { value: 'copy', label: 'copy' },
+    { value: 'xor', label: 'xor' },
+    { value: 'multiply', label: 'multiply' },
+    { value: 'screen', label: 'screen' },
+    { value: 'lighten', label: 'lighten' },
+    { value: 'darken', label: 'darken' },
+    { value: 'exclusion', label: 'exclusion' },
+    { value: 'difference', label: 'difference' }
+  ], defaultValue: 'source-over' }
 ]
