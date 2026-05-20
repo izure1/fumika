@@ -22,7 +22,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import { useModuleStore } from '../../store/useModuleStore'
+import { useModuleStore, getPinMetaInStore } from '../../store/useModuleStore'
 import { BlueprintNode } from './BlueprintNode'
 import { ModuleSidebar } from './ModuleSidebar'
 import { ModuleInspector } from './ModuleInspector'
@@ -170,81 +170,17 @@ function getPinMeta(handleId: string): { pinType: 'exec' | 'data'; dataType: Pin
   const nodeId = handleId.substring(0, index)
   const pinId = handleId.substring(index + 2)
 
-  if (pinId.startsWith('prop__')) {
-    const key = pinId.substring(6)
-    const spec = LEVIAR_STYLE_PROPERTIES.find(p => p.key === key)
-    if (spec) {
-      const typeMap: Record<string, PinDataType> = {
-        number: 'number',
-        boolean: 'boolean'
-      }
-      return { pinType: 'data', dataType: typeMap[spec.type] ?? 'string' }
-    }
-  }
-
   const store = useModuleStore.getState()
   const activeTab = store.activeTab
   const graph = store.graphs[activeTab]
-  const node = graph?.nodes.find(n => n.id === nodeId)
-  const nodeType = node?.data.nodeType as string | undefined
+  if (!graph) return null
 
-  if (nodeType) {
-    if (nodeType === 'SetState' && node?.data) {
-      const fields = (node.data.fields as string[]) || []
-      if (fields.includes(pinId)) {
-        const val = node.data[pinId]
-        let dataType: PinDataType = 'string'
-        const def = store.definitions?.schemaDef.find(d => d.name === pinId)
-        if (def) {
-          dataType = def.type as PinDataType
-        } else {
-          if (typeof val === 'number') {
-            dataType = 'number'
-          } else if (typeof val === 'boolean') {
-            dataType = 'boolean'
-          } else if (typeof val === 'object' && val !== null) {
-            dataType = 'object'
-          }
-        }
-        return { pinType: 'data', dataType }
-      }
-    }
-    // GetState / GetCmd 출력 핀의 dataType 동적 결정
-    if (nodeType === 'GetState' && pinId === 'value' && node?.data) {
-      const fieldName = node.data.fieldName as string | undefined
-      if (fieldName) {
-        const def = store.definitions?.schemaDef.find(d => d.name === fieldName)
-        if (def) {
-          return { pinType: 'data', dataType: def.type }
-        }
-      }
-    }
-    if (nodeType === 'GetCmd' && pinId === 'value' && node?.data) {
-      const fieldName = node.data.fieldName as string | undefined
-      if (fieldName) {
-        const def = store.definitions?.commandDef.find(d => d.name === fieldName)
-        if (def) {
-          return { pinType: 'data', dataType: def.type }
-        }
-      }
-    }
-
-    const nodeDef = NODE_CATALOG.find(n => n.type === nodeType)
-    if (nodeDef) {
-      const pin = nodeDef.pins.find(p => p.id === pinId)
-      if (pin) {
-        return { pinType: pin.pinType, dataType: pin.dataType ?? 'exec' }
-      }
-    }
+  const meta = getPinMetaInStore(nodeId, pinId, graph.nodes, store.definitions)
+  if (!meta) return null
+  return {
+    pinType: meta.pinType,
+    dataType: meta.dataType as PinDataType,
   }
-
-  for (const nodeDef of NODE_CATALOG) {
-    const pin = nodeDef.pins.find(p => p.id === pinId)
-    if (pin) {
-      return { pinType: pin.pinType, dataType: pin.dataType ?? 'exec' }
-    }
-  }
-  return null
 }
 
 const TABS: GraphTab[] = [

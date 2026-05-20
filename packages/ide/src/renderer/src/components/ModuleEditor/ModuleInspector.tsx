@@ -146,6 +146,10 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   AddChild: [],
   GetCamera: [],
   RemoveChild: [],
+  RemoveObject: [
+    { key: 'child', label: 'Child', type: 'boolean' },
+    { key: 'follower', label: 'Follower', type: 'boolean' },
+  ],
   RemoveFromParent: [],
   HasClass: [],
   AddClass: [],
@@ -164,11 +168,11 @@ interface TypedInputProps {
   label?: string
   value: unknown
   onChange: (newValue: unknown) => void
-  forceType?: 'string' | 'number' | 'boolean' | 'json'
+  forceType?: 'string' | 'number' | 'boolean' | 'json' | 'array' | 'null'
 }
 
 function TypedInput({ label, value, onChange, forceType }: TypedInputProps): React.JSX.Element {
-  let currentType: 'string' | 'number' | 'boolean' | 'json' = 'string'
+  let currentType: 'string' | 'number' | 'boolean' | 'json' | 'array' | 'null' = 'string'
   if (forceType) {
     currentType = forceType
   } else {
@@ -176,12 +180,16 @@ function TypedInput({ label, value, onChange, forceType }: TypedInputProps): Rea
       currentType = 'number'
     } else if (typeof value === 'boolean') {
       currentType = 'boolean'
+    } else if (value === null) {
+      currentType = 'null'
+    } else if (Array.isArray(value)) {
+      currentType = 'array'
     } else if (typeof value === 'object' && value !== null) {
       currentType = 'json'
     }
   }
 
-  const handleTypeChange = (newType: 'string' | 'number' | 'boolean' | 'json') => {
+  const handleTypeChange = (newType: 'string' | 'number' | 'boolean' | 'json' | 'array' | 'null') => {
     if (newType === currentType) return
 
     if (newType === 'string') {
@@ -193,6 +201,10 @@ function TypedInput({ label, value, onChange, forceType }: TypedInputProps): Rea
       onChange(Boolean(value))
     } else if (newType === 'json') {
       onChange({})
+    } else if (newType === 'array') {
+      onChange([])
+    } else if (newType === 'null') {
+      onChange(null)
     }
   }
 
@@ -221,6 +233,20 @@ function TypedInput({ label, value, onChange, forceType }: TypedInputProps): Rea
     return JSON.stringify(val)
   }
 
+  // Coercion helper for Array
+  const getCoercedArrayString = (val: unknown): string => {
+    if (Array.isArray(val)) {
+      return JSON.stringify(val, null, 2)
+    }
+    if (typeof val === 'string') {
+      const trimmed = val.trim()
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        return val
+      }
+    }
+    return '[]'
+  }
+
   // Coercion helper for numbers
   const getCoercedNumber = (val: unknown): number => {
     const num = Number(val)
@@ -243,12 +269,14 @@ function TypedInput({ label, value, onChange, forceType }: TypedInputProps): Rea
           <select
             className="bg-surface-900 border border-surface-750 rounded px-1 py-0.5 text-[9px] text-primary-400 font-medium outline-none cursor-pointer"
             value={currentType}
-            onChange={(e) => handleTypeChange(e.target.value as 'string' | 'number' | 'boolean' | 'json')}
+            onChange={(e) => handleTypeChange(e.target.value as 'string' | 'number' | 'boolean' | 'json' | 'array' | 'null')}
           >
             <option value="string">String</option>
             <option value="number">Number</option>
             <option value="boolean">Boolean</option>
-            <option value="json">JSON</option>
+            <option value="json">JSON (Object)</option>
+            <option value="array">Array</option>
+            <option value="null">Null</option>
           </select>
         )}
       </div>
@@ -291,6 +319,30 @@ function TypedInput({ label, value, onChange, forceType }: TypedInputProps): Rea
             }}
             placeholder="{}"
           />
+        )}
+
+        {currentType === 'array' && (
+          <textarea
+            className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[9px] text-white font-mono outline-none focus:border-primary-500/50 min-h-[40px] resize-y custom-scrollbar"
+            value={getCoercedArrayString(value)}
+            onChange={(e) => {
+              try {
+                const parsed = JSON.parse(e.target.value)
+                if (Array.isArray(parsed)) {
+                  onChange(parsed)
+                }
+              } catch {
+                // 타이핑 중의 임시 파싱 오류는 무시하고 상태 유실 방지
+              }
+            }}
+            placeholder="[]"
+          />
+        )}
+
+        {currentType === 'null' && (
+          <div className="w-full bg-surface-900/30 border border-surface-750/50 rounded px-1.5 py-0.5 text-[10px] text-surface-500 font-mono select-none">
+            null
+          </div>
         )}
 
         {currentType === 'string' && (

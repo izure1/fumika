@@ -82,7 +82,17 @@ const createEmptyDefinitions = (): ModuleDefinitions => ({
   hookDef: [],
 })
 
-function getPinMetaInStore(
+function inferPinDataType(val: unknown): string {
+  if (val === null) return 'null'
+  if (Array.isArray(val)) return 'array'
+  if (typeof val === 'number') return 'number'
+  if (typeof val === 'boolean') return 'boolean'
+  if (typeof val === 'object') return 'object'
+  if (typeof val === 'string') return 'string'
+  return 'any'
+}
+
+export function getPinMetaInStore(
   nodeId: string,
   pinId: string,
   nodes: Node[],
@@ -101,6 +111,36 @@ function getPinMetaInStore(
         boolean: 'boolean'
       }
       return { pinType: 'data', dataType: typeMap[spec.type] ?? 'string' }
+    }
+  }
+
+  if (nodeType === 'Constant' && pinId === 'value' && node?.data) {
+    const val = node.data.value !== undefined ? node.data.value : node.data.inlineValue
+    const dataType = inferPinDataType(val)
+    return { pinType: 'data', dataType }
+  }
+
+  if ((nodeType === 'SetConst' || nodeType === 'SetGlobal') && pinId === 'value' && node?.data) {
+    const val = node.data.value
+    const dataType = inferPinDataType(val)
+    return { pinType: 'data', dataType }
+  }
+
+  if (nodeType === 'GetConst' && pinId === 'value' && node?.data) {
+    const nameVal = node.data.name as string | undefined
+    if (nameVal) {
+      const matchNode = nodes.find(n => n.data?.nodeType === 'SetConst' && n.data?.name === nameVal)
+      const dataType = matchNode ? inferPinDataType(matchNode.data?.value) : 'any'
+      return { pinType: 'data', dataType }
+    }
+  }
+
+  if (nodeType === 'GetGlobal' && pinId === 'value' && node?.data) {
+    const nameVal = node.data.name as string | undefined
+    if (nameVal) {
+      const matchNode = nodes.find(n => n.data?.nodeType === 'SetGlobal' && n.data?.name === nameVal)
+      const dataType = matchNode ? inferPinDataType(matchNode.data?.value) : 'any'
+      return { pinType: 'data', dataType }
     }
   }
 

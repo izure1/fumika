@@ -71,10 +71,21 @@ function PinHandle({ pin, nodeId }: { pin: PinDef, nodeId: string }): React.JSX.
   )
 }
 
+function inferPinDataType(val: unknown): PinDataType {
+  if (val === null) return 'null'
+  if (Array.isArray(val)) return 'array'
+  if (typeof val === 'number') return 'number'
+  if (typeof val === 'boolean') return 'boolean'
+  if (typeof val === 'object') return 'object'
+  if (typeof val === 'string') return 'string'
+  return 'any'
+}
+
 // ─── 메인 블루프린트 노드 ────────────────────────────────────
 
 function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Element | null {
   const nodeType = data.nodeType as string
+  const nodes = useModuleStore((s) => s.graphs[s.activeTab]?.nodes ?? [])
   const edges = useModuleStore((s) => s.graphs[s.activeTab]?.edges ?? [])
   const definitions = useModuleStore((s) => s.definitions)
 
@@ -134,6 +145,12 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
     ]
   }
 
+  if (nodeType === 'SetConst' || nodeType === 'SetGlobal') {
+    const val = data.value
+    const dataType = inferPinDataType(val)
+    inputPins = inputPins.map(p => p.id === 'value' ? { ...p, dataType } : p)
+  }
+
   let outputPins = catalog.pins.filter(p => p.direction === 'output')
 
   if (nodeType === 'GetState' && data.fieldName) {
@@ -148,6 +165,20 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
     if (def) {
       outputPins = outputPins.map(p => p.id === 'value' ? { ...p, dataType: def.type } : p)
     }
+  } else if (nodeType === 'Constant') {
+    const val = data.value !== undefined ? data.value : data.inlineValue
+    const dataType = inferPinDataType(val)
+    outputPins = outputPins.map(p => p.id === 'value' ? { ...p, dataType } : p)
+  } else if (nodeType === 'GetConst' && data.name) {
+    const nameVal = data.name as string
+    const matchNode = nodes.find(n => n.data?.nodeType === 'SetConst' && n.data?.name === nameVal)
+    const dataType = matchNode ? inferPinDataType(matchNode.data?.value) : 'any'
+    outputPins = outputPins.map(p => p.id === 'value' ? { ...p, dataType } : p)
+  } else if (nodeType === 'GetGlobal' && data.name) {
+    const nameVal = data.name as string
+    const matchNode = nodes.find(n => n.data?.nodeType === 'SetGlobal' && n.data?.name === nameVal)
+    const dataType = matchNode ? inferPinDataType(matchNode.data?.value) : 'any'
+    outputPins = outputPins.map(p => p.id === 'value' ? { ...p, dataType } : p)
   }
 
   const maxRows = Math.max(inputPins.length, outputPins.length, 1)
@@ -236,6 +267,8 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
             if (data.value !== undefined) {
               if (typeof val === 'number') currentType = 'number'
               else if (typeof val === 'boolean') currentType = 'boolean'
+              else if (val === null) currentType = 'null'
+              else if (Array.isArray(val)) currentType = 'array'
               else if (typeof val === 'object' && val !== null) currentType = 'json'
             }
 

@@ -42,6 +42,7 @@ export type PinDataType =
   | 'boolean'
   | 'object'
   | 'array'
+  | 'null'
   | 'style'
   | 'attribute'
   | 'vec3'
@@ -65,6 +66,7 @@ export const PIN_COLORS: Record<PinDataType, string> = {
   boolean: '#ef4444',
   object: '#94a3b8',
   array: '#f59e0b',
+  null: '#64748b',
   style: '#a855f7',
   attribute: '#ec4899',
   vec3: '#06b6d4',
@@ -412,10 +414,12 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     type: 'RemoveObject',
     label: 'Remove Object',
     category: 'leviar-element',
-    description: 'object.remove({ child: true })',
+    description: 'object.remove({ child, follower })',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
+      { id: 'child', label: 'Child', direction: 'input', pinType: 'data', dataType: 'boolean' },
+      { id: 'follower', label: 'Follower', direction: 'input', pinType: 'data', dataType: 'boolean' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
     allowedTabs: ['view'],
