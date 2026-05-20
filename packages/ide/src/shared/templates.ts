@@ -719,14 +719,12 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "    const nodeType = node.data?.nodeType",
   "    let nextPinId = 'exec-out'",
   "",
-  "    console.log(`[BLUEPRINT-EXEC] node: ${currentNodeId} (${nodeType})`)",
   "    if (nodeType === 'SetState') {",
   "      const fields = (node.data?.fields as string[]) || []",
   "      const stateObj: Record<string, any> = {}",
   "      for (const field of fields) {",
   "        stateObj[field] = evaluatePin(currentNodeId + '__' + field)",
   "      }",
-  "      console.log(`[BLUEPRINT-EXEC] SetState calling stateObj:`, stateObj)",
   "      setState(stateObj)",
   "    } else if (nodeType === 'SetVariable') {",
   "      const name = evaluatePin(currentNodeId + '__name')",
@@ -819,5 +817,6 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "  if (firstEdge) {",
   "    return executeNode(firstEdge.target)",
   "  }",
+  "  return",
   "}"
 ].join('\n')

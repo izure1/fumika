@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 export interface DialogBoxProps {
   isOpen: boolean
@@ -6,27 +6,42 @@ export interface DialogBoxProps {
   defaultValue?: string
   placeholder?: string
   options?: { label: string; value: string }[]
-  onConfirm: (value: string) => void
+  selectOptions?: { label: string; value: string }[]
+  selectLabel?: string
+  onConfirm: (value: string, selectValue?: string) => void
   onCancel: () => void
 }
 
-export function DialogBox({ isOpen, title, defaultValue = '', placeholder = '', options, onConfirm, onCancel }: DialogBoxProps) {
-  const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null)
+export function DialogBox({ isOpen, title, defaultValue = '', placeholder = '', options, selectOptions, selectLabel, onConfirm, onCancel }: DialogBoxProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const selectRef = useRef<HTMLSelectElement>(null)
+  const singleSelectRef = useRef<HTMLSelectElement>(null)
+  const [selectVal, setSelectVal] = useState('')
 
   useEffect(() => {
-    if (isOpen && inputRef.current && inputRef.current.tagName === 'INPUT') {
-      (inputRef.current as HTMLInputElement).focus();
-      (inputRef.current as HTMLInputElement).select();
-    } else if (isOpen && inputRef.current && inputRef.current.tagName === 'SELECT') {
-      (inputRef.current as HTMLSelectElement).focus();
+    if (isOpen) {
+      if (singleSelectRef.current) {
+        singleSelectRef.current.focus()
+      } else if (inputRef.current) {
+        inputRef.current.focus()
+        inputRef.current.select()
+      }
+      if (selectOptions && selectOptions.length > 0) {
+        setSelectVal(selectOptions[0].value)
+      }
     }
-  }, [isOpen])
+  }, [isOpen, selectOptions])
 
   if (!isOpen) return null
 
   const handleConfirm = () => {
-    if (inputRef.current) {
-      onConfirm(inputRef.current.value)
+    const textVal = inputRef.current ? inputRef.current.value : ''
+    const singleVal = singleSelectRef.current ? singleSelectRef.current.value : ''
+    
+    if (options) {
+      onConfirm(singleVal)
+    } else {
+      onConfirm(textVal, selectRef.current ? selectRef.current.value : selectVal)
     }
   }
 
@@ -44,7 +59,7 @@ export function DialogBox({ isOpen, title, defaultValue = '', placeholder = '', 
         <h3 className="text-sm font-bold text-white mb-2">{title}</h3>
         {options ? (
           <select
-            ref={inputRef as React.RefObject<HTMLSelectElement>}
+            ref={singleSelectRef}
             className="w-full bg-surface-900 border border-surface-600 text-white px-2 py-1 rounded-sm mb-4 focus:outline-none focus:border-primary-500"
             defaultValue={defaultValue || (options.length > 0 ? options[0].value : '')}
             onKeyDown={handleKeyDown}
@@ -54,13 +69,35 @@ export function DialogBox({ isOpen, title, defaultValue = '', placeholder = '', 
             ))}
           </select>
         ) : (
-          <input
-            ref={inputRef as React.RefObject<HTMLInputElement>}
-            className="w-full bg-surface-900 border border-surface-600 text-white px-2 py-1 rounded-sm mb-4 focus:outline-none focus:border-primary-500"
-            defaultValue={defaultValue}
-            placeholder={placeholder}
-            onKeyDown={handleKeyDown}
-          />
+          <>
+            <input
+              ref={inputRef}
+              className="w-full bg-surface-900 border border-surface-600 text-white px-2 py-1 rounded-sm mb-3 focus:outline-none focus:border-primary-500"
+              defaultValue={defaultValue}
+              placeholder={placeholder}
+              onKeyDown={handleKeyDown}
+            />
+            {selectOptions && (
+              <div className="mb-4">
+                {selectLabel && (
+                  <label className="block text-[10px] text-surface-400 font-bold uppercase tracking-wider mb-1">
+                    {selectLabel}
+                  </label>
+                )}
+                <select
+                  ref={selectRef}
+                  className="w-full bg-surface-900 border border-surface-600 text-white px-2 py-1 rounded-sm focus:outline-none focus:border-primary-500"
+                  value={selectVal}
+                  onChange={(e) => setSelectVal(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                >
+                  {selectOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </>
         )}
         <div className="flex justify-end gap-2">
           <button 
@@ -80,3 +117,4 @@ export function DialogBox({ isOpen, title, defaultValue = '', placeholder = '', 
     </div>
   )
 }
+

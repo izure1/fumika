@@ -10,9 +10,16 @@ const WATCH_FOLDERS = ['assets', 'scenes', 'characters', 'modules', 'backgrounds
  * 해당 폴더의 기존 이름 목록을 받아, 충돌 시 _1, _2, ... 형태의 고유 이름을 반환합니다.
  * 파일의 경우 확장자 없이 비교하고, 폴더는 그대로 비교합니다.
  */
+const getBaseNameWithoutExt = (filename: string): string => {
+  if (filename.endsWith('.fbp.json')) {
+    return filename.slice(0, -9)
+  }
+  return filename.replace(/\.[^/.]+$/, '')
+}
+
 const resolveUniqueName = (baseName: string, existingNodes: FileNode[], isFolder: boolean): string => {
   const existingNames = new Set(
-    existingNodes.map(n => isFolder ? n.name : n.name.replace(/\.[^/.]+$/, ''))
+    existingNodes.map(n => isFolder ? n.name : getBaseNameWithoutExt(n.name))
   )
   if (!existingNames.has(baseName)) return baseName
   let counter = 1
@@ -50,6 +57,8 @@ interface PromptData {
   targetNode?: FileNode
   defaultValue: string
   options?: { label: string; value: string }[]
+  selectOptions?: { label: string; value: string }[]
+  selectLabel?: string
 }
 export function ProjectSidebar({ width = 256 }: { width?: number }) {
   const { projectPath, activeFile, setActiveFile, setGlobalLoading, setProjectPath, tsErrors } = useProjectStore()
@@ -341,10 +350,18 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
 
     const rootType = folderPath.split(/[/\\]/)[0]
     
-    let options: { label: string; value: string }[] | undefined;
+    let options: { label: string; value: string }[] | undefined
+    let selectOptions: { label: string; value: string }[] | undefined
+    let selectLabel: string | undefined
     if (rootType === 'effects' && !isFolder) {
-      const effectTypes = ['dust', 'rain', 'snow', 'sakura', 'sparkle', 'fog', 'leaves', 'fireflies'];
-      options = effectTypes.map(t => ({ label: t, value: t }));
+      const effectTypes = ['dust', 'rain', 'snow', 'sakura', 'sparkle', 'fog', 'leaves', 'fireflies']
+      options = effectTypes.map(t => ({ label: t, value: t }))
+    } else if (rootType === 'modules' && !isFolder) {
+      selectOptions = [
+        { label: '블루프린트 (Visual Node)', value: 'blueprint' },
+        { label: '코드 에디터 (TypeScript)', value: 'code' }
+      ]
+      selectLabel = '모듈 타입'
     }
 
     // 대상 폴더의 현재 파일 목록을 가져와 중복 이름 방지
@@ -369,7 +386,9 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
       action: isFolder ? 'create_folder' : 'create_file',
       targetFolder: folderPath,
       defaultValue: uniqueDefault,
-      options
+      options,
+      selectOptions,
+      selectLabel
     })
   }
 
@@ -432,7 +451,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     })
   }
 
-  const submitPrompt = async (inputValue: string) => {
+  const submitPrompt = async (inputValue: string, selectValue?: string) => {
     if (!inputValue || !promptData || !projectPath) return
     const { action, targetFolder, targetNode } = promptData
     setPromptData(null)
@@ -440,10 +459,58 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     const safeName = inputValue.replace(/[^a-zA-Z0-9_-]/g, '_')
     const rootType = targetFolder.split(/[/\\]/)[0]
 
+    const findNodes = (nodes: FileNode[], parts: string[]): FileNode[] => {
+      if (parts.length === 0 || parts[0] === '') return nodes
+      const found = nodes.find(n => n.name === parts[0] && n.isDirectory)
+      return found?.children ? findNodes(found.children, parts.slice(1)) : []
+    }
+
     if (action === 'create_folder') {
+      const targetRelPath = targetFolder
+      const rootFolder = targetRelPath.split(/[/\\]/)[0]
+      const subPath = targetRelPath.split(/[/\\]/).slice(1).join('/')
+      const rootNodes = folderFiles[rootFolder] || []
+      const currentNodes = subPath ? findNodes(rootNodes, subPath.split('/')) : rootNodes
+
+      const isDuplicate = currentNodes.some(n => n.name === safeName)
+      if (isDuplicate) {
+        setConfirmState({
+          isOpen: true,
+          title: '생성 실패',
+          message: `'${safeName}' 폴더가 이미 존재합니다.`,
+          type: 'warning',
+          showCancel: false,
+          onConfirm: () => setConfirmState(null)
+        })
+        return
+      }
+
       await window.api.fs.mkdir(`${projectPath}/${targetFolder}/${safeName}`)
     } else if (action === 'create_file') {
-      const isBlueprint = targetFolder.startsWith('modules')
+      const targetRelPath = targetFolder
+      const rootFolder = targetRelPath.split(/[/\\]/)[0]
+      const subPath = targetRelPath.split(/[/\\]/).slice(1).join('/')
+      const rootNodes = folderFiles[rootFolder] || []
+      const currentNodes = subPath ? findNodes(rootNodes, subPath.split('/')) : rootNodes
+
+      const isDuplicate = currentNodes.some(n => {
+        if (n.isDirectory) return n.name === safeName
+        return getBaseNameWithoutExt(n.name) === safeName
+      })
+
+      if (isDuplicate) {
+        setConfirmState({
+          isOpen: true,
+          title: '생성 실패',
+          message: `'${safeName}'은(는) 이미 존재하는 이름이거나 중복되는 모듈 이름입니다. 다른 이름을 사용해주세요.`,
+          type: 'warning',
+          showCancel: false,
+          onConfirm: () => setConfirmState(null)
+        })
+        return
+      }
+
+      const isBlueprint = rootType === 'modules' ? (selectValue === 'blueprint') : false
       const ext = isBlueprint ? '.fbp.json' : '.ts'
       const filePath = `${projectPath}/${targetFolder}/${safeName}${ext}`
       const relativeDots = Array(targetFolder.split(/[/\\]/).length).fill('..').join('/')
@@ -486,6 +553,30 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
       const dirPath = oldPath.substring(0, oldPath.lastIndexOf('/'))
       const newPath = `${dirPath}/${newName}`
       
+      const targetRelPath = targetFolder
+      const rootFolder = targetRelPath.split(/[/\\]/)[0]
+      const subPath = targetRelPath.split(/[/\\]/).slice(1).join('/')
+      const rootNodes = folderFiles[rootFolder] || []
+      const currentNodes = subPath ? findNodes(rootNodes, subPath.split('/')) : rootNodes
+
+      const isDuplicate = currentNodes.some(n => {
+        if (n.path === targetNode.path) return false
+        if (n.isDirectory) return n.name === safeName
+        return getBaseNameWithoutExt(n.name) === safeName
+      })
+
+      if (isDuplicate) {
+        setConfirmState({
+          isOpen: true,
+          title: '이름 변경 실패',
+          message: `'${safeName}'은(는) 이미 존재하는 이름이거나 중복되는 모듈 이름입니다. 다른 이름을 사용해주세요.`,
+          type: 'warning',
+          showCancel: false,
+          onConfirm: () => setConfirmState(null)
+        })
+        return
+      }
+
       await window.api.fs.renameFile(oldPath, newPath)
       window.dispatchEvent(new CustomEvent('file-renamed', { detail: { oldPath, newPath, isDirectory: targetNode.isDirectory } }))
       if (activeFile === oldPath) setActiveFile(newPath)
@@ -759,6 +850,8 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
         }
         defaultValue={promptData?.defaultValue}
         options={promptData?.options}
+        selectOptions={promptData?.selectOptions}
+        selectLabel={promptData?.selectLabel}
         onConfirm={submitPrompt}
         onCancel={() => setPromptData(null)}
       />
