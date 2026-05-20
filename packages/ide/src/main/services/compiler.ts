@@ -80,7 +80,8 @@ export function compileBlueprint(jsonStr: string): string {
   const cleanJson = JSON.stringify(bp, null, 2)
 
   return `// @fumika-blueprint-generated
-import { define, runBlueprintFlow } from 'fumika'
+import { define } from 'fumika'
+import { runBlueprintFlow } from '../declarations/blueprintRuntime'
 
 interface MySchema {
 ${schemaProps}
@@ -101,7 +102,7 @@ ${schemaDefaults}
 })
   .defineCommand(function* (cmd, ctx, state, setState) {
     const outputs = new Map<string, any>()
-    const gen = runBlueprintFlow('command', blueprintData.graphs, 'OnCommand', {
+    const gen = runBlueprintFlow('command', blueprintData.graphs, 'CommandEntry', {
       cmd,
       ctx,
       state,
@@ -120,6 +121,20 @@ ${schemaDefaults}
   .defineView((ctx, state, setState) => {
     const outputs = new Map<string, any>()
     
+    // 최초 뷰 마운트(초기화) 시 1회 구동
+    const genMount = runBlueprintFlow('view', blueprintData.graphs, 'ViewMountEntry', {
+      ctx,
+      state,
+      setState,
+      outputs
+    })
+    if (genMount) {
+      let res = genMount.next()
+      while (!res.done) {
+        res = genMount.next()
+      }
+    }
+
     const runUpdate = () => {
       const gen = runBlueprintFlow('view', blueprintData.graphs, 'OnUpdateEntry', {
         ctx,
@@ -185,22 +200,6 @@ ${schemaDefaults}
       hide: runHide,
       onUpdate: runUpdate,
       onCleanup: runCleanup
-    }
-  })
-  .onBoot(async (world) => {
-    const outputs = new Map<string, any>()
-    const ctxStub = { world }
-    const gen = runBlueprintFlow('boot', blueprintData.graphs, 'OnBoot', {
-      ctx: ctxStub,
-      state: {},
-      setState: () => {},
-      outputs
-    })
-    if (gen) {
-      let res = gen.next()
-      while (!res.done) {
-        res = gen.next()
-      }
     }
   })
 `

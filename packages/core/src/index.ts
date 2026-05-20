@@ -37,8 +37,6 @@ export { defineCharacter } from './define/defineCharacter'
 export { defineAssets, defineBackgrounds, defineAudios, defineEffects, defineFallback, defineCustomModules } from './define/defineConfigHelpers'
 export { defineScene, defineInitial } from './define/defineScene'
 export type { SceneDefinition, SceneBuilders } from './define/defineScene'
-export { runBlueprintFlow } from './define/defineBlueprint'
-export type { BlueprintNode, BlueprintEdge, BlueprintGraph, BlueprintRuntimeContext } from './define/defineBlueprint'
 
 // ─── 모듈 팩토리 ─────────────────────────────────────────────
 export { define, defineHook } from './define/defineCmdUI'
