@@ -216,10 +216,12 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
     const pos = position ?? { x: 250 + Math.random() * 200, y: 150 + Math.random() * 200 }
 
     let initialData: Record<string, unknown> = {}
-    if (nodeType === 'CreateRectangle') {
-      initialData = { style: '#ffffff', posX: 0, posY: 0, posZ: 0 }
+    if (nodeType === 'CreateRectangle' || nodeType === 'CreateEllipse') {
+      initialData = {}
+    } else if (nodeType === 'CreateImage') {
+      initialData = { image: '' }
     } else if (nodeType === 'CreateText') {
-      initialData = { text: 'Hello', style: '#ffffff', posX: 0, posY: 0, posZ: 0 }
+      initialData = { text: 'Hello' }
     } else if (nodeType === 'MakeStyle') {
       initialData = {
         styleKeys: ['width', 'height', 'background'],

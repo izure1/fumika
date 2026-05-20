@@ -92,16 +92,13 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
       { value: 'false', label: 'false (대기)' },
     ]},
   ],
-  CreateRectangle: [
-    { key: 'posX', label: 'Position X', type: 'number' },
-    { key: 'posY', label: 'Position Y', type: 'number' },
-    { key: 'posZ', label: 'Position Z', type: 'number' },
-  ],
+  CreateRectangle: [],
+  CreateEllipse: [],
   CreateText: [
     { key: 'text', label: 'Text Content', type: 'text', placeholder: 'Enter text...' },
-    { key: 'posX', label: 'Position X', type: 'number' },
-    { key: 'posY', label: 'Position Y', type: 'number' },
-    { key: 'posZ', label: 'Position Z', type: 'number' },
+  ],
+  CreateImage: [
+    { key: 'image', label: 'Image Path', type: 'text', placeholder: 'e.g. assets/bg.png' },
   ],
   FadeIn: [
     { key: 'duration', label: 'Duration (ms)', type: 'number' },

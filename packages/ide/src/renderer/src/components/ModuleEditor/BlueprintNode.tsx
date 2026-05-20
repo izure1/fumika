@@ -2,7 +2,7 @@
 // BlueprintNode.tsx — 블루프린트 커스텀 노드 컴포넌트
 // =============================================================
 
-import { memo, useCallback, useMemo } from 'react'
+import React, { memo, useCallback } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { useModuleStore } from '../../store/useModuleStore'
 import {
@@ -11,13 +11,11 @@ import {
   PIN_COLORS,
   NODE_CATEGORY_COLORS,
   NODE_CATALOG,
-  LEVIAR_STYLE_PROPERTIES,
-  type PinDataType,
 } from '../../types/blueprint'
 
 // ─── 핀 핸들 컴포넌트 ────────────────────────────────────────
 
-function PinHandle({ pin, nodeId }: { pin: PinDef, nodeId: string }) {
+function PinHandle({ pin, nodeId }: { pin: PinDef, nodeId: string }): React.JSX.Element {
   const isInput = pin.direction === 'input'
   const isExec = pin.pinType === 'exec'
   const color = PIN_COLORS[pin.dataType ?? 'exec']
@@ -78,26 +76,11 @@ function PinHandle({ pin, nodeId }: { pin: PinDef, nodeId: string }) {
 
 // ─── 메인 블루프린트 노드 ────────────────────────────────────
 
-function BlueprintNodeInner({ id, data, selected }: NodeProps) {
+function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Element | null {
   const nodeType = data.nodeType as string
-  const catalog = NODE_CATALOG.find(n => n.type === nodeType)
-  if (!catalog) return null
-
-  const category = catalog.category as NodeCategory
-  const colors = NODE_CATEGORY_COLORS[category]
-
-  const inputPins = nodeType === 'MakeStyle'
-    ? []
-    : catalog.pins.filter(p => p.direction === 'input')
-
-  const outputPins = catalog.pins.filter(p => p.direction === 'output')
-
-  const maxRows = Math.max(inputPins.length, outputPins.length, 1)
-
-  const edges = useModuleStore(s => s.graphs[s.activeTab].edges)
-  const connectedTargets = useMemo(() => {
-    return edges.filter(e => e.target === id).map(e => e.targetHandle)
-  }, [edges, id])
+  const edges = useModuleStore((s) => s.graphs[s.activeTab]?.edges ?? [])
+  const isTextBound = edges.some((e) => e.target === id && e.targetHandle === `${id}__text`)
+  const isImageBound = edges.some((e) => e.target === id && e.targetHandle === `${id}__image`)
 
   const updateNodeData = useCallback((keyOrData: string | Record<string, unknown>, value?: unknown) => {
     const store = useModuleStore.getState()
@@ -118,9 +101,22 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps) {
     })
   }, [id])
 
+  const catalog = NODE_CATALOG.find(n => n.type === nodeType)
+  if (!catalog) return null
+
+  const category = catalog.category as NodeCategory
+  const colors = NODE_CATEGORY_COLORS[category]
+
+  const inputPins = nodeType === 'MakeStyle'
+    ? []
+    : catalog.pins.filter(p => p.direction === 'input')
+
+  const outputPins = catalog.pins.filter(p => p.direction === 'output')
+
+  const maxRows = Math.max(inputPins.length, outputPins.length, 1)
+
   const hasDetails = [
-    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'SetVariable', 'BindEvent', 'Log', 'Return',
-    'CreateRectangle', 'CreateText', 'FadeIn', 'FadeOut'
+    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'SetVariable', 'BindEvent', 'Log', 'Return'
   ].includes(nodeType)
 
   return (
@@ -178,17 +174,13 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps) {
       {hasDetails && (
         <div className="px-3.5 pb-3.5 border-t border-white/5 pt-2.5 flex flex-col gap-2">
           {nodeType === 'Constant' && (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
               <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider">
                 {String(data.constantType ?? 'string')}
               </span>
-              <input
-                className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-2 py-1 text-[10px] text-white outline-none focus:border-primary-500/40 transition-colors"
-                value={String(data.inlineValue ?? '')}
-                onChange={(e) => updateNodeData('inlineValue', e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                placeholder="value"
-              />
+              <div className="text-[10px] text-surface-300 font-mono bg-black/30 px-2 py-1 rounded-md border border-white/5 truncate select-none">
+                {String(data.inlineValue ?? 'Empty')}
+              </div>
             </div>
           )}
 
@@ -270,110 +262,11 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps) {
                   </span>
                 </div>
               )}
-              <input
-                className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-2 py-1 text-[10px] text-white outline-none focus:border-primary-500/40 transition-colors"
-                value={String(data.message ?? '')}
-                onChange={(e) => updateNodeData('message', e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                placeholder="log message..."
-              />
-            </div>
-          )}
-
-          {nodeType === 'CreateRectangle' && (
-            <div className="flex flex-col gap-1.5">
-              <div className="grid grid-cols-3 gap-1">
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] text-red-400 font-mono font-bold">X</span>
-                  <input
-                    type="number"
-                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
-                    value={data.posX !== undefined ? Number(data.posX) : 0}
-                    onChange={(e) => updateNodeData('posX', Number(e.target.value))}
-                    onClick={(e) => e.stopPropagation()}
-                  />
+              {!!data.message && (
+                <div className="text-[10px] text-surface-300 font-mono bg-black/30 px-2 py-1 rounded-md border border-white/5 truncate select-none">
+                  {String(data.message)}
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] text-emerald-400 font-mono font-bold">Y</span>
-                  <input
-                    type="number"
-                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
-                    value={data.posY !== undefined ? Number(data.posY) : 0}
-                    onChange={(e) => updateNodeData('posY', Number(e.target.value))}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] text-blue-400 font-mono font-bold">Z</span>
-                  <input
-                    type="number"
-                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
-                    value={data.posZ !== undefined ? Number(data.posZ) : 0}
-                    onChange={(e) => updateNodeData('posZ', Number(e.target.value))}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {nodeType === 'CreateText' && (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider">Text:</span>
-                <input
-                  className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-2 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/40 transition-colors"
-                  value={String(data.text ?? '')}
-                  onChange={(e) => updateNodeData('text', e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  placeholder="Enter text..."
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] text-red-400 font-mono font-bold">X</span>
-                  <input
-                    type="number"
-                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
-                    value={data.posX !== undefined ? Number(data.posX) : 0}
-                    onChange={(e) => updateNodeData('posX', Number(e.target.value))}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] text-emerald-400 font-mono font-bold">Y</span>
-                  <input
-                    type="number"
-                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
-                    value={data.posY !== undefined ? Number(data.posY) : 0}
-                    onChange={(e) => updateNodeData('posY', Number(e.target.value))}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] text-blue-400 font-mono font-bold">Z</span>
-                  <input
-                    type="number"
-                    className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-1.5 py-0.5 text-[9px] text-white outline-none focus:border-primary-500/40 transition-colors"
-                    value={data.posZ !== undefined ? Number(data.posZ) : 0}
-                    onChange={(e) => updateNodeData('posZ', Number(e.target.value))}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {(nodeType === 'FadeIn' || nodeType === 'FadeOut') && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider shrink-0">Duration (ms):</span>
-              <input
-                type="number"
-                className="w-full bg-black/50 border border-white/5 shadow-inner rounded-md px-2 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/40 transition-colors"
-                value={data.duration !== undefined ? Number(data.duration) : 0}
-                onChange={(e) => updateNodeData('duration', Number(e.target.value))}
-                onClick={(e) => e.stopPropagation()}
-              />
+              )}
             </div>
           )}
         </div>

@@ -38,9 +38,10 @@ const nodeTypes: NodeTypes = {
 
 // ─── 핀 메타 추출 헬퍼 ───────────────────────────────────────
 function getPinMeta(handleId: string): { pinType: 'exec' | 'data'; dataType: PinDataType } | null {
-  const parts = handleId.split('__')
-  if (parts.length < 2) return null
-  const pinId = parts[parts.length - 1]
+  const lastIndex = handleId.lastIndexOf('__')
+  if (lastIndex === -1) return null
+  const nodeId = handleId.substring(0, lastIndex)
+  const pinId = handleId.substring(lastIndex + 2)
 
   if (pinId.startsWith('prop__')) {
     const key = pinId.substring(6)
@@ -51,6 +52,22 @@ function getPinMeta(handleId: string): { pinType: 'exec' | 'data'; dataType: Pin
         boolean: 'boolean'
       }
       return { pinType: 'data', dataType: typeMap[spec.type] ?? 'string' }
+    }
+  }
+
+  const store = useModuleStore.getState()
+  const activeTab = store.activeTab
+  const graph = store.graphs[activeTab]
+  const node = graph?.nodes.find(n => n.id === nodeId)
+  const nodeType = node?.data.nodeType as string | undefined
+
+  if (nodeType) {
+    const nodeDef = NODE_CATALOG.find(n => n.type === nodeType)
+    if (nodeDef) {
+      const pin = nodeDef.pins.find(p => p.id === pinId)
+      if (pin) {
+        return { pinType: pin.pinType, dataType: pin.dataType ?? 'exec' }
+      }
     }
   }
 

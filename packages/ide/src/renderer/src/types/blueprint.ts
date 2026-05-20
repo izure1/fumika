@@ -273,6 +273,21 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
       { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
     ],
+    allowedTabs: ['view'],
+  },
+  {
+    type: 'CreateEllipse',
+    label: 'Create Ellipse',
+    category: 'action',
+    description: 'ctx.world.createEllipse()',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
+      { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
+    ],
+    allowedTabs: ['view'],
   },
   {
     type: 'CreateText',
@@ -287,6 +302,22 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
       { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
     ],
+    allowedTabs: ['view'],
+  },
+  {
+    type: 'CreateImage',
+    label: 'Create Image',
+    category: 'action',
+    description: 'ctx.world.createImage()',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'image', label: 'Image', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
+      { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
+    ],
+    allowedTabs: ['view'],
   },
   {
     type: 'FadeIn',
@@ -299,6 +330,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'duration', label: 'Duration', direction: 'input', pinType: 'data', dataType: 'number' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
+    allowedTabs: ['view'],
   },
   {
     type: 'FadeOut',
@@ -311,6 +343,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'duration', label: 'Duration', direction: 'input', pinType: 'data', dataType: 'number' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
+    allowedTabs: ['view'],
   },
   {
     type: 'RemoveObject',
@@ -322,6 +355,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
+    allowedTabs: ['view'],
   },
   {
     type: 'BindEvent',
@@ -333,6 +367,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
+    allowedTabs: ['view'],
   },
   {
     type: 'Log',
