@@ -634,42 +634,60 @@ export function runBlueprintFlow(
         styleObj[key] = evaluatePin(nodeId + '__prop__' + key)
       }
       val = styleObj
+    } else if (nodeType === 'MakeAttribute') {
+      const attrKeys = (node.data?.attrKeys as string[]) ?? ['name', 'className']
+      const attrObj: Record<string, any> = {}
+      for (const key of attrKeys) {
+        attrObj[key] = evaluatePin(nodeId + '__prop__' + key)
+      }
+      if (attrObj.physics === 'none') {
+        attrObj.physics = null
+      }
+      val = attrObj
     } else if (nodeType === 'CreateRectangle') {
+      const attribute = evaluatePin(nodeId + '__attribute') || {}
       const style = evaluatePin(nodeId + '__style') || {}
       const position = evaluatePin(nodeId + '__position')
       if (ctx.world) {
         val = ctx.world.createRectangle({
+          attribute,
           style,
           transform: position ? { position } : undefined
         })
       }
     } else if (nodeType === 'CreateEllipse') {
+      const attribute = evaluatePin(nodeId + '__attribute') || {}
       const style = evaluatePin(nodeId + '__style') || {}
       const position = evaluatePin(nodeId + '__position')
       if (ctx.world) {
         val = ctx.world.createEllipse({
+          attribute,
           style,
           transform: position ? { position } : undefined
         })
       }
     } else if (nodeType === 'CreateText') {
       const text = evaluatePin(nodeId + '__text') || ''
+      const attribute = evaluatePin(nodeId + '__attribute') || {}
       const style = evaluatePin(nodeId + '__style') || {}
       const position = evaluatePin(nodeId + '__position')
       if (ctx.world) {
         val = ctx.world.createText({
           text,
+          attribute,
           style,
           transform: position ? { position } : undefined
         })
       }
     } else if (nodeType === 'CreateImage') {
       const image = evaluatePin(nodeId + '__image') || ''
+      const attribute = evaluatePin(nodeId + '__attribute') || {}
       const style = evaluatePin(nodeId + '__style') || {}
       const position = evaluatePin(nodeId + '__position')
       if (ctx.world) {
         val = ctx.world.createImage({
           src: image,
+          attribute,
           style,
           transform: position ? { position } : undefined
         })

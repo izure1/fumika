@@ -4,7 +4,7 @@
 
 import React, { useCallback, useMemo } from 'react'
 import { useModuleStore } from '../../store/useModuleStore'
-import { NODE_CATALOG, NODE_CATEGORY_COLORS, type NodeCategory, LEVIAR_STYLE_PROPERTIES } from '../../types/blueprint'
+import { NODE_CATALOG, NODE_CATEGORY_COLORS, type NodeCategory, LEVIAR_STYLE_PROPERTIES, LEVIAR_ATTRIBUTE_PROPERTIES } from '../../types/blueprint'
 
 // ─── 노드별 편집 가능 필드 룩업 테이블 ──────────────────────────
 
@@ -283,6 +283,20 @@ export function ModuleInspector() {
     })
   }
 
+  if (nodeType === 'MakeAttribute' && selectedNode) {
+    const attrKeys = (selectedNode.data?.attrKeys as string[]) ?? ['name', 'className']
+    fields = attrKeys.map(key => {
+      const spec = LEVIAR_ATTRIBUTE_PROPERTIES.find(p => p.key === key)
+      return {
+        key,
+        label: spec?.label ?? key,
+        type: spec?.type ?? 'text',
+        options: spec?.options,
+        placeholder: spec?.placeholder
+      }
+    })
+  }
+
   const connectedTargets = useMemo(() => {
     if (!selectedNodeId) return []
     return edges.filter(e => e.target === selectedNodeId).map(e => e.targetHandle)
@@ -338,6 +352,53 @@ export function ModuleInspector() {
 
     updateNodeData({
       styleKeys: nextKeys,
+      [key]: defaultValue,
+    })
+  }, [selectedNode, updateNodeData])
+
+  const removeAttrProperty = useCallback((key: string) => {
+    if (!selectedNodeId || !selectedNode) return
+    const currentKeys = (selectedNode.data?.attrKeys as string[]) ?? ['name', 'className']
+    const nextKeys = currentKeys.filter(k => k !== key)
+
+    const store = useModuleStore.getState()
+    const tab = store.activeTab
+    const graph = store.graphs[tab]
+
+    const targetHandleId = `${selectedNodeId}__prop__${key}`
+    const nextEdges = graph.edges.filter(e => e.targetHandle !== targetHandleId)
+
+    const updatedNodes = graph.nodes.map(n => {
+      if (n.id !== selectedNodeId) return n
+      const nextData = { ...n.data }
+      delete nextData[key]
+      nextData.attrKeys = nextKeys
+      return { ...n, data: nextData }
+    })
+
+    useModuleStore.setState({
+      graphs: {
+        ...store.graphs,
+        [tab]: {
+          ...graph,
+          nodes: updatedNodes,
+          edges: nextEdges,
+        }
+      }
+    })
+  }, [selectedNodeId, selectedNode])
+
+  const addAttrProperty = useCallback((key: string) => {
+    if (!key || !selectedNode) return
+    const currentKeys = (selectedNode.data?.attrKeys as string[]) ?? ['name', 'className']
+    if (currentKeys.includes(key)) return
+    const nextKeys = [...currentKeys, key]
+
+    const spec = LEVIAR_ATTRIBUTE_PROPERTIES.find(p => p.key === key)
+    const defaultValue = spec ? spec.defaultValue : ''
+
+    updateNodeData({
+      attrKeys: nextKeys,
       [key]: defaultValue,
     })
   }, [selectedNode, updateNodeData])
@@ -523,6 +584,106 @@ export function ModuleInspector() {
                     }}
                   >
                     <option value="" disabled className="bg-[#141414] text-surface-500">-- Select Style Property --</option>
+                    {remainingProperties.map(p => (
+                      <option key={p.key} value={p.key} className="bg-[#141414] text-white">{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )
+        })() : nodeType === 'MakeAttribute' ? (() => {
+          const attrKeys = (selectedNode.data?.attrKeys as string[]) ?? ['name', 'className']
+          const remainingProperties = LEVIAR_ATTRIBUTE_PROPERTIES.filter(p => !attrKeys.includes(p.key))
+          return (
+            <div className="space-y-3">
+              <div className="text-[9px] text-surface-500 uppercase tracking-wider font-bold">Attribute Properties</div>
+              <div className="space-y-2 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
+                {attrKeys.map(key => {
+                  const spec = LEVIAR_ATTRIBUTE_PROPERTIES.find(p => p.key === key)
+                  if (!spec) return null
+                  const targetHandleId = `${selectedNode.id}__prop__${key}`
+                  const isBound = connectedTargets.includes(targetHandleId)
+
+                  return (
+                    <div key={key} className="p-1.5 rounded bg-[#1c1c1c] border border-surface-800/60 space-y-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] font-bold text-surface-300 font-mono truncate" title={spec.label}>
+                          {spec.label}
+                        </span>
+                        <button
+                          className="text-surface-500 hover:text-red-400 text-[10px] transition-colors p-0.5"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeAttrProperty(key)
+                          }}
+                          title="Remove property"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div>
+                        {isBound ? (
+                          <div className="text-[9px] text-primary-400 font-medium italic flex items-center gap-1 py-0.5 select-none font-mono">
+                            ⛓️ Bound to Node
+                          </div>
+                        ) : (
+                          spec.type === 'number' ? (
+                            <input
+                              type="number"
+                              className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/50 font-mono"
+                              value={selectedNode.data?.[key] !== undefined ? Number(selectedNode.data?.[key]) : Number(spec.defaultValue ?? 0)}
+                              onChange={(e) => updateNodeData(key, Number(e.target.value))}
+                            />
+                          ) : spec.type === 'boolean' ? (
+                            <label className="flex items-center gap-1.5 cursor-pointer py-0.5">
+                              <input
+                                type="checkbox"
+                                className="accent-primary-500"
+                                checked={selectedNode.data?.[key] !== undefined ? Boolean(selectedNode.data?.[key]) : Boolean(spec.defaultValue ?? false)}
+                                onChange={(e) => updateNodeData(key, e.target.checked)}
+                              />
+                              <span className="text-[9px] text-surface-400 font-mono select-none">
+                                {selectedNode.data?.[key] ? 'true' : 'false'}
+                              </span>
+                            </label>
+                          ) : spec.type === 'select' ? (
+                            <select
+                              className="w-full bg-surface-900 border border-surface-750 rounded px-1 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/50 font-mono"
+                              value={String(selectedNode.data?.[key] ?? spec.defaultValue ?? '')}
+                              onChange={(e) => updateNodeData(key, e.target.value)}
+                            >
+                              {spec.options?.map(opt => (
+                                <option key={opt.value} value={opt.value} className="bg-[#141414] text-white">{opt.label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50 font-mono"
+                              value={String(selectedNode.data?.[key] ?? '')}
+                              onChange={(e) => updateNodeData(key, e.target.value)}
+                              placeholder={spec.placeholder}
+                            />
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {remainingProperties.length > 0 && (
+                <div className="pt-2 border-t border-surface-800 flex flex-col gap-1">
+                  <span className="text-[9px] text-surface-500 font-bold uppercase tracking-wider select-none">Add Attribute</span>
+                  <select
+                    className="w-full bg-surface-900 border border-surface-750 rounded px-2 py-1 text-[10px] text-surface-300 outline-none focus:border-primary-500/50 cursor-pointer"
+                    value=""
+                    onChange={(e) => {
+                      addAttrProperty(e.target.value)
+                      e.target.value = ""
+                    }}
+                  >
+                    <option value="" disabled className="bg-[#141414] text-surface-500">-- Select Attribute Property --</option>
                     {remainingProperties.map(p => (
                       <option key={p.key} value={p.key} className="bg-[#141414] text-white">{p.label}</option>
                     ))}

@@ -43,6 +43,7 @@ export type PinDataType =
   | 'object'
   | 'array'
   | 'style'
+  | 'attribute'
   | 'vec3'
   | 'leviarObj'
   | 'any'
@@ -65,6 +66,7 @@ export const PIN_COLORS: Record<PinDataType, string> = {
   object: '#94a3b8',
   array: '#f59e0b',
   style: '#a855f7',
+  attribute: '#ec4899',
   vec3: '#06b6d4',
   leviarObj: '#fb923c',
   any: '#cbd5e1',
@@ -286,6 +288,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     description: 'ctx.world.createRectangle()',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
       { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
       { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
@@ -300,6 +303,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     description: 'ctx.world.createEllipse()',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
       { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
       { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
@@ -315,6 +319,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'text', label: 'Text', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
       { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
       { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
@@ -330,6 +335,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'image', label: 'Image', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
       { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
       { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
@@ -394,7 +400,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     description: 'console.log(message)',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'message', label: 'Message', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'message', label: 'Message', direction: 'input', pinType: 'data', dataType: 'any' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
   },
@@ -475,6 +481,15 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     description: '시각적 스타일 객체 조립기',
     pins: [
       { id: 'style', label: 'Style', direction: 'output', pinType: 'data', dataType: 'style' },
+    ],
+  },
+  {
+    type: 'MakeAttribute',
+    label: 'Make Attribute',
+    category: 'math-util',
+    description: '오브젝트 어트리뷰트 속성 조립기',
+    pins: [
+      { id: 'attribute', label: 'Attribute', direction: 'output', pinType: 'data', dataType: 'attribute' },
     ],
   },
   {
@@ -749,3 +764,39 @@ export const LEVIAR_STYLE_PROPERTIES: StylePropertySpec[] = [
     { value: 'difference', label: 'difference' }
   ], defaultValue: 'source-over' }
 ]
+
+export interface AttributePropertySpec {
+  key: string
+  label: string
+  type: 'text' | 'number' | 'select' | 'boolean'
+  options?: { value: string, label: string }[]
+  placeholder?: string
+  defaultValue: unknown
+}
+
+export const LEVIAR_ATTRIBUTE_PROPERTIES: AttributePropertySpec[] = [
+  { key: 'name', label: 'Name', type: 'text', placeholder: 'object-name', defaultValue: '' },
+  { key: 'className', label: 'Class Name', type: 'text', placeholder: 'class-name', defaultValue: '' },
+  { key: 'physics', label: 'Physics', type: 'select', options: [
+    { value: 'none', label: 'none' },
+    { value: 'dynamic', label: 'dynamic' },
+    { value: 'static', label: 'static' }
+  ], defaultValue: 'none' },
+  { key: 'density', label: 'Density', type: 'number', defaultValue: 0.001 },
+  { key: 'friction', label: 'Friction', type: 'number', defaultValue: 0.1 },
+  { key: 'frictionAir', label: 'Friction Air', type: 'number', defaultValue: 0.01 },
+  { key: 'restitution', label: 'Restitution', type: 'number', defaultValue: 0 },
+  { key: 'fixedRotation', label: 'Fixed Rotation', type: 'boolean', defaultValue: false },
+  { key: 'gravityScale', label: 'Gravity Scale', type: 'number', defaultValue: 1 },
+  { key: 'collisionGroup', label: 'Collision Group', type: 'number', defaultValue: 1 },
+  { key: 'collisionMask', label: 'Collision Mask', type: 'number', defaultValue: 4294967295 },
+  { key: 'collisionCategory', label: 'Collision Category', type: 'number', defaultValue: 1 },
+  { key: 'text', label: 'Text Content', type: 'text', defaultValue: '' },
+  { key: 'src', label: 'Src (Asset)', type: 'text', defaultValue: '' },
+  { key: 'currentTime', label: 'Current Time', type: 'number', defaultValue: 0 },
+  { key: 'playbackRate', label: 'Playback Rate', type: 'number', defaultValue: 1 },
+  { key: 'volume', label: 'Volume', type: 'number', defaultValue: 1 },
+  { key: 'strictPhysics', label: 'Strict Physics', type: 'boolean', defaultValue: false },
+  { key: 'focalLength', label: 'Focal Length', type: 'number', defaultValue: 100 }
+]
+
