@@ -3,7 +3,7 @@ import path from 'path'
 import { execFile, spawn } from 'child_process'
 import prettier from 'prettier'
 import licenseContent from '../../../LICENSE?raw'
-import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, getDeclarationTemplate, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent } from '../../shared/templates'
+import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, getDeclarationTemplate, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent, RUNTIME_CONTENT, SAVE_MANAGER_CONTENT, BLUEPRINT_RUNTIME_CODE } from '../../shared/templates'
 
 async function runCommandLive(
   cmd: string,
@@ -62,7 +62,8 @@ const DEFAULT_FOLDERS = [
   'effects',
   'fallbacks',
   'initials',
-  'hooks'
+  'hooks',
+  'helpers'
 ]
 
 export interface ProjectOptions {
@@ -165,13 +166,13 @@ export async function ensureProjectDependencies(targetDir: string, options?: Par
   }
 
   if (needsInstall || forceUpdate) {
-    console.log('[IDE] Installing fumika and vite from npm to', targetDir)
+    console.log('[IDE] Installing fumika, document-dataply and vite from npm to', targetDir)
     const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
     await new Promise<void>((resolve, reject) => {
-      execFile(npmCmd, ['install', 'fumika'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
+      execFile(npmCmd, ['install', 'fumika', 'document-dataply'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
         if (err) {
-          console.error('[IDE] npm install fumika failed:', stderr)
+          console.error('[IDE] npm install fumika and document-dataply failed:', stderr)
           reject(err)
         } else {
           execFile(npmCmd, ['install', '--save-dev', 'vite', 'typescript@6', 'vite-plugin-pwa', '@types/node'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
@@ -253,6 +254,27 @@ export async function ensureProjectStructure(targetDir: string, options?: Partia
     await fs.access(viteConfigPath)
   } catch {
     await fs.writeFile(viteConfigPath, getViteConfigContent(), 'utf-8')
+  }
+
+  const runtimeHelperPath = path.join(targetDir, 'helpers', 'Runtime.ts')
+  try {
+    await fs.access(runtimeHelperPath)
+  } catch {
+    await fs.writeFile(runtimeHelperPath, RUNTIME_CONTENT, 'utf-8')
+  }
+
+  const saveManagerHelperPath = path.join(targetDir, 'helpers', 'SaveManager.ts')
+  try {
+    await fs.access(saveManagerHelperPath)
+  } catch {
+    await fs.writeFile(saveManagerHelperPath, SAVE_MANAGER_CONTENT, 'utf-8')
+  }
+
+  const blueprintRuntimeHelperPath = path.join(targetDir, 'helpers', 'blueprintRuntime.ts')
+  try {
+    await fs.access(blueprintRuntimeHelperPath)
+  } catch {
+    await fs.writeFile(blueprintRuntimeHelperPath, BLUEPRINT_RUNTIME_CODE, 'utf-8')
   }
 }
 

@@ -446,8 +446,31 @@ const FILE_TEMPLATE_GENERATORS: Partial<
     `import { defineCharacter } from 'fumika'\nimport assets from '@/declarations/assets'\n\nexport default defineCharacter(assets)({\n  name: '${safeName}',\n  bases: { },\n  emotions: { }\n})\n`,
 
   modules: (safeName) =>
-    `import { define } from 'fumika'\n\ninterface MyCmd { }\n\ninterface MySchema { }\n\ninterface MyHook {\n  '${safeName}:event': (val: unknown) => unknown\n}\n\nexport default define<MyCmd, MySchema, MyHook>({ })\n  .defineCommand(function* (cmd, ctx, state, setState) {\n    // 커맨드 구현\n  })\n  .defineView((ctx, state, setState) => {\n    // 뷰 구현\n    return {\n      show: () => {},\n      hide: () => {},\n      onUpdate: () => {},\n      onCleanup: () => {}\n    }\n  })\n`,
+    `import { define } from 'fumika'
+import { getRuntimeEnv } from '@/helpers/Runtime'
 
+interface MyCmd { }
+
+interface MySchema { }
+
+interface MyHook {
+  '${safeName}:event': (val: unknown) => unknown
+}
+
+export default define<MyCmd, MySchema, MyHook>({ })
+  .defineCommand(function* (cmd, ctx, state, setState) {
+    // 커맨드 구현
+  })
+  .defineView((ctx, state, setState) => {
+    // 뷰 구현
+    return {
+      show: () => {},
+      hide: () => {},
+      onUpdate: () => {},
+      onCleanup: () => {}
+    }
+  })
+`,
   backgrounds: (_, _relativeDots) => getBackgroundContent('', true),
 
   effects: () =>
@@ -742,6 +765,21 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "          transform: position ? { position } : undefined",
   "        })",
   "      }",
+  "    } else if (nodeType === 'MakeFunction') {",
+  "      const callbackEdge = (graph.edges || []).find(",
+  "        (e) => e.source === nodeId && e.sourceHandle === (nodeId + '__callback')",
+  "      )",
+  "      val = (...args: any[]) => {",
+  "        if (callbackEdge) {",
+  "          const gen = executeNode(callbackEdge.target)",
+  "          if (gen) {",
+  "            let res = gen.next()",
+  "            while (!res.done) {",
+  "              res = gen.next()",
+  "            }",
+  "          }",
+  "        }",
+  "      }",
   "    }",
   "",
   "    outputs.set(handleId, val)",
@@ -796,6 +834,13 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "        Object.assign(obj.attribute, attribute)",
   "      }",
   "    } else if (nodeType === 'AddChild') {",
+  "    } else if (nodeType === 'BindEvent') {",
+  "      const obj = evaluatePin(currentNodeId + '__object')",
+  "      const eventType = node.data?.eventType",
+  "      const callbackFn = evaluatePin(currentNodeId + '__callback')",
+  "      if (obj && eventType && typeof obj.on === 'function' && typeof callbackFn === 'function') {",
+  "        obj.on(eventType, callbackFn)",
+  "      }",
   "    } else if (nodeType === 'FadeIn') {",
   "      const obj = evaluatePin(currentNodeId + '__object')",
   "      const dur = Number(evaluatePin(currentNodeId + '__duration') ?? 1000)",
@@ -814,30 +859,6 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "      const follower = evaluatePin(currentNodeId + '__follower') ?? false",
   "      if (obj && typeof obj.remove === 'function') {",
   "        obj.remove({ child, follower })",
-  "      }",
-  "    } else if (nodeType === 'BindEvent') {",
-  "      const obj = evaluatePin(currentNodeId + '__object')",
-  "      const eventType = node.data?.eventType",
-  "      const handlerId = node.data?.handlerId",
-  "      if (obj && eventType && typeof obj.on === 'function') {",
-  "        obj.on(eventType, () => {",
-  "          if (handlerId) {",
-  "            const action = (runtimeContext.ctx.actions && typeof runtimeContext.ctx.actions.get === 'function')",
-  "              ? runtimeContext.ctx.actions.get(handlerId)",
-  "              : undefined",
-  "            if (action) {",
-  "              action(obj, runtimeContext.ctx)",
-  "            } else if (typeof runtimeContext.ctx.execute === 'function') {",
-  "              const gen = runtimeContext.ctx.execute({ type: handlerId })",
-  "              if (gen) {",
-  "                let res = gen.next()",
-  "                while (!res.done) {",
-  "                  res = gen.next()",
-  "                }",
-  "              }",
-  "            }",
-  "          }",
-  "        })",
   "      }",
   "    } else if (nodeType === 'Branch') {",
   "      const cond = evaluatePin(currentNodeId + '__condition')",
@@ -902,3 +923,194 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "  return",
   "}"
 ].join('\n')
+
+export const RUNTIME_CONTENT = `export function isWindowsEnv(): boolean {
+  const isNode = typeof process !== 'undefined' && process.versions && process.versions.node
+  const isElectron = typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron')
+  const isWin = (typeof process !== 'undefined' && process.platform === 'win32') || 
+                (typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('win'))
+  return !!(isNode || isElectron) && isWin
+}
+
+export function isWebEnv(): boolean {
+  return !isWindowsEnv()
+}
+
+export function getRuntimeEnv(): 'web' | 'windows' {
+  return isWindowsEnv() ? 'windows' : 'web'
+}
+`
+
+export const SAVE_MANAGER_CONTENT = `import { Novel } from 'fumika'
+import { isWindowsEnv } from './Runtime'
+
+interface SaveDoc {
+  key: string
+  value: string
+}
+
+function openIndexedDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('fumika-save-db', 1)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains('saves')) {
+        db.createObjectStore('saves', { keyPath: 'key' })
+      }
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function getIndexedDBValue(key: string): Promise<string | null> {
+  const db = await openIndexedDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('saves', 'readonly')
+    const store = tx.objectStore('saves')
+    const request = store.get(key)
+    request.onsuccess = () => {
+      resolve(request.result ? request.result.value : null)
+    }
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function setIndexedDBValue(key: string, value: string): Promise<void> {
+  const db = await openIndexedDB()
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction('saves', 'readwrite')
+    const store = tx.objectStore('saves')
+    const request = store.put({ key, value })
+    request.onsuccess = () => resolve()
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function checkIndexedDBValue(key: string): Promise<boolean> {
+  const val = await getIndexedDBValue(key)
+  return val !== null
+}
+
+let dataplyDb: any = null
+
+async function getDataplyDb(): Promise<any> {
+  if (dataplyDb) {
+    return dataplyDb
+  }
+  // @ts-ignore
+  const mod = await import(/* @vite-ignore */ 'document-dataply')
+  const db = mod.DocumentDataply.Define()
+    .Options({ wal: 'save.wal' })
+    .Open('save.db')
+  
+  await db.init()
+  await db.migration(1, async (tx: any) => {
+    await db.createIndex('idx_key', { type: 'btree', fields: ['key'] }, tx)
+  })
+  
+  dataplyDb = db
+  return db
+}
+
+async function getDataplyValue(key: string): Promise<string | null> {
+  const db = await getDataplyDb()
+  const query = db.select({ key })
+  const results = await query.drain()
+  if (results && results.length > 0) {
+    return results[0].value
+  }
+  return null
+}
+
+async function setDataplyValue(key: string, value: string): Promise<void> {
+  const db = await getDataplyDb()
+  const updatedCount = await db.partialUpdate({ key }, { value })
+  if (updatedCount === 0) {
+    await db.insert({ key, value })
+  }
+}
+
+async function checkDataplyValue(key: string): Promise<boolean> {
+  const val = await getDataplyValue(key)
+  return val !== null
+}
+
+export class SaveManager {
+  private novel: Novel
+
+  constructor(novel: Novel) {
+    this.novel = novel
+  }
+
+  async check(slot: number): Promise<boolean> {
+    const key = \`slot_\${slot}\`
+    if (isWindowsEnv()) {
+      return await checkDataplyValue(key)
+    } else {
+      return await checkIndexedDBValue(key)
+    }
+  }
+
+  async save(slot: number): Promise<string> {
+    const data = this.novel.save()
+    const serialized = JSON.stringify(data)
+    const key = \`slot_\${slot}\`
+    if (isWindowsEnv()) {
+      await setDataplyValue(key, serialized)
+    } else {
+      await setIndexedDBValue(key, serialized)
+    }
+    return serialized
+  }
+
+  async load(slot: number): Promise<string> {
+    const key = \`slot_\${slot}\`
+    let serialized: string | null = null
+    if (isWindowsEnv()) {
+      serialized = await getDataplyValue(key)
+    } else {
+      serialized = await getIndexedDBValue(key)
+    }
+    if (!serialized) {
+      throw new Error(\`No save data found in slot \${slot}\`)
+    }
+    const data = JSON.parse(serialized)
+    this.novel.loadSave(data)
+    return serialized
+  }
+
+  async saveEnv(): Promise<string> {
+    const data = this.novel.saveEnv()
+    const serialized = JSON.stringify(data)
+    const key = 'env'
+    if (isWindowsEnv()) {
+      await setDataplyValue(key, serialized)
+    } else {
+      await setIndexedDBValue(key, serialized)
+    }
+    return serialized
+  }
+
+  async loadEnv(): Promise<string> {
+    const key = 'env'
+    let serialized: string | null = null
+    if (isWindowsEnv()) {
+      serialized = await getDataplyValue(key)
+    } else {
+      serialized = await getIndexedDBValue(key)
+    }
+    if (!serialized) {
+      throw new Error('No environment save data found')
+    }
+    const data = JSON.parse(serialized)
+    this.novel.loadEnv(data)
+    return serialized
+  }
+}
+
+export function getSaveManager(novel: Novel): SaveManager {
+  return new SaveManager(novel)
+}
+`
+

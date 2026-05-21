@@ -48,6 +48,7 @@ export type PinDataType =
   | 'vec3'
   | 'leviarObj'
   | 'any'
+  | 'function'
 
 export interface PinDef {
   id: string
@@ -72,6 +73,7 @@ export const PIN_COLORS: Record<PinDataType, string> = {
   vec3: '#06b6d4',
   leviarObj: '#fb923c',
   any: '#cbd5e1',
+  function: '#6366f1',
 }
 
 // ─── 노드 카테고리 ───────────────────────────────────────────
@@ -434,9 +436,20 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
+      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
     allowedTabs: ['view'],
+  },
+  {
+    type: 'MakeFunction',
+    label: 'Make Function',
+    category: 'control',
+    description: '실행 흐름을 Function으로 변환',
+    pins: [
+      { id: 'callback', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'fn', label: 'Callback', direction: 'output', pinType: 'data', dataType: 'function' },
+    ],
   },
   {
     type: 'Log',

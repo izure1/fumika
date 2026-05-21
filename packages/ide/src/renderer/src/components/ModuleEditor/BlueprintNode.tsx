@@ -492,16 +492,9 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
           })()}
 
           {nodeType === 'BindEvent' && !!data.eventType && (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
-                <span className="text-[8px] text-purple-400 font-bold uppercase">Event</span>
-                <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.eventType)}</span>
-              </div>
-              {!!data.handlerId && (
-                <span className="text-[8px] text-surface-500 font-mono italic truncate px-0.5">
-                  ↳ handler: {String(data.handlerId)}
-                </span>
-              )}
+            <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
+              <span className="text-[8px] text-purple-400 font-bold uppercase">Event</span>
+              <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.eventType)}</span>
             </div>
           )}
 

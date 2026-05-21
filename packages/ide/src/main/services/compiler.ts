@@ -2,7 +2,6 @@
 // compiler.ts — 블루프린트 컴파일러 (fbp.json -> .ts 트랜스파일)
 // =============================================================
 
-import { BLUEPRINT_RUNTIME_CODE } from '../../shared/templates'
 
 export interface BlueprintDefinitionField {
   name: string
@@ -83,6 +82,7 @@ export function compileBlueprint(jsonStr: string): string {
 
   return `// @fumika-blueprint-generated
 import { define } from 'fumika'
+import { runBlueprintFlow } from '@/helpers/blueprintRuntime'
 
 interface MySchema {
 ${schemaProps}
@@ -202,8 +202,5 @@ ${schemaDefaults}
     }
 
   })
-
-// ─── BLUEPRINT RUNTIME UTILITY (INLINED) ───
-${BLUEPRINT_RUNTIME_CODE}
 `
 }

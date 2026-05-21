@@ -106,7 +106,6 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
       { value: 'ended', label: 'ended' },
       { value: 'repeat', label: 'repeat' }
     ]},
-    { key: 'handlerId', label: 'Handler ID', type: 'text', placeholder: 'handler name' },
   ],
   Log: [
     { key: 'logLevel', label: 'Level', type: 'select', options: [
