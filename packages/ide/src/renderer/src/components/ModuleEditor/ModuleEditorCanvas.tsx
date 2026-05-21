@@ -30,7 +30,6 @@ import {
   GRAPH_TAB_LABELS,
   NODE_CATALOG,
   PIN_COLORS,
-  LEVIAR_STYLE_PROPERTIES,
   type GraphTab,
   type PinDataType,
   type ModuleDefinitions,

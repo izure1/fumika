@@ -373,6 +373,7 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
 
           {nodeType === 'GetVariable' && (() => {
             const isNameBound = edges.some(e => e.target === id && e.targetHandle === `${id}__name`)
+            if (isNameBound) return null
             return (
               <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
                 {data.scope !== 'global' && (
@@ -380,28 +381,21 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
                     {data.scope === 'env' ? '$' : '_'}
                   </span>
                 )}
-                {isNameBound ? (
-                  <span className="text-[10px] text-primary-400 font-mono italic">⛓️ Bound</span>
-                ) : (
-                  <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.varName ?? 'Empty')}</span>
-                )}
+                <span className="text-[10px] text-surface-300 font-mono truncate">{String(data.varName ?? 'Empty')}</span>
               </div>
             )
           })()}
 
           {(nodeType === 'GetConst' || nodeType === 'GetGlobal') && (() => {
             const isNameBound = edges.some(e => e.target === id && e.targetHandle === `${id}__name`)
+            if (isNameBound) return null
             const nameVal = data.name
             return (
               <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
                 <span className="text-[8px] text-purple-400 font-bold font-mono">
                   {nodeType === 'GetConst' ? 'L' : 'G'}
                 </span>
-                {isNameBound ? (
-                  <span className="text-[10px] text-primary-400 font-mono italic">⛓️ Bound</span>
-                ) : (
-                  <span className="text-[10px] text-surface-300 font-mono truncate">{String(nameVal ?? 'Empty')}</span>
-                )}
+                <span className="text-[10px] text-surface-300 font-mono truncate">{String(nameVal ?? 'Empty')}</span>
               </div>
             )
           })()}
@@ -435,29 +429,41 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
             )
           })()}
 
-          {nodeType === 'Return' && (
-            <div className="flex justify-center">
-              <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-red-950/40 bg-red-950/30 text-red-400 font-bold font-mono">
-                value: {String(data.value ?? 'true')}
-              </span>
-            </div>
-          )}
+          {nodeType === 'Return' && (() => {
+            const isValueBound = edges.some(e => e.target === id && e.targetHandle === `${id}__value`)
+            if (isValueBound) return null
+            return (
+              <div className="flex justify-center">
+                <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-red-950/40 bg-red-950/30 text-red-400 font-bold font-mono">
+                  value: {String(data.value ?? 'true')}
+                </span>
+              </div>
+            )
+          })()}
 
-          {nodeType === 'Branch' && (
-            <div className="flex justify-center">
-              <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-950/40 bg-emerald-950/30 text-emerald-400 font-bold font-mono">
-                condition: {String(data.condition ?? 'false')}
-              </span>
-            </div>
-          )}
+          {nodeType === 'Branch' && (() => {
+            const isConditionBound = edges.some(e => e.target === id && e.targetHandle === `${id}__condition`)
+            if (isConditionBound) return null
+            return (
+              <div className="flex justify-center">
+                <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-950/40 bg-emerald-950/30 text-emerald-400 font-bold font-mono">
+                  condition: {String(data.condition ?? 'false')}
+                </span>
+              </div>
+            )
+          })()}
 
-          {nodeType === 'Yield' && (
-            <div className="flex justify-center">
-              <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-sky-950/40 bg-sky-950/30 text-sky-400 font-bold font-mono">
-                value: {String(data.value ?? 'false')}
-              </span>
-            </div>
-          )}
+          {nodeType === 'Yield' && (() => {
+            const isValueBound = edges.some(e => e.target === id && e.targetHandle === `${id}__value`)
+            if (isValueBound) return null
+            return (
+              <div className="flex justify-center">
+                <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-sky-950/40 bg-sky-950/30 text-sky-400 font-bold font-mono">
+                  value: {String(data.value ?? 'false')}
+                </span>
+              </div>
+            )
+          })()}
 
           {nodeType === 'BindEvent' && !!data.eventType && (
             <div className="flex flex-col gap-1">
@@ -473,28 +479,31 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
             </div>
           )}
 
-          {nodeType === 'Log' && (
-            <div className="flex flex-col gap-1.5">
-              {!!data.logLevel && (
-                <div className="flex justify-center">
-                  <span className={`text-[8px] uppercase tracking-wider px-2 py-0.5 rounded-md border font-bold ${
-                    data.logLevel === 'error'
-                      ? 'text-red-400 bg-red-950/30 border-red-950/40'
-                      : data.logLevel === 'warn'
-                        ? 'text-amber-400 bg-amber-950/30 border-amber-950/40'
-                        : 'text-surface-400 bg-surface-900/30 border-surface-900'
-                  }`}>
-                    log level: {String(data.logLevel)}
-                  </span>
-                </div>
-              )}
-              {!!data.message && (
-                <div className="text-[10px] text-surface-300 font-mono bg-black/30 px-2 py-1 rounded-md border border-white/5 truncate select-none">
-                  {String(data.message)}
-                </div>
-              )}
-            </div>
-          )}
+          {nodeType === 'Log' && (() => {
+            const isMessageBound = edges.some(e => e.target === id && e.targetHandle === `${id}__message`)
+            return (
+              <div className="flex flex-col gap-1.5">
+                {!!data.logLevel && (
+                  <div className="flex justify-center">
+                    <span className={`text-[8px] uppercase tracking-wider px-2 py-0.5 rounded-md border font-bold ${
+                      data.logLevel === 'error'
+                        ? 'text-red-400 bg-red-950/30 border-red-950/40'
+                        : data.logLevel === 'warn'
+                          ? 'text-amber-400 bg-amber-950/30 border-amber-950/40'
+                          : 'text-surface-400 bg-surface-900/30 border-surface-900'
+                    }`}>
+                      log level: {String(data.logLevel)}
+                    </span>
+                  </div>
+                )}
+                {!isMessageBound && !!data.message && (
+                  <div className="text-[10px] text-surface-300 font-mono bg-black/30 px-2 py-1 rounded-md border border-white/5 truncate select-none">
+                    {String(data.message)}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
       )}
     </div>
