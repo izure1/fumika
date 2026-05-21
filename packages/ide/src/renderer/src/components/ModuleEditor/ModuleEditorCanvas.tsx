@@ -324,10 +324,13 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
     }
 
     if (connection.targetHandle) {
-      const existingEdges = currentEdges.filter(
-        (e) => e.target === connection.target && e.targetHandle === connection.targetHandle
-      )
-      existingEdges.forEach((e) => toRemoveIds.add(e.id))
+      const meta = getPinMeta(connection.targetHandle)
+      if (!meta || meta.pinType === 'data') {
+        const existingEdges = currentEdges.filter(
+          (e) => e.target === connection.target && e.targetHandle === connection.targetHandle
+        )
+        existingEdges.forEach((e) => toRemoveIds.add(e.id))
+      }
     }
 
     if (toRemoveIds.size > 0) {
