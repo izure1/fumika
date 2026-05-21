@@ -120,14 +120,12 @@ ${schemaDefaults}
     return true
   })
   .defineView((ctx, state, setState) => {
-    const outputs = new Map<string, any>()
-    
     // 최초 뷰 마운트(초기화) 시 1회 구동
     const genMount = runBlueprintFlow('view', blueprintData.graphs, 'ViewMountEntry', {
       ctx,
       state,
       setState,
-      outputs
+      outputs: new Map<string, any>()
     })
     if (genMount) {
       let res = genMount.next()
@@ -141,7 +139,7 @@ ${schemaDefaults}
         ctx: uCtx ?? ctx,
         state: uState ?? state,
         setState: uSetState ?? setState,
-        outputs
+        outputs: new Map<string, any>()
       })
       if (gen) {
         let res = gen.next()
@@ -156,7 +154,7 @@ ${schemaDefaults}
         ctx: uCtx ?? ctx,
         state: uState ?? state,
         setState: uSetState ?? setState,
-        outputs
+        outputs: new Map<string, any>()
       })
       if (gen) {
         let res = gen.next()
@@ -171,7 +169,7 @@ ${schemaDefaults}
         ctx: uCtx ?? ctx,
         state: uState ?? state,
         setState: uSetState ?? setState,
-        outputs
+        outputs: new Map<string, any>()
       })
       if (gen) {
         let res = gen.next()
@@ -186,7 +184,7 @@ ${schemaDefaults}
         ctx: uCtx ?? ctx,
         state: uState ?? state,
         setState: uSetState ?? setState,
-        outputs
+        outputs: new Map<string, any>()
       })
       if (gen) {
         let res = gen.next()
