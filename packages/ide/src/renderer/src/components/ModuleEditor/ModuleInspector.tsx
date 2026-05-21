@@ -161,6 +161,14 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   Follow: [],
   Unfollow: [],
   Kick: [],
+  NovelSave: [],
+  NovelLoadSave: [
+    { key: 'value', label: 'Value', type: 'text', placeholder: 'serialized save string' }
+  ],
+  NovelSaveEnv: [],
+  NovelLoadEnv: [
+    { key: 'value', label: 'Value', type: 'text', placeholder: 'serialized env string' }
+  ]
 }
 
 // ─── 스마트 타입 기입 컴포넌트 (TypedInput) ───────────────────

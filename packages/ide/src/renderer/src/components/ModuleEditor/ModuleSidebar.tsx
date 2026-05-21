@@ -14,6 +14,7 @@ import { ModuleDefPanel } from './ModuleDefPanel'
 const CATEGORY_ORDER: { key: NodeCategory, label: string }[] = [
   { key: 'event', label: 'Event' },
   { key: 'control', label: 'Control Flow' },
+  { key: 'novel', label: 'Novel' },
   { key: 'math-util', label: 'Math & Utility' },
   { key: 'variable', label: 'Variable & State' },
   { key: 'leviar-element', label: 'Leviar: Element' },

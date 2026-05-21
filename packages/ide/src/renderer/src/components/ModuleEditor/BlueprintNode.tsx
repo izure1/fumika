@@ -184,7 +184,7 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
   const maxRows = Math.max(inputPins.length, outputPins.length, 1)
 
   const hasDetails = [
-    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'GetConst', 'GetGlobal', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield'
+    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'GetConst', 'GetGlobal', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield', 'NovelLoadSave', 'NovelLoadEnv'
   ].includes(nodeType)
 
   // 값 포맷터 함수
@@ -461,6 +461,32 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
                 <span className="text-[8px] uppercase tracking-wider px-2 py-1 rounded-md border border-sky-950/40 bg-sky-950/30 text-sky-400 font-bold font-mono">
                   value: {String(data.value ?? 'false')}
                 </span>
+              </div>
+            )
+          })()}
+
+          {nodeType === 'NovelLoadSave' && (() => {
+            const isValueBound = edges.some(e => e.target === id && e.targetHandle === `${id}__value`)
+            if (isValueBound) return null
+            return (
+              <div className="flex flex-col gap-1">
+                <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider">Save Data String</span>
+                <div className="text-[10px] text-surface-300 font-mono bg-black/30 px-2 py-1 rounded-md border border-white/5 truncate select-none">
+                  {formatPreviewValue(data.value)}
+                </div>
+              </div>
+            )
+          })()}
+
+          {nodeType === 'NovelLoadEnv' && (() => {
+            const isValueBound = edges.some(e => e.target === id && e.targetHandle === `${id}__value`)
+            if (isValueBound) return null
+            return (
+              <div className="flex flex-col gap-1">
+                <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider">Env Data String</span>
+                <div className="text-[10px] text-surface-300 font-mono bg-black/30 px-2 py-1 rounded-md border border-white/5 truncate select-none">
+                  {formatPreviewValue(data.value)}
+                </div>
               </div>
             )
           })()}

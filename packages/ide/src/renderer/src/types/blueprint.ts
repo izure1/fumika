@@ -80,6 +80,7 @@ export type NodeCategory =
   | 'event'
   | 'control'
   | 'variable'
+  | 'novel'
   | 'leviar-element'
   | 'leviar-hierarchy'
   | 'leviar-effect'
@@ -91,6 +92,7 @@ export type NodeCategory =
 export const NODE_CATEGORY_COLORS: Record<NodeCategory, { bg: string, border: string, header: string, text: string }> = {
   event: { bg: 'rgba(20, 20, 23, 0.85)', border: '#f43f5e', header: 'rgba(28, 28, 33, 0.45)', text: '#fda4af' },
   control: { bg: 'rgba(20, 20, 23, 0.85)', border: '#38bdf8', header: 'rgba(28, 28, 33, 0.45)', text: '#bae6fd' },
+  novel: { bg: 'rgba(20, 20, 23, 0.85)', border: '#f472b6', header: 'rgba(28, 28, 33, 0.45)', text: '#fbcfe8' },
   variable: { bg: 'rgba(20, 20, 23, 0.85)', border: '#a78bfa', header: 'rgba(28, 28, 33, 0.45)', text: '#ddd6fe' },
   'leviar-element': { bg: 'rgba(20, 20, 23, 0.85)', border: '#fb7185', header: 'rgba(28, 28, 33, 0.45)', text: '#fecdd3' },
   'leviar-hierarchy': { bg: 'rgba(20, 20, 23, 0.85)', border: '#f59e0b', header: 'rgba(28, 28, 33, 0.45)', text: '#fde68a' },
@@ -768,6 +770,51 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
     allowedTabs: ['view'],
+  },
+  // ── Novel ──────────────────────────────────────────────────
+  {
+    type: 'NovelSave',
+    label: 'Save',
+    category: 'novel',
+    description: '현재 게임 진행 상태를 직렬화된 문자열로 반환합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
+    ]
+  },
+  {
+    type: 'NovelLoadSave',
+    label: 'Load Save',
+    category: 'novel',
+    description: '직렬화된 문자열로부터 게임 진행 상태를 복원합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'NovelSaveEnv',
+    label: 'Save Env',
+    category: 'novel',
+    description: '현재 환경변수 상태를 직렬화된 문자열로 반환합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
+    ]
+  },
+  {
+    type: 'NovelLoadEnv',
+    label: 'Load Env',
+    category: 'novel',
+    description: '직렬화된 문자열로부터 환경변수 상태를 복원합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
   }
 ]
 

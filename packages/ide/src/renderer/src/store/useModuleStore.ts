@@ -475,6 +475,10 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
       initialData = { x: 0, y: 0, z: 0 }
     } else if (nodeType === 'Branch') {
       initialData = { condition: false }
+    } else if (nodeType === 'NovelLoadSave') {
+      initialData = { value: '' }
+    } else if (nodeType === 'NovelLoadEnv') {
+      initialData = { value: '' }
     }
 
     const newNode: Node = {
