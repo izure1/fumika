@@ -162,6 +162,7 @@ export const MAIN_TS_CONTENT = `// Fumika Engine Entry Point
 import { Novel } from 'fumika'
 import config from '@/novel.config'
 import Scenes from '@/declarations/scenes'
+import { setNovel } from '@/helpers/SaveManager'
 
 async function main() {
   const element = document.getElementById('app') as HTMLDivElement
@@ -170,6 +171,9 @@ async function main() {
     element,
     scenes: Scenes
   })
+
+  // SaveManager에 novel 인스턴스 등록
+  setNovel(novel)
 
   await novel.load()
   await novel.boot()
@@ -448,6 +452,7 @@ const FILE_TEMPLATE_GENERATORS: Partial<
   modules: (safeName) =>
     `import { define } from 'fumika'
 import { getRuntimeEnv } from '@/helpers/Runtime'
+import { save, load, saveEnv, loadEnv } from '@/helpers/SaveManager'
 
 interface MyCmd { }
 
@@ -1036,81 +1041,86 @@ async function checkDataplyValue(key: string): Promise<boolean> {
   return val !== null
 }
 
-export class SaveManager {
-  private novel: Novel
+let activeNovel: Novel | null = null
 
-  constructor(novel: Novel) {
-    this.novel = novel
+export function setNovel(novel: Novel): void {
+  activeNovel = novel
+}
+
+function getNovel(): Novel {
+  if (!activeNovel) {
+    throw new Error('SaveManager has not been initialized with a Novel instance. Call setNovel(novel) first.')
   }
+  return activeNovel
+}
 
-  async check(slot: number): Promise<boolean> {
-    const key = \`slot_\${slot}\`
-    if (isWindowsEnv()) {
-      return await checkDataplyValue(key)
-    } else {
-      return await checkIndexedDBValue(key)
-    }
-  }
-
-  async save(slot: number): Promise<string> {
-    const data = this.novel.save()
-    const serialized = JSON.stringify(data)
-    const key = \`slot_\${slot}\`
-    if (isWindowsEnv()) {
-      await setDataplyValue(key, serialized)
-    } else {
-      await setIndexedDBValue(key, serialized)
-    }
-    return serialized
-  }
-
-  async load(slot: number): Promise<string> {
-    const key = \`slot_\${slot}\`
-    let serialized: string | null = null
-    if (isWindowsEnv()) {
-      serialized = await getDataplyValue(key)
-    } else {
-      serialized = await getIndexedDBValue(key)
-    }
-    if (!serialized) {
-      throw new Error(\`No save data found in slot \${slot}\`)
-    }
-    const data = JSON.parse(serialized)
-    this.novel.loadSave(data)
-    return serialized
-  }
-
-  async saveEnv(): Promise<string> {
-    const data = this.novel.saveEnv()
-    const serialized = JSON.stringify(data)
-    const key = 'env'
-    if (isWindowsEnv()) {
-      await setDataplyValue(key, serialized)
-    } else {
-      await setIndexedDBValue(key, serialized)
-    }
-    return serialized
-  }
-
-  async loadEnv(): Promise<string> {
-    const key = 'env'
-    let serialized: string | null = null
-    if (isWindowsEnv()) {
-      serialized = await getDataplyValue(key)
-    } else {
-      serialized = await getIndexedDBValue(key)
-    }
-    if (!serialized) {
-      throw new Error('No environment save data found')
-    }
-    const data = JSON.parse(serialized)
-    this.novel.loadEnv(data)
-    return serialized
+export async function check(slot: number): Promise<boolean> {
+  const key = \`slot_\${slot}\`
+  if (isWindowsEnv()) {
+    return await checkDataplyValue(key)
+  } else {
+    return await checkIndexedDBValue(key)
   }
 }
 
-export function getSaveManager(novel: Novel): SaveManager {
-  return new SaveManager(novel)
+export async function save(slot: number): Promise<string> {
+  const novel = getNovel()
+  const data = novel.save()
+  const serialized = JSON.stringify(data)
+  const key = \`slot_\${slot}\`
+  if (isWindowsEnv()) {
+    await setDataplyValue(key, serialized)
+  } else {
+    await setIndexedDBValue(key, serialized)
+  }
+  return serialized
+}
+
+export async function load(slot: number): Promise<string> {
+  const novel = getNovel()
+  const key = \`slot_\${slot}\`
+  let serialized: string | null = null
+  if (isWindowsEnv()) {
+    serialized = await getDataplyValue(key)
+  } else {
+    serialized = await getIndexedDBValue(key)
+  }
+  if (!serialized) {
+    throw new Error(\`No save data found in slot \${slot}\`)
+  }
+  const data = JSON.parse(serialized)
+  novel.loadSave(data)
+  return serialized
+}
+
+export async function saveEnv(): Promise<string> {
+  const novel = getNovel()
+  const data = novel.saveEnv()
+  const serialized = JSON.stringify(data)
+  const key = 'env'
+  if (isWindowsEnv()) {
+    await setDataplyValue(key, serialized)
+  } else {
+    await setIndexedDBValue(key, serialized)
+  }
+  return serialized
+}
+
+export async function loadEnv(): Promise<string> {
+  const novel = getNovel()
+  const key = 'env'
+  let serialized: string | null = null
+  if (isWindowsEnv()) {
+    serialized = await getDataplyValue(key)
+  } else {
+    serialized = await getIndexedDBValue(key)
+  }
+  if (!serialized) {
+    throw new Error('No environment save data found')
+  }
+  const data = JSON.parse(serialized)
+  novel.loadEnv(data)
+  return serialized
 }
 `
 
