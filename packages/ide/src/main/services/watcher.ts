@@ -123,6 +123,41 @@ export class ProjectWatcher {
   }
 
   /**
+   * 프로젝트 내의 모든 블루프린트(.fbp.json)를 .ts 파일로 빌드하고 선언 파일을 갱신합니다.
+   */
+  public async compileAllBlueprints(explicitProjectPath?: string) {
+    const projectPath = explicitProjectPath || this.projectPath
+    if (!projectPath) return
+    const modulesDir = path.join(projectPath, 'modules')
+    try {
+      await fs.access(modulesDir)
+    } catch {
+      return
+    }
+
+    const files = await getFilesRecursively(modulesDir)
+    const fbpFiles = files.filter((f) => f.name.endsWith('.fbp.json'))
+
+    for (const file of fbpFiles) {
+      const tsPath = file.path.replace(/\.fbp\.json$/, '.ts')
+      try {
+        const content = await fs.readFile(file.path, 'utf-8')
+        const compiled = compileBlueprint(content)
+        await fs.writeFile(tsPath, compiled, 'utf-8')
+        console.log(`[IDE] Compiled blueprint: ${file.path} -> ${tsPath}`)
+      } catch (err) {
+        console.error(`[IDE] Failed to compile blueprint ${file.path}:`, err)
+      }
+    }
+
+    // 선언 파일 강제 갱신
+    const origPath = this.projectPath
+    this.projectPath = projectPath
+    await this.generateDeclaration('modules')
+    this.projectPath = origPath
+  }
+
+  /**
    * 캐시된 모든 TS 파일 내용을 반환합니다.
    * 초기 스캔이 완료될 때까지 대기합니다.
    */

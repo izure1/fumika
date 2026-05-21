@@ -239,6 +239,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('project:build', async (event, projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean }) => {
     try {
+      await watcher.compileAllBlueprints(projectPath)
       const iconPath = path.join(projectPath, 'assets', 'icon.png')
       let hasIcon = true
 
@@ -314,6 +315,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('preview:start', async (_, projectPath: string, targetScene?: string) => {
     try {
+      await watcher.compileAllBlueprints(projectPath)
       const url = await previewService.start(projectPath, targetScene)
       return { success: true, url }
     } catch (error: any) {
