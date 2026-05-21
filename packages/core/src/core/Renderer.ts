@@ -197,13 +197,14 @@ export class Renderer {
    *
    * @param fn 실행할 콜백 함수
    * @param ms 지연 시간(ms)
+   * @param respectSkip 스킵 모드일 경우 시간을 0으로 처리합니다.
    * @returns 타이머 ID. `clearTimer()`로 개별 취소할 수 있습니다.
    */
-  setTimer(fn: () => void, ms: number): ReturnType<typeof setTimeout> {
+  setTimer(fn: () => void, ms: number, respectSkip: boolean = false): ReturnType<typeof setTimeout> {
     const id = setTimeout(() => {
       this._timers.delete(id)
       fn()
-    }, this.dur(ms))
+    }, respectSkip ? this.dur(ms) : ms)
     this._timers.add(id)
     return id
   }
