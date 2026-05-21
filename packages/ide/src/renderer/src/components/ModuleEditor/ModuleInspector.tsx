@@ -160,14 +160,14 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   Follow: [],
   Unfollow: [],
   Kick: [],
-  NovelSave: [],
+  NovelSave: [
+    { key: 'slot', label: 'Slot', type: 'number', placeholder: '0' },
+  ],
   NovelLoadSave: [
-    { key: 'value', label: 'Value', type: 'text', placeholder: 'serialized save string' }
+    { key: 'slot', label: 'Slot', type: 'number', placeholder: '0' },
   ],
   NovelSaveEnv: [],
-  NovelLoadEnv: [
-    { key: 'value', label: 'Value', type: 'text', placeholder: 'serialized env string' }
-  ]
+  NovelLoadEnv: []
 }
 
 // ─── 스마트 타입 기입 컴포넌트 (TypedInput) ───────────────────

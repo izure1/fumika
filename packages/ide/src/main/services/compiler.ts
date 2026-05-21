@@ -121,18 +121,20 @@ ${schemaDefaults}
   })
   .defineView((ctx, state, setState) => {
     // 최초 뷰 마운트(초기화) 시 1회 구동
-    const genMount = runBlueprintFlow('view', blueprintData.graphs, 'ViewMountEntry', {
-      ctx,
-      state,
-      setState,
-      outputs: new Map<string, any>()
-    })
-    if (genMount) {
-      let res = genMount.next()
-      while (!res.done) {
-        res = genMount.next()
+    ;(() => {
+      const genMount = runBlueprintFlow('view', blueprintData.graphs, 'ViewMountEntry', {
+        ctx,
+        state,
+        setState,
+        outputs: new Map<string, any>()
+      })
+      if (genMount) {
+        let res = genMount.next()
+        while (!res.done) {
+          res = genMount.next()
+        }
       }
-    }
+    })()
 
     const runUpdate = (uCtx?: any, uState?: any, uSetState?: any) => {
       const gen = runBlueprintFlow('view', blueprintData.graphs, 'OnUpdateEntry', {
@@ -200,7 +202,6 @@ ${schemaDefaults}
       onUpdate: runUpdate,
       onCleanup: runCleanup
     }
-
   })
 `
 }

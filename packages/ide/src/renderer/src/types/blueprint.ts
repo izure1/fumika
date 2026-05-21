@@ -789,45 +789,51 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     type: 'NovelSave',
     label: 'Save',
     category: 'novel',
-    description: '현재 게임 진행 상태를 직렬화된 문자열로 반환합니다.',
+    description: 'SaveManager를 통해 슬롯에 게임 진행 상태를 저장합니다.',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'slot', label: 'Slot', direction: 'input', pinType: 'data', dataType: 'number' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
       { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
-    ]
+    ],
+    allowedTabs: ['command']
   },
   {
     type: 'NovelLoadSave',
     label: 'Load Save',
     category: 'novel',
-    description: '직렬화된 문자열로부터 게임 진행 상태를 복원합니다.',
+    description: 'SaveManager를 통해 슬롯에서 게임 진행 상태를 불러옵니다.',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'string' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
-    ]
+      { id: 'slot', label: 'Slot', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
+    ],
+    allowedTabs: ['command']
   },
   {
     type: 'NovelSaveEnv',
     label: 'Save Env',
     category: 'novel',
-    description: '현재 환경변수 상태를 직렬화된 문자열로 반환합니다.',
+    description: 'SaveManager를 통해 현재 환경변수 상태를 저장합니다.',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
       { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
-    ]
+    ],
+    allowedTabs: ['command']
   },
   {
     type: 'NovelLoadEnv',
     label: 'Load Env',
     category: 'novel',
-    description: '직렬화된 문자열로부터 환경변수 상태를 복원합니다.',
+    description: 'SaveManager를 통해 저장된 환경변수 상태를 불러옵니다.',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'string' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
-    ]
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
+    ],
+    allowedTabs: ['command']
   }
 ]
 
