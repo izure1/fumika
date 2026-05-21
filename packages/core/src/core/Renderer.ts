@@ -203,7 +203,7 @@ export class Renderer {
     const id = setTimeout(() => {
       this._timers.delete(id)
       fn()
-    }, ms)
+    }, this.dur(ms))
     this._timers.add(id)
     return id
   }
