@@ -2,7 +2,7 @@
 // ModuleInspector.tsx — 선택된 노드의 속성 편집 패널
 // =============================================================
 
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import { useModuleStore } from '../../store/useModuleStore'
 import { NODE_CATALOG, NODE_CATEGORY_COLORS, type NodeCategory, type PinDataType, LEVIAR_STYLE_PROPERTIES, LEVIAR_ATTRIBUTE_PROPERTIES, PIN_COLORS } from '../../types/blueprint'
 
@@ -68,6 +68,13 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
     ]},
     { key: 'name', label: 'Variable Name', type: 'text', placeholder: 'name' },
     { key: 'value', label: 'Variable Value', type: 'typed', placeholder: 'value' },
+  ],
+  SetValue: [
+    { key: 'name', label: 'Value Name', type: 'text', placeholder: 'value variable name' },
+    { key: 'value', label: 'Value', type: 'typed', placeholder: 'value' },
+  ],
+  GetValue: [
+    { key: 'name', label: 'Value Name', type: 'text', placeholder: 'value variable name' },
   ],
   SetConst: [
     { key: 'name', label: 'Const Name', type: 'text', placeholder: 'const variable name' },
@@ -199,25 +206,6 @@ function TypedInput({ label, value, onChange, forceType }: TypedInputProps): Rea
     }
   }
 
-  const handleTypeChange = (newType: 'string' | 'number' | 'boolean' | 'json' | 'array' | 'null') => {
-    if (newType === currentType) return
-
-    if (newType === 'string') {
-      onChange(String(value ?? ''))
-    } else if (newType === 'number') {
-      const num = Number(value)
-      onChange(isNaN(num) ? 0 : num)
-    } else if (newType === 'boolean') {
-      onChange(Boolean(value))
-    } else if (newType === 'json') {
-      onChange({})
-    } else if (newType === 'array') {
-      onChange([])
-    } else if (newType === 'null') {
-      onChange(null)
-    }
-  }
-
   // Coercion helper for checkboxes
   const getCoercedBoolean = (val: unknown): boolean => {
     if (typeof val === 'boolean') return val
@@ -257,10 +245,64 @@ function TypedInput({ label, value, onChange, forceType }: TypedInputProps): Rea
     return '[]'
   }
 
+  // Loose parser helper for JavaScript Object/Array Literals
+  const parseLooseJson = (text: string): unknown => {
+    const trimmed = text.trim()
+    if (trimmed === '') return null
+    try {
+      return JSON.parse(trimmed)
+    } catch {
+      if (
+        (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'))
+      ) {
+        const fn = new Function(`return (${trimmed})`)
+        return fn()
+      }
+      throw new Error('Invalid JSON or Object format')
+    }
+  }
+
   // Coercion helper for numbers
   const getCoercedNumber = (val: unknown): number => {
     const num = Number(val)
     return isNaN(num) ? 0 : num
+  }
+
+  // 로컬 텍스트 상태 관리 (JSON / Array 텍스트 기입 롤백 방지)
+  const [jsonText, setJsonText] = useState(() => getCoercedJsonString(value))
+  const [arrayText, setArrayText] = useState(() => getCoercedArrayString(value))
+
+  // 내부 타이핑에 의한 변경인지 추적하는 플래그
+  const isInternalChange = useRef(false)
+
+  // 외부 value가 변경되었을 때만 로컬 상태 동기화 (내부 타이핑 중에는 건너뜀)
+  useEffect(() => {
+    if (isInternalChange.current) {
+      isInternalChange.current = false
+      return
+    }
+    setJsonText(getCoercedJsonString(value))
+    setArrayText(getCoercedArrayString(value))
+  }, [value])
+
+  const handleTypeChange = (newType: 'string' | 'number' | 'boolean' | 'json' | 'array' | 'null') => {
+    if (newType === currentType) return
+
+    if (newType === 'string') {
+      onChange(String(value ?? ''))
+    } else if (newType === 'number') {
+      const num = Number(value)
+      onChange(isNaN(num) ? 0 : num)
+    } else if (newType === 'boolean') {
+      onChange(Boolean(value))
+    } else if (newType === 'json') {
+      onChange({})
+    } else if (newType === 'array') {
+      onChange([])
+    } else if (newType === 'null') {
+      onChange(null)
+    }
   }
 
   return (
@@ -318,11 +360,21 @@ function TypedInput({ label, value, onChange, forceType }: TypedInputProps): Rea
         {currentType === 'json' && (
           <textarea
             className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[9px] text-white font-mono outline-none focus:border-primary-500/50 min-h-[40px] resize-y custom-scrollbar"
-            value={getCoercedJsonString(value)}
+            value={jsonText}
             onChange={(e) => {
+              const text = e.target.value
+              setJsonText(text)
+              if (text.trim() === '') {
+                isInternalChange.current = true
+                onChange({})
+                return
+              }
               try {
-                const parsed = JSON.parse(e.target.value)
-                onChange(parsed)
+                const parsed = parseLooseJson(text)
+                if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                  isInternalChange.current = true
+                  onChange(parsed)
+                }
               } catch {
                 // 타이핑 중의 임시 파싱 오류는 무시하고 상태 유실 방지
               }
@@ -334,11 +386,19 @@ function TypedInput({ label, value, onChange, forceType }: TypedInputProps): Rea
         {currentType === 'array' && (
           <textarea
             className="w-full bg-surface-900/50 border border-surface-750 rounded px-1.5 py-0.5 text-[9px] text-white font-mono outline-none focus:border-primary-500/50 min-h-[40px] resize-y custom-scrollbar"
-            value={getCoercedArrayString(value)}
+            value={arrayText}
             onChange={(e) => {
+              const text = e.target.value
+              setArrayText(text)
+              if (text.trim() === '') {
+                isInternalChange.current = true
+                onChange([])
+                return
+              }
               try {
-                const parsed = JSON.parse(e.target.value)
+                const parsed = parseLooseJson(text)
                 if (Array.isArray(parsed)) {
+                  isInternalChange.current = true
                   onChange(parsed)
                 }
               } catch {

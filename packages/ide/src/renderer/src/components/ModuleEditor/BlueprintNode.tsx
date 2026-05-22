@@ -72,12 +72,15 @@ function PinHandle({ pin, nodeId }: { pin: PinDef, nodeId: string }): React.JSX.
 }
 
 function inferPinDataType(val: unknown): PinDataType {
-  if (val === null) return 'null'
+  if (val === undefined || val === null || val === '') return 'any'
   if (Array.isArray(val)) return 'array'
   if (typeof val === 'number') return 'number'
   if (typeof val === 'boolean') return 'boolean'
   if (typeof val === 'object') return 'object'
-  if (typeof val === 'string') return 'string'
+  if (typeof val === 'string') {
+    if (val.trim() === '') return 'any'
+    return 'string'
+  }
   return 'any'
 }
 
@@ -176,7 +179,7 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
     ]
   }
 
-  if (nodeType === 'SetConst' || nodeType === 'SetGlobal') {
+  if (nodeType === 'SetValue' || nodeType === 'SetConst' || nodeType === 'SetGlobal') {
     const val = data.value
     const dataType = inferPinDataType(val)
     inputPins = inputPins.map(p => p.id === 'value' ? { ...p, dataType } : p)
@@ -200,16 +203,6 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
     const val = data.value !== undefined ? data.value : data.inlineValue
     const dataType = inferPinDataType(val)
     outputPins = outputPins.map(p => p.id === 'value' ? { ...p, dataType } : p)
-  } else if (nodeType === 'GetConst' && data.name) {
-    const nameVal = data.name as string
-    const matchNode = nodes.find(n => n.data?.nodeType === 'SetConst' && n.data?.name === nameVal)
-    const dataType = matchNode ? inferPinDataType(matchNode.data?.value) : 'any'
-    outputPins = outputPins.map(p => p.id === 'value' ? { ...p, dataType } : p)
-  } else if (nodeType === 'GetGlobal' && data.name) {
-    const nameVal = data.name as string
-    const matchNode = nodes.find(n => n.data?.nodeType === 'SetGlobal' && n.data?.name === nameVal)
-    const dataType = matchNode ? inferPinDataType(matchNode.data?.value) : 'any'
-    outputPins = outputPins.map(p => p.id === 'value' ? { ...p, dataType } : p)
   } else if (nodeType === 'MakeFunction') {
     // 우측 패널에서 등록한 { name, type }[] 매개변수를 동적 출력 핀으로 노출
     type ArgDef = { name: string, type: PinDataType }
@@ -228,7 +221,7 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
   const maxRows = Math.max(inputPins.length, outputPins.length, 1)
 
   const hasDetails = [
-    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'GetConst', 'GetGlobal', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield', 'NovelLoadSave', 'NovelLoadEnv', 'MakeFunction'
+    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'GetValue', 'GetConst', 'GetGlobal', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield', 'NovelLoadSave', 'NovelLoadEnv', 'MakeFunction'
   ].includes(nodeType)
 
   // 값 포맷터 함수
@@ -461,14 +454,14 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
             )
           })()}
 
-          {(nodeType === 'GetConst' || nodeType === 'GetGlobal') && (() => {
+          {(nodeType === 'GetValue' || nodeType === 'GetConst' || nodeType === 'GetGlobal') && (() => {
             const isNameBound = edges.some(e => e.target === id && e.targetHandle === `${id}__name`)
             if (isNameBound) return null
             const nameVal = data.name
             return (
               <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 shadow-inner">
                 <span className="text-[8px] text-purple-400 font-bold font-mono">
-                  {nodeType === 'GetConst' ? 'L' : 'G'}
+                  {nodeType === 'GetGlobal' ? 'G' : (nodeType === 'GetValue' ? 'V' : 'L')}
                 </span>
                 <span className="text-[10px] text-surface-300 font-mono truncate">{String(nameVal ?? 'Empty')}</span>
               </div>

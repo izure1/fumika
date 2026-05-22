@@ -277,10 +277,10 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     ],
   },
   {
-    type: 'SetConst',
-    label: 'Set Const (Local)',
+    type: 'SetValue',
+    label: 'Set Value (Local)',
     category: 'variable',
-    description: '현재 실행 흐름 내에서 유지되는 변수 저장',
+    description: '현재 실행 흐름 내에서 유지되는 변수 저장 및 수정(재할당 가능)',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'name', label: 'Name', direction: 'input', pinType: 'data', dataType: 'string' },
@@ -290,9 +290,9 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   },
   {
     type: 'SetGlobal',
-    label: 'Set Const (Global)',
+    label: 'Set Value (Global)',
     category: 'variable',
-    description: '모든 흐름과 공유되는 변수 저장',
+    description: '모든 흐름과 공유되는 변수 저장 및 수정(재할당 가능)',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'name', label: 'Name', direction: 'input', pinType: 'data', dataType: 'string' },
@@ -502,8 +502,8 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     ],
   },
   {
-    type: 'GetConst',
-    label: 'Get Const (Local)',
+    type: 'GetValue',
+    label: 'Get Value (Local)',
     category: 'variable',
     description: '현재 실행 흐름 내의 변수 읽기',
     pins: [
@@ -513,7 +513,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   },
   {
     type: 'GetGlobal',
-    label: 'Get Const (Global)',
+    label: 'Get Value (Global)',
     category: 'variable',
     description: '모든 흐름과 공유되는 변수 읽기',
     pins: [
@@ -866,7 +866,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     description: '생성된 타이머의 작동을 중지시킵니다.',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'timerId', label: 'Timer ID', direction: 'input', pinType: 'any' },
+      { id: 'timerId', label: 'Timer ID', direction: 'input', pinType: 'data', dataType: 'any' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
     ]
   },
@@ -900,7 +900,9 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
       { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'index', label: 'Index', direction: 'output', pinType: 'data', dataType: 'number' },
+      { id: 'element', label: 'Element', direction: 'output', pinType: 'data', dataType: 'any' }
     ]
   },
   {
