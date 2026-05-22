@@ -221,7 +221,7 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
   const maxRows = Math.max(inputPins.length, outputPins.length, 1)
 
   const hasDetails = [
-    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'GetValue', 'GetConst', 'GetGlobal', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield', 'NovelLoadSave', 'NovelLoadEnv', 'MakeFunction'
+    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'GetValue', 'GetConst', 'GetGlobal', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield', 'NovelLoadSave', 'NovelLoadEnv', 'MakeFunction', 'SetTimer'
   ].includes(nodeType)
 
   // 값 포맷터 함수
@@ -586,6 +586,30 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
                 {!isMessageBound && !!data.message && (
                   <div className="text-[10px] text-surface-300 font-mono bg-black/30 px-2 py-1 rounded-md border border-white/5 truncate select-none">
                     {String(data.message)}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {nodeType === 'SetTimer' && (() => {
+            const isMsBound = edges.some(e => e.target === id && e.targetHandle === `${id}__ms`)
+            const isRespectSkipBound = edges.some(e => e.target === id && e.targetHandle === `${id}__respectSkip`)
+            const msVal = data.ms
+            const respectSkipVal = data.respectSkip
+
+            return (
+              <div className="flex flex-col gap-1.5">
+                {!isMsBound && msVal !== undefined && msVal !== '' && (
+                  <div className="flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded border border-white/5">
+                    <span className="text-[8px] text-primary-400 font-bold font-mono uppercase">Delay:</span>
+                    <span className="text-[9px] text-surface-300 font-mono truncate">{formatPreviewValue(msVal)} ms</span>
+                  </div>
+                )}
+                {!isRespectSkipBound && respectSkipVal !== undefined && respectSkipVal !== '' && (
+                  <div className="flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded border border-white/5">
+                    <span className="text-[8px] text-primary-400 font-bold font-mono uppercase">Skip:</span>
+                    <span className="text-[9px] text-surface-300 font-mono truncate">{String(respectSkipVal)}</span>
                   </div>
                 )}
               </div>

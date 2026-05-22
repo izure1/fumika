@@ -177,6 +177,10 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   NovelLoadEnv: [],
   GetArgument: [
     { key: 'index', label: 'Arg Index (0-indexed)', type: 'number', placeholder: '0' }
+  ],
+  SetTimer: [
+    { key: 'ms', label: 'Delay (ms)', type: 'number', placeholder: '0' },
+    { key: 'respectSkip', label: 'Respect Skip', type: 'boolean' }
   ]
 }
 
