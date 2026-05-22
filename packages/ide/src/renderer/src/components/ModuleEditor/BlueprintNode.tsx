@@ -111,9 +111,40 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
     return false
   })()
 
-  let inputPins = nodeType === 'MakeStyle'
-    ? []
-    : catalog.pins.filter(p => p.direction === 'input')
+  let inputPins = catalog.pins.filter(p => p.direction === 'input')
+
+  if (nodeType === 'MakeStyle') {
+    const styleKeys = (data.styleKeys as string[]) || []
+    inputPins = styleKeys.map(key => ({
+      id: `prop__${key}`,
+      label: key,
+      direction: 'input' as const,
+      pinType: 'data' as const,
+      dataType: 'any' as PinDataType
+    }))
+  } else if (nodeType === 'MakeAttribute') {
+    const attrKeys = (data.attrKeys as string[]) || []
+    inputPins = attrKeys.map(key => ({
+      id: `prop__${key}`,
+      label: key,
+      direction: 'input' as const,
+      pinType: 'data' as const,
+      dataType: 'any' as PinDataType
+    }))
+  } else if (nodeType === 'Execute') {
+    const cmdKeys = (data.cmdKeys as string[]) || []
+    inputPins = [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'type', label: 'Type', direction: 'input', pinType: 'data', dataType: 'string' },
+      ...cmdKeys.map(key => ({
+        id: `prop__${key}`,
+        label: key,
+        direction: 'input' as const,
+        pinType: 'data' as const,
+        dataType: 'any' as PinDataType
+      }))
+    ]
+  }
 
   if (nodeType === 'SetState') {
     const fields = (data.fields as string[]) || []
@@ -179,12 +210,25 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
     const matchNode = nodes.find(n => n.data?.nodeType === 'SetGlobal' && n.data?.name === nameVal)
     const dataType = matchNode ? inferPinDataType(matchNode.data?.value) : 'any'
     outputPins = outputPins.map(p => p.id === 'value' ? { ...p, dataType } : p)
+  } else if (nodeType === 'MakeFunction') {
+    // 우측 패널에서 등록한 { name, type }[] 매개변수를 동적 출력 핀으로 노출
+    type ArgDef = { name: string, type: PinDataType }
+    const argDefs = (data.arguments as ArgDef[]) ?? []
+    const argOutputPins = argDefs.map(arg => ({
+      id: `prop__${arg.name}`,
+      label: arg.name,
+      direction: 'output' as const,
+      pinType: 'data' as const,
+      dataType: arg.type
+    }))
+    // 기본 핀(callback exec, fn data) 뒤에 동적 핀을 이어서 보여줌
+    outputPins = [...catalog.pins.filter(p => p.direction === 'output'), ...argOutputPins]
   }
 
   const maxRows = Math.max(inputPins.length, outputPins.length, 1)
 
   const hasDetails = [
-    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'GetConst', 'GetGlobal', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield', 'NovelLoadSave', 'NovelLoadEnv'
+    'Constant', 'Compare', 'MathOp', 'GetState', 'SetState', 'GetCmd', 'GetVariable', 'GetConst', 'GetGlobal', 'SetVariable', 'BindEvent', 'Log', 'Return', 'Branch', 'Yield', 'NovelLoadSave', 'NovelLoadEnv', 'MakeFunction'
   ].includes(nodeType)
 
   // 값 포맷터 함수
@@ -261,6 +305,37 @@ function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Elemen
       {/* Node-specific Custom Details */}
       {hasDetails && (
         <div className="px-3.5 pb-3.5 border-t border-white/5 pt-2.5 flex flex-col gap-2">
+          {nodeType === 'MakeFunction' && (() => {
+            type ArgDef = { name: string, type: PinDataType }
+            const args = (data.arguments as ArgDef[]) || []
+            return (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[8px] text-surface-400 font-bold uppercase tracking-wider">Arguments</span>
+                {args.length > 0 ? (
+                  <div className="flex flex-col gap-1">
+                    {args.map((arg, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ background: PIN_COLORS[arg.type] ?? PIN_COLORS['any'] }}
+                        />
+                        <span className="text-[9px] text-surface-300 font-mono">{arg.name}</span>
+                        <span
+                          className="text-[8px] font-mono ml-auto"
+                          style={{ color: PIN_COLORS[arg.type] ?? PIN_COLORS['any'] }}
+                        >
+                          {arg.type}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-[9px] text-surface-500 font-mono italic">No arguments</span>
+                )}
+              </div>
+            )
+          })()}
+
           {nodeType === 'Constant' && (() => {
             const val = data.value !== undefined ? data.value : data.inlineValue
             let currentType = data.constantType || 'string'

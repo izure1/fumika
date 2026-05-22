@@ -445,11 +445,11 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     type: 'MakeFunction',
     label: 'Make Function',
     category: 'control',
-    description: '실행 흐름을 Function으로 변환',
+    description: '실행 흐름을 Function으로 변환 (우측 패널에서 매개변수를 등록할 수 있습니다)',
     pins: [
       { id: 'callback', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'fn', label: 'Callback', direction: 'output', pinType: 'data', dataType: 'function' },
-    ],
+      { id: 'fn', label: 'Callback', direction: 'output', pinType: 'data', dataType: 'function' }
+    ]
   },
   {
     type: 'Log',
@@ -834,6 +834,86 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
     ],
     allowedTabs: ['command']
+  },
+  {
+    type: 'GetArgument',
+    label: 'Get Argument',
+    category: 'variable',
+    description: '현재 실행 흐름(콜백)의 N번째 매개변수 값을 조회합니다.',
+    pins: [
+      { id: 'index', label: 'Index', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' }
+    ]
+  },
+  {
+    type: 'SetTimer',
+    label: 'Set Timer',
+    category: 'control',
+    description: '지연 시간 후 지정된 콜백 함수를 실행하는 타이머를 작동시킵니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'ms', label: 'Delay (ms)', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
+      { id: 'respectSkip', label: 'Respect Skip', direction: 'input', pinType: 'data', dataType: 'boolean' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'timerId', label: 'Timer ID', direction: 'output', pinType: 'data', dataType: 'any' }
+    ]
+  },
+  {
+    type: 'ClearTimer',
+    label: 'Clear Timer',
+    category: 'control',
+    description: '생성된 타이머의 작동을 중지시킵니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'timerId', label: 'Timer ID', direction: 'input', pinType: 'any' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'Execute',
+    label: 'Execute',
+    category: 'control',
+    description: '타 모듈 커맨드를 호출합니다. 우측 패널에서 인자를 추가할 수 있습니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'type', label: 'Type', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'Keys',
+    label: 'Keys',
+    category: 'math-util',
+    description: '객체의 모든 키들을 배열로 반환합니다.',
+    pins: [
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'object' },
+      { id: 'keys', label: 'Keys', direction: 'output', pinType: 'data', dataType: 'array' }
+    ]
+  },
+  {
+    type: 'ForOf',
+    label: 'For Of',
+    category: 'control',
+    description: '배열을 순회하며 매 루프마다 콜백 함수를 실행합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'While',
+    label: 'While',
+    category: 'control',
+    description: '조건이 만족하는 동안 루프하며 콜백 함수를 순회 실행합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'condition', label: 'Condition', direction: 'input', pinType: 'data', dataType: 'boolean' },
+      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
   }
 ]
 

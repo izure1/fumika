@@ -4,7 +4,7 @@
 
 import React, { useCallback, useMemo } from 'react'
 import { useModuleStore } from '../../store/useModuleStore'
-import { NODE_CATALOG, NODE_CATEGORY_COLORS, type NodeCategory, LEVIAR_STYLE_PROPERTIES, LEVIAR_ATTRIBUTE_PROPERTIES } from '../../types/blueprint'
+import { NODE_CATALOG, NODE_CATEGORY_COLORS, type NodeCategory, type PinDataType, LEVIAR_STYLE_PROPERTIES, LEVIAR_ATTRIBUTE_PROPERTIES, PIN_COLORS } from '../../types/blueprint'
 
 // ─── 노드별 편집 가능 필드 룩업 테이블 ──────────────────────────
 
@@ -167,7 +167,10 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
     { key: 'slot', label: 'Slot', type: 'number', placeholder: '0' },
   ],
   NovelSaveEnv: [],
-  NovelLoadEnv: []
+  NovelLoadEnv: [],
+  GetArgument: [
+    { key: 'index', label: 'Arg Index (0-indexed)', type: 'number', placeholder: '0' }
+  ]
 }
 
 // ─── 스마트 타입 기입 컴포넌트 (TypedInput) ───────────────────
@@ -818,6 +821,204 @@ export function ModuleInspector() {
                   </select>
                 </div>
               )}
+            </div>
+          )
+        })() : nodeType === 'MakeFunction' ? (() => {
+          // ─── { name: string, type: PinDataType }[] 구조 ───
+          type ArgDef = { name: string, type: PinDataType }
+          const ARG_TYPE_OPTIONS: { value: PinDataType, label: string }[] = [
+            { value: 'string',    label: 'string' },
+            { value: 'number',    label: 'number' },
+            { value: 'boolean',   label: 'boolean' },
+            { value: 'object',    label: 'object' },
+            { value: 'array',     label: 'array' },
+            { value: 'function',  label: 'function' },
+            { value: 'any',       label: 'any' },
+          ]
+          const args = (selectedNode.data?.arguments as ArgDef[]) ?? []
+          return (
+            <div className="space-y-3">
+              <div className="text-[9px] text-surface-500 uppercase tracking-wider font-bold">Function Arguments</div>
+              <div className="space-y-2 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+                {args.map((arg, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 p-1.5 rounded bg-[#1c1c1c] border border-surface-800/60">
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ background: PIN_COLORS[arg.type] ?? PIN_COLORS['any'] }}
+                    />
+                    <span className="text-[10px] font-bold text-surface-300 font-mono flex-1 truncate">{arg.name}</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/5 bg-black/30"
+                      style={{ color: PIN_COLORS[arg.type] ?? PIN_COLORS['any'] }}>
+                      {arg.type}
+                    </span>
+                    <button
+                      className="text-surface-500 hover:text-red-400 text-[10px] transition-colors p-0.5 flex-shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        updateNodeData('arguments', args.filter((_, i) => i !== idx))
+                      }}
+                      title="Remove argument"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-surface-800 flex flex-col gap-1.5">
+                <span className="text-[9px] text-surface-500 font-bold uppercase tracking-wider select-none">Add Argument</span>
+                <form
+                  className="flex flex-col gap-1"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const form = e.currentTarget
+                    const nameInput = form.elements.namedItem('argName') as HTMLInputElement
+                    const typeSelect = form.elements.namedItem('argType') as HTMLSelectElement
+                    const nameVal = nameInput.value.trim()
+                    const typeVal = typeSelect.value as PinDataType
+                    if (nameVal && !args.some(a => a.name === nameVal)) {
+                      updateNodeData('arguments', [...args, { name: nameVal, type: typeVal }])
+                      nameInput.value = ''
+                    }
+                  }}
+                >
+                  <input
+                    name="argName"
+                    type="text"
+                    placeholder="param name..."
+                    className="w-full bg-surface-900 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/50 font-mono"
+                  />
+                  <div className="flex gap-1">
+                    <select
+                      name="argType"
+                      defaultValue="any"
+                      className="flex-1 bg-surface-900 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-surface-300 outline-none focus:border-primary-500/50"
+                    >
+                      {ARG_TYPE_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value} className="bg-[#141414]">{opt.label}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="submit"
+                      className="bg-primary-950 border border-primary-900 hover:bg-primary-900/60 text-primary-400 text-[9px] font-bold px-2 py-0.5 rounded transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )
+        })() : nodeType === 'Execute' ? (() => {
+          const cmdKeys = (selectedNode.data?.cmdKeys as string[]) ?? []
+          const isTypeBound = connectedTargets.includes(`${selectedNode.id}__type`)
+
+          return (
+            <div className="space-y-3">
+              <div>
+                <label className="text-[9px] text-surface-500 uppercase tracking-wider font-bold">Type</label>
+                {isTypeBound ? (
+                  <div className="text-[10px] text-primary-400 font-medium italic flex items-center gap-1 py-1 select-none font-mono">
+                    ⛓️ Bound to Node
+                  </div>
+                ) : (
+                  <input
+                    className="mt-0.5 w-full bg-surface-900/50 border border-surface-700 rounded px-2 py-1 text-[11px] text-white placeholder-surface-600 outline-none focus:border-primary-500/50 font-mono"
+                    value={String(selectedNode.data?.type ?? '')}
+                    placeholder="Command type..."
+                    onChange={(e) => updateNodeData('type', e.target.value)}
+                  />
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-surface-800">
+                <span className="text-[9px] text-surface-500 uppercase tracking-wider font-bold">Parameters</span>
+                <div className="space-y-2 mt-1.5 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+                  {cmdKeys.map(key => {
+                    const targetHandleId = `${selectedNode.id}__prop__${key}`
+                    const isBound = connectedTargets.includes(targetHandleId)
+
+                    return (
+                      <div key={key} className="p-1.5 rounded bg-[#1c1c1c] border border-surface-800/60 space-y-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[10px] font-bold text-surface-300 font-mono truncate">{key}</span>
+                          <button
+                            className="text-surface-500 hover:text-red-400 text-[10px] transition-colors p-0.5"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const nextKeys = cmdKeys.filter(k => k !== key)
+                              const store = useModuleStore.getState()
+                              const tab = store.activeTab
+                              const graph = store.graphs[tab]
+                              const nextEdges = graph.edges.filter(edge => edge.targetHandle !== targetHandleId)
+                              const updatedNodes = graph.nodes.map(n => {
+                                if (n.id !== selectedNode.id) return n
+                                const nextData = { ...n.data }
+                                delete nextData[`prop__${key}`]
+                                nextData.cmdKeys = nextKeys
+                                return { ...n, data: nextData }
+                              })
+                              useModuleStore.setState({
+                                graphs: {
+                                  ...store.graphs,
+                                  [tab]: { ...graph, nodes: updatedNodes, edges: nextEdges }
+                                }
+                              })
+                            }}
+                            title="Remove parameter"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div>
+                          {isBound ? (
+                            <div className="text-[9px] text-primary-400 font-medium italic flex items-center gap-1 py-0.5 select-none font-mono">
+                              ⛓️ Bound to Node
+                            </div>
+                          ) : (
+                            <TypedInput
+                              value={selectedNode.data?.[`prop__${key}`]}
+                              onChange={(newVal) => updateNodeData(`prop__${key}`, newVal)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-surface-800 flex flex-col gap-1.5">
+                <span className="text-[9px] text-surface-500 font-bold uppercase tracking-wider select-none">Add Parameter</span>
+                <form
+                  className="flex gap-1"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const form = e.currentTarget
+                    const input = form.elements.namedItem('newParam') as HTMLInputElement
+                    const val = input.value.trim()
+                    if (val && !cmdKeys.includes(val)) {
+                      updateNodeData({
+                        cmdKeys: [...cmdKeys, val],
+                        [`prop__${val}`]: ''
+                      })
+                      input.value = ''
+                    }
+                  }}
+                >
+                  <input
+                    name="newParam"
+                    type="text"
+                    placeholder="param name..."
+                    className="flex-1 bg-surface-900 border border-surface-750 rounded px-1.5 py-0.5 text-[10px] text-white outline-none focus:border-primary-500/50 font-mono"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-primary-950 border border-primary-900 hover:bg-primary-900/60 text-primary-400 text-[9px] font-bold px-2 py-0.5 rounded transition-colors"
+                  >
+                    Add
+                  </button>
+                </form>
+              </div>
             </div>
           )
         })() : nodeType === 'SetState' ? (() => {

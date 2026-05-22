@@ -104,14 +104,31 @@ export function getPinMetaInStore(
 
   if (pinId.startsWith('prop__')) {
     const key = pinId.substring(6)
-    const spec = LEVIAR_STYLE_PROPERTIES.find(p => p.key === key)
-    if (spec) {
-      const typeMap: Record<string, string> = {
-        number: 'number',
-        boolean: 'boolean'
+
+    // ── MakeFunction: 우측 패널에서 등록한 { name, type }[] arguments 에서 타입 조회
+    if (nodeType === 'MakeFunction' && node?.data?.arguments) {
+      type ArgDef = { name: string; type: string }
+      const argDefs = node.data.arguments as ArgDef[]
+      const argDef = argDefs.find(a => a.name === key)
+      if (argDef) {
+        return { pinType: 'data', dataType: argDef.type }
       }
-      return { pinType: 'data', dataType: typeMap[spec.type] ?? 'string' }
+      // arguments에 정의되어 있지 않은 prop__는 any로 허용
+      return { pinType: 'data', dataType: 'any' }
     }
+
+    // ── MakeStyle: LEVIAR_STYLE_PROPERTIES 기반 타입 조회
+    if (nodeType === 'MakeStyle') {
+      const spec = LEVIAR_STYLE_PROPERTIES.find(p => p.key === key)
+      if (spec) {
+        const typeMap: Record<string, string> = { number: 'number', boolean: 'boolean' }
+        return { pinType: 'data', dataType: typeMap[spec.type] ?? 'string' }
+      }
+      return { pinType: 'data', dataType: 'any' }
+    }
+
+    // ── MakeAttribute / Execute / 기타 동적 prop__ 핀: any로 허용
+    return { pinType: 'data', dataType: 'any' }
   }
 
   if (nodeType === 'Constant' && pinId === 'value' && node?.data) {
