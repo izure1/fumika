@@ -11,7 +11,8 @@
 이러한 단순 반복 작업은 기획의 흐름을 끊고 사소한 문법 에러로 실행이 막히는 문제를 만듭니다.  
 
 ### ❌ 기존의 복잡한 수동 코드 작성 방식
-```ts
+
+```typescript
 import { define } from 'fumika'
 
 export default define({
@@ -20,14 +21,16 @@ export default define({
   .defineCommand(function* (cmd, ctx, state, setState) {
     if (cmd.type === 'showText') {
       setState({ text: cmd.text })
-      yield { action: 'wait' }
+      yield false
     }
     return true
   })
   .defineView((ctx, state, setState) => {
     return {
       show: () => {},
-      hide: () => {}
+      hide: () => {},
+      onUpdate: () => {},
+      onCleanup: () => {},
     }
   })
 ```

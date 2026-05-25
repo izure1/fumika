@@ -79,30 +79,28 @@ export const PIN_COLORS: Record<PinDataType, string> = {
 // ─── 노드 카테고리 ───────────────────────────────────────────
 
 export type NodeCategory =
-  | 'event'
-  | 'control'
+  | 'system'
+  | 'flow'
   | 'variable'
+  | 'utility'
+  | 'object'
+  | 'style-class'
+  | 'motion'
+  | 'effect'
+  | 'interaction'
   | 'novel'
-  | 'leviar-element'
-  | 'leviar-hierarchy'
-  | 'leviar-effect'
-  | 'leviar-physics'
-  | 'leviar-tracking'
-  | 'leviar-class'
-  | 'math-util'
 
 export const NODE_CATEGORY_COLORS: Record<NodeCategory, { bg: string, border: string, header: string, text: string }> = {
-  event: { bg: 'rgba(20, 20, 23, 0.85)', border: '#f43f5e', header: 'rgba(28, 28, 33, 0.45)', text: '#fda4af' },
-  control: { bg: 'rgba(20, 20, 23, 0.85)', border: '#38bdf8', header: 'rgba(28, 28, 33, 0.45)', text: '#bae6fd' },
-  novel: { bg: 'rgba(20, 20, 23, 0.85)', border: '#f472b6', header: 'rgba(28, 28, 33, 0.45)', text: '#fbcfe8' },
+  system: { bg: 'rgba(20, 20, 23, 0.85)', border: '#f43f5e', header: 'rgba(28, 28, 33, 0.45)', text: '#fda4af' },
+  flow: { bg: 'rgba(20, 20, 23, 0.85)', border: '#38bdf8', header: 'rgba(28, 28, 33, 0.45)', text: '#bae6fd' },
   variable: { bg: 'rgba(20, 20, 23, 0.85)', border: '#a78bfa', header: 'rgba(28, 28, 33, 0.45)', text: '#ddd6fe' },
-  'leviar-element': { bg: 'rgba(20, 20, 23, 0.85)', border: '#fb7185', header: 'rgba(28, 28, 33, 0.45)', text: '#fecdd3' },
-  'leviar-hierarchy': { bg: 'rgba(20, 20, 23, 0.85)', border: '#f59e0b', header: 'rgba(28, 28, 33, 0.45)', text: '#fde68a' },
-  'leviar-effect': { bg: 'rgba(20, 20, 23, 0.85)', border: '#ec4899', header: 'rgba(28, 28, 33, 0.45)', text: '#fbcfe8' },
-  'leviar-physics': { bg: 'rgba(20, 20, 23, 0.85)', border: '#10b981', header: 'rgba(28, 28, 33, 0.45)', text: '#a7f3d0' },
-  'leviar-tracking': { bg: 'rgba(20, 20, 23, 0.85)', border: '#06b6d4', header: 'rgba(28, 28, 33, 0.45)', text: '#cffafe' },
-  'leviar-class': { bg: 'rgba(20, 20, 23, 0.85)', border: '#84cc16', header: 'rgba(28, 28, 33, 0.45)', text: '#d9f99d' },
-  'math-util': { bg: 'rgba(20, 20, 23, 0.85)', border: '#64748b', header: 'rgba(28, 28, 33, 0.45)', text: '#cbd5e1' },
+  utility: { bg: 'rgba(20, 20, 23, 0.85)', border: '#64748b', header: 'rgba(28, 28, 33, 0.45)', text: '#cbd5e1' },
+  object: { bg: 'rgba(20, 20, 23, 0.85)', border: '#fb7185', header: 'rgba(28, 28, 33, 0.45)', text: '#fecdd3' },
+  'style-class': { bg: 'rgba(20, 20, 23, 0.85)', border: '#84cc16', header: 'rgba(28, 28, 33, 0.45)', text: '#d9f99d' },
+  motion: { bg: 'rgba(20, 20, 23, 0.85)', border: '#10b981', header: 'rgba(28, 28, 33, 0.45)', text: '#a7f3d0' },
+  effect: { bg: 'rgba(20, 20, 23, 0.85)', border: '#ec4899', header: 'rgba(28, 28, 33, 0.45)', text: '#fbcfe8' },
+  interaction: { bg: 'rgba(20, 20, 23, 0.85)', border: '#f59e0b', header: 'rgba(28, 28, 33, 0.45)', text: '#fde68a' },
+  novel: { bg: 'rgba(20, 20, 23, 0.85)', border: '#f472b6', header: 'rgba(28, 28, 33, 0.45)', text: '#fbcfe8' },
 }
 
 // ─── 블루프린트 노드 타입 정의 ────────────────────────────────
@@ -135,11 +133,11 @@ export const GRAPH_TAB_LABELS: Record<GraphTab, string> = {
 // ─── 노드 카탈로그 ───────────────────────────────────────────
 
 export const NODE_CATALOG: BlueprintNodeDef[] = [
-  // ── Event ──────────────────────────────────────────────────
+  // ── System ─────────────────────────────────────────────────
   {
     type: 'CommandEntry',
     label: 'Command Entry',
-    category: 'event',
+    category: 'system',
     description: 'defineCommand의 진입점',
     pins: [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
@@ -150,7 +148,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'ViewMountEntry',
     label: 'View Mount',
-    category: 'event',
+    category: 'system',
     description: 'defineView 호출 시 실행 (마운트)',
     pins: [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
@@ -161,7 +159,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'ShowEntry',
     label: 'show()',
-    category: 'event',
+    category: 'system',
     description: 'UI 표시 시 호출',
     pins: [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
@@ -173,7 +171,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'HideEntry',
     label: 'hide()',
-    category: 'event',
+    category: 'system',
     description: 'UI 숨김 시 호출',
     pins: [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
@@ -185,7 +183,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'OnUpdateEntry',
     label: 'onUpdate()',
-    category: 'event',
+    category: 'system',
     description: 'setState 호출 시 자동 실행',
     pins: [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
@@ -196,7 +194,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'OnCleanupEntry',
     label: 'onCleanup()',
-    category: 'event',
+    category: 'system',
     description: '씬 전환 시 정리',
     pins: [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
@@ -205,11 +203,11 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     singleton: true,
   },
 
-  // ── Condition ──────────────────────────────────────────────
+  // ── Flow ───────────────────────────────────────────────────
   {
     type: 'Branch',
     label: 'Branch',
-    category: 'control',
+    category: 'flow',
     description: 'if/else 분기',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -219,22 +217,9 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     ],
   },
   {
-    type: 'Compare',
-    label: 'Compare',
-    category: 'math-util',
-    description: '두 값 비교',
-    pins: [
-      { id: 'a', label: 'A', direction: 'input', pinType: 'data', dataType: 'any' },
-      { id: 'b', label: 'B', direction: 'input', pinType: 'data', dataType: 'any' },
-      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'boolean' },
-    ],
-  },
-
-  // ── Action ─────────────────────────────────────────────────
-  {
     type: 'Return',
     label: 'Return',
-    category: 'control',
+    category: 'flow',
     description: '커맨드 종료 (true=완료, false=대기)',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -245,7 +230,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'Yield',
     label: 'Yield',
-    category: 'control',
+    category: 'flow',
     description: '사용자 입력 대기 후 재개 (true=완료, false=대기)',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -254,6 +239,91 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     ],
     allowedTabs: ['command'],
   },
+  {
+    type: 'MakeFunction',
+    label: 'Make Function',
+    category: 'flow',
+    description: '실행 흐름을 Function으로 변환 (우측 패널에서 매개변수를 등록할 수 있습니다)',
+    pins: [
+      { id: 'callback', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'fn', label: 'Callback', direction: 'output', pinType: 'data', dataType: 'function' }
+    ]
+  },
+  {
+    type: 'Log',
+    label: 'Log',
+    category: 'flow',
+    description: 'console.log(message)',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'message', label: 'Message', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+  },
+  {
+    type: 'SetTimer',
+    label: 'Set Timer',
+    category: 'flow',
+    description: '지연 시간 후 지정된 콜백 함수를 실행하는 타이머를 작동시킵니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'ms', label: 'Delay (ms)', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
+      { id: 'respectSkip', label: 'Respect Skip', direction: 'input', pinType: 'data', dataType: 'boolean' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'timerId', label: 'Timer ID', direction: 'output', pinType: 'data', dataType: 'any' }
+    ]
+  },
+  {
+    type: 'ClearTimer',
+    label: 'Clear Timer',
+    category: 'flow',
+    description: '생성된 타이머의 작동을 중지시킵니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'timerId', label: 'Timer ID', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'Execute',
+    label: 'Execute',
+    category: 'flow',
+    description: '타 모듈 커맨드를 호출합니다. 우측 패널에서 인자를 추가할 수 있습니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'type', label: 'Type', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'ForOf',
+    label: 'For Of',
+    category: 'flow',
+    description: '배열을 순회하며 매 루프마다 콜백 함수를 실행합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'index', label: 'Index', direction: 'output', pinType: 'data', dataType: 'number' },
+      { id: 'element', label: 'Element', direction: 'output', pinType: 'data', dataType: 'any' }
+    ]
+  },
+  {
+    type: 'While',
+    label: 'While',
+    category: 'flow',
+    description: '조건이 만족하는 동안 루프하며 콜백 함수를 순회 실행합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'condition', label: 'Condition', direction: 'input', pinType: 'data', dataType: 'boolean' },
+      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+
+  // ── Variable ───────────────────────────────────────────────
   {
     type: 'SetState',
     label: 'Set State',
@@ -300,170 +370,6 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
     ],
   },
-  {
-    type: 'SetStyle',
-    label: 'Set Style',
-    category: 'leviar-element',
-    description: '오브젝트의 Style 설정',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
-      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-    ],
-    allowedTabs: ['view'],
-  },
-  {
-    type: 'SetAttribute',
-    label: 'Set Attribute',
-    category: 'leviar-element',
-    description: '오브젝트의 Attribute 설정',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
-      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-    ],
-    allowedTabs: ['view'],
-  },
-  {
-    type: 'CreateRectangle',
-    label: 'Create Rectangle',
-    category: 'leviar-element',
-    description: 'ctx.world.createRectangle()',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
-      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
-      { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
-    ],
-    allowedTabs: ['view'],
-  },
-  {
-    type: 'CreateEllipse',
-    label: 'Create Ellipse',
-    category: 'leviar-element',
-    description: 'ctx.world.createEllipse()',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
-      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
-      { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
-    ],
-    allowedTabs: ['view'],
-  },
-  {
-    type: 'CreateText',
-    label: 'Create Text',
-    category: 'leviar-element',
-    description: 'ctx.world.createText()',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'text', label: 'Text', direction: 'input', pinType: 'data', dataType: 'string' },
-      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
-      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
-      { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
-    ],
-    allowedTabs: ['view'],
-  },
-  {
-    type: 'CreateImage',
-    label: 'Create Image',
-    category: 'leviar-element',
-    description: 'ctx.world.createImage()',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'image', label: 'Image', direction: 'input', pinType: 'data', dataType: 'string' },
-      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
-      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
-      { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
-    ],
-    allowedTabs: ['view'],
-  },
-  {
-    type: 'FadeIn',
-    label: 'Fade In',
-    category: 'leviar-effect',
-    description: 'object.fadeIn(duration, easing)',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
-      { id: 'duration', label: 'Duration', direction: 'input', pinType: 'data', dataType: 'number' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-    ],
-    allowedTabs: ['view'],
-  },
-  {
-    type: 'FadeOut',
-    label: 'Fade Out',
-    category: 'leviar-effect',
-    description: 'object.fadeOut(duration, easing)',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
-      { id: 'duration', label: 'Duration', direction: 'input', pinType: 'data', dataType: 'number' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-    ],
-    allowedTabs: ['view'],
-  },
-  {
-    type: 'RemoveObject',
-    label: 'Remove Object',
-    category: 'leviar-element',
-    description: 'object.remove({ child, follower })',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
-      { id: 'child', label: 'Child', direction: 'input', pinType: 'data', dataType: 'boolean' },
-      { id: 'follower', label: 'Follower', direction: 'input', pinType: 'data', dataType: 'boolean' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-    ],
-    allowedTabs: ['view'],
-  },
-  {
-    type: 'BindEvent',
-    label: 'Bind Event',
-    category: 'leviar-effect',
-    description: '오브젝트에 이벤트 핸들러 바인딩',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
-      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-    ],
-    allowedTabs: ['view'],
-  },
-  {
-    type: 'MakeFunction',
-    label: 'Make Function',
-    category: 'control',
-    description: '실행 흐름을 Function으로 변환 (우측 패널에서 매개변수를 등록할 수 있습니다)',
-    pins: [
-      { id: 'callback', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'fn', label: 'Callback', direction: 'output', pinType: 'data', dataType: 'function' }
-    ]
-  },
-  {
-    type: 'Log',
-    label: 'Log',
-    category: 'control',
-    description: 'console.log(message)',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'message', label: 'Message', direction: 'input', pinType: 'data', dataType: 'any' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-    ],
-  },
-
-  // ── Data ───────────────────────────────────────────────────
   {
     type: 'Constant',
     label: 'Constant',
@@ -522,9 +428,32 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     ],
   },
   {
+    type: 'GetArgument',
+    label: 'Get Argument',
+    category: 'variable',
+    description: '현재 실행 흐름(콜백)의 N번째 매개변수 값을 조회합니다.',
+    pins: [
+      { id: 'index', label: 'Index', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' }
+    ]
+  },
+
+  // ── Utility ────────────────────────────────────────────────
+  {
+    type: 'Compare',
+    label: 'Compare',
+    category: 'utility',
+    description: '두 값 비교',
+    pins: [
+      { id: 'a', label: 'A', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'b', label: 'B', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'boolean' },
+    ],
+  },
+  {
     type: 'MathOp',
     label: 'Math',
-    category: 'math-util',
+    category: 'utility',
     description: '사칙연산',
     pins: [
       { id: 'a', label: 'A', direction: 'input', pinType: 'data', dataType: 'number' },
@@ -535,7 +464,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'MakePosition',
     label: 'Make Position',
-    category: 'math-util',
+    category: 'utility',
     description: '{ x, y, z } 벡터 생성',
     pins: [
       { id: 'x', label: 'X', direction: 'input', pinType: 'data', dataType: 'number' },
@@ -547,7 +476,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'MakeStyle',
     label: 'Make Style',
-    category: 'math-util',
+    category: 'utility',
     description: '시각적 스타일 객체 조립기',
     pins: [
       { id: 'style', label: 'Style', direction: 'output', pinType: 'data', dataType: 'style' },
@@ -556,16 +485,278 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'MakeAttribute',
     label: 'Make Attribute',
-    category: 'math-util',
+    category: 'utility',
     description: '오브젝트 어트리뷰트 속성 조립기',
     pins: [
       { id: 'attribute', label: 'Attribute', direction: 'output', pinType: 'data', dataType: 'attribute' },
     ],
   },
   {
+    type: 'ArrayLength',
+    label: 'Array Length',
+    category: 'utility',
+    description: '배열의 총 길이를 반환합니다.',
+    pins: [
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'length', label: 'Length', direction: 'output', pinType: 'data', dataType: 'number' }
+    ]
+  },
+  {
+    type: 'ArrayGet',
+    label: 'Array Get',
+    category: 'utility',
+    description: '배열의 특정 인덱스 위치의 값을 가져옵니다.',
+    pins: [
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'index', label: 'Index', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' }
+    ]
+  },
+  {
+    type: 'ArraySet',
+    label: 'Array Set',
+    category: 'utility',
+    description: '배열의 특정 인덱스 위치의 값을 변경합니다 (덮어쓰기).',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'index', label: 'Index', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'ArrayAdd',
+    label: 'Array Add',
+    category: 'utility',
+    description: '배열의 맨 끝에 새로운 값을 추가합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'index', label: 'Index', direction: 'output', pinType: 'data', dataType: 'number' }
+    ]
+  },
+  {
+    type: 'ArrayInsert',
+    label: 'Array Insert',
+    category: 'utility',
+    description: '배열의 특정 인덱스 위치에 값을 새로 삽입합니다 (splice).',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'index', label: 'Index', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'ArrayRemove',
+    label: 'Array Remove',
+    category: 'utility',
+    description: '배열에서 특정 인덱스 위치의 요소를 삭제합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'index', label: 'Index', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'ArrayClear',
+    label: 'Array Clear',
+    category: 'utility',
+    description: '배열의 모든 요소를 완전히 비웁니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'ArrayContains',
+    label: 'Array Contains',
+    category: 'utility',
+    description: '배열에 특정 값이 포함되어 있는지 확인합니다.',
+    pins: [
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'boolean' }
+    ]
+  },
+  {
+    type: 'ArrayReverse',
+    label: 'Array Reverse',
+    category: 'utility',
+    description: '배열의 요소 순서를 완전히 뒤집습니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'ArraySlice',
+    label: 'Array Slice',
+    category: 'utility',
+    description: '배열의 일부분을 복사하여 새 배열을 추출합니다.',
+    pins: [
+      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
+      { id: 'start', label: 'Start', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'end', label: 'End', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'array' }
+    ]
+  },
+  {
+    type: 'ObjectGet',
+    label: 'Object Get',
+    category: 'utility',
+    description: '객체에서 특정 키에 해당하는 속성 값을 조회합니다.',
+    pins: [
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'object' },
+      { id: 'key', label: 'Key', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' }
+    ]
+  },
+  {
+    type: 'ObjectSet',
+    label: 'Object Set',
+    category: 'utility',
+    description: '객체의 특정 키에 값을 설정합니다 (덮어쓰기 및 추가).',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'object' },
+      { id: 'key', label: 'Key', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'ObjectDelete',
+    label: 'Object Delete',
+    category: 'utility',
+    description: '객체에서 특정 키 속성을 완전히 삭제합니다.',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'object' },
+      { id: 'key', label: 'Key', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
+    ]
+  },
+  {
+    type: 'ObjectHasKey',
+    label: 'Object Has Key',
+    category: 'utility',
+    description: '객체에 특정 키가 존재하는지 여부를 확인합니다.',
+    pins: [
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'object' },
+      { id: 'key', label: 'Key', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'boolean' }
+    ]
+  },
+  {
+    type: 'Keys',
+    label: 'Object Keys',
+    category: 'utility',
+    description: '객체의 모든 키들을 배열로 반환합니다.',
+    pins: [
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'object' },
+      { id: 'keys', label: 'Keys', direction: 'output', pinType: 'data', dataType: 'array' }
+    ]
+  },
+  {
+    type: 'ObjectValues',
+    label: 'Object Values',
+    category: 'utility',
+    description: '객체의 모든 값들을 배열로 반환합니다.',
+    pins: [
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'object' },
+      { id: 'values', label: 'Values', direction: 'output', pinType: 'data', dataType: 'array' }
+    ]
+  },
+
+  // ── Object ─────────────────────────────────────────────────
+  {
+    type: 'CreateRectangle',
+    label: 'Create Rectangle',
+    category: 'object',
+    description: 'ctx.world.createRectangle()',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
+      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
+      { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
+    ],
+    allowedTabs: ['view'],
+  },
+  {
+    type: 'CreateEllipse',
+    label: 'Create Ellipse',
+    category: 'object',
+    description: 'ctx.world.createEllipse()',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
+      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
+      { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
+    ],
+    allowedTabs: ['view'],
+  },
+  {
+    type: 'CreateText',
+    label: 'Create Text',
+    category: 'object',
+    description: 'ctx.world.createText()',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'text', label: 'Text', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
+      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
+      { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
+    ],
+    allowedTabs: ['view'],
+  },
+  {
+    type: 'CreateImage',
+    label: 'Create Image',
+    category: 'object',
+    description: 'ctx.world.createImage()',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'image', label: 'Image', direction: 'input', pinType: 'data', dataType: 'string' },
+      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
+      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
+      { id: 'position', label: 'Position', direction: 'input', pinType: 'data', dataType: 'vec3' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
+    ],
+    allowedTabs: ['view'],
+  },
+  {
+    type: 'RemoveObject',
+    label: 'Remove Object',
+    category: 'object',
+    description: 'object.remove({ child, follower })',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
+      { id: 'child', label: 'Child', direction: 'input', pinType: 'data', dataType: 'boolean' },
+      { id: 'follower', label: 'Follower', direction: 'input', pinType: 'data', dataType: 'boolean' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+    allowedTabs: ['view'],
+  },
+  {
     type: 'AddChild',
     label: 'Add Child',
-    category: 'leviar-hierarchy',
+    category: 'object',
     description: '부모 오브젝트에 자식 오브젝트 추가',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -578,7 +769,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'GetCamera',
     label: 'Get Camera',
-    category: 'leviar-hierarchy',
+    category: 'object',
     description: '카메라 오브젝트 참조 반환',
     pins: [
       { id: 'camera', label: 'Camera', direction: 'output', pinType: 'data', dataType: 'leviarObj' },
@@ -588,7 +779,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'CanvasToWorld',
     label: 'Canvas To World',
-    category: 'leviar-hierarchy',
+    category: 'object',
     description: '캔버스 좌표를 카메라 기준의 월드 좌표로 변환 (canvasToWorld)',
     pins: [
       { id: 'camera', label: 'Camera', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
@@ -602,7 +793,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'CanvasToLocal',
     label: 'Canvas To Local',
-    category: 'leviar-hierarchy',
+    category: 'object',
     description: '캔버스 좌표를 카메라 기준의 로컬 좌표로 변환 (canvasToLocal)',
     pins: [
       { id: 'camera', label: 'Camera', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
@@ -616,7 +807,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'CalcDepthRatio',
     label: 'Calc Depth Ratio',
-    category: 'leviar-hierarchy',
+    category: 'object',
     description: '목표 Z 깊이에 맞춰 원근 투영 크기 비율을 계산 (calcDepthRatio)',
     pins: [
       { id: 'camera', label: 'Camera', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
@@ -629,7 +820,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'RemoveChild',
     label: 'Remove Child',
-    category: 'leviar-hierarchy',
+    category: 'object',
     description: '부모 오브젝트에서 자식 오브젝트 제거',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -642,7 +833,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'RemoveFromParent',
     label: 'Remove From Parent',
-    category: 'leviar-hierarchy',
+    category: 'object',
     description: '현재 부모 오브젝트로부터 독립',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -651,10 +842,38 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     ],
     allowedTabs: ['view'],
   },
+
+  // ── Style & Class ──────────────────────────────────────────
+  {
+    type: 'SetStyle',
+    label: 'Set Style',
+    category: 'style-class',
+    description: '오브젝트의 Style 설정',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
+      { id: 'style', label: 'Style', direction: 'input', pinType: 'data', dataType: 'style' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+    allowedTabs: ['view'],
+  },
+  {
+    type: 'SetAttribute',
+    label: 'Set Attribute',
+    category: 'style-class',
+    description: '오브젝트의 Attribute 설정',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
+      { id: 'attribute', label: 'Attribute', direction: 'input', pinType: 'data', dataType: 'attribute' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+    allowedTabs: ['view'],
+  },
   {
     type: 'HasClass',
     label: 'Has Class',
-    category: 'leviar-class',
+    category: 'style-class',
     description: '오브젝트가 해당 클래스명을 가졌는지 확인',
     pins: [
       { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
@@ -666,7 +885,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'AddClass',
     label: 'Add Class',
-    category: 'leviar-class',
+    category: 'style-class',
     description: '오브젝트에 하나 이상의 클래스 추가',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -679,7 +898,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'RemoveClass',
     label: 'Remove Class',
-    category: 'leviar-class',
+    category: 'style-class',
     description: '오브젝트에서 하나 이상의 클래스 제거',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -689,10 +908,12 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     ],
     allowedTabs: ['view'],
   },
+
+  // ── Motion ─────────────────────────────────────────────────
   {
     type: 'ApplyForce',
     label: 'Apply Force',
-    category: 'leviar-physics',
+    category: 'motion',
     description: '오브젝트 물리 바디에 힘 적용',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -706,7 +927,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'SetVelocity',
     label: 'Set Velocity',
-    category: 'leviar-physics',
+    category: 'motion',
     description: '오브젝트 물리 바디의 속도 설정',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -720,7 +941,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'SetAngularVelocity',
     label: 'Set Angular Velocity',
-    category: 'leviar-physics',
+    category: 'motion',
     description: '오브젝트 물리 바디의 각속도 설정',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -733,7 +954,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'ApplyTorque',
     label: 'Apply Torque',
-    category: 'leviar-physics',
+    category: 'motion',
     description: '오브젝트 물리 바디에 회전 토크 적용',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -746,7 +967,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'Follow',
     label: 'Follow',
-    category: 'leviar-tracking',
+    category: 'motion',
     description: '다른 오브젝트를 일정 거리를 두고 추적',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -762,7 +983,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'Unfollow',
     label: 'Unfollow',
-    category: 'leviar-tracking',
+    category: 'motion',
     description: '대상을 따라다니는 동작을 중지',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -774,7 +995,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
   {
     type: 'Kick',
     label: 'Kick',
-    category: 'leviar-tracking',
+    category: 'motion',
     description: '자신을 따라다니는 특정 오브젝트 추적 끊기',
     pins: [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
@@ -784,6 +1005,50 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
     ],
     allowedTabs: ['view'],
   },
+
+  // ── Effect ─────────────────────────────────────────────────
+  {
+    type: 'FadeIn',
+    label: 'Fade In',
+    category: 'effect',
+    description: 'object.fadeIn(duration, easing)',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
+      { id: 'duration', label: 'Duration', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+    allowedTabs: ['view'],
+  },
+  {
+    type: 'FadeOut',
+    label: 'Fade Out',
+    category: 'effect',
+    description: 'object.fadeOut(duration, easing)',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
+      { id: 'duration', label: 'Duration', direction: 'input', pinType: 'data', dataType: 'number' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+    allowedTabs: ['view'],
+  },
+
+  // ── Interaction ────────────────────────────────────────────
+  {
+    type: 'BindEvent',
+    label: 'Bind Event',
+    category: 'interaction',
+    description: '오브젝트에 이벤트 핸들러 바인딩',
+    pins: [
+      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
+      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'leviarObj' },
+      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
+      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
+    ],
+    allowedTabs: ['view'],
+  },
+
   // ── Novel ──────────────────────────────────────────────────
   {
     type: 'NovelSave',
@@ -834,88 +1099,6 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
     ],
     allowedTabs: ['command']
-  },
-  {
-    type: 'GetArgument',
-    label: 'Get Argument',
-    category: 'variable',
-    description: '현재 실행 흐름(콜백)의 N번째 매개변수 값을 조회합니다.',
-    pins: [
-      { id: 'index', label: 'Index', direction: 'input', pinType: 'data', dataType: 'number' },
-      { id: 'value', label: 'Value', direction: 'output', pinType: 'data', dataType: 'any' }
-    ]
-  },
-  {
-    type: 'SetTimer',
-    label: 'Set Timer',
-    category: 'control',
-    description: '지연 시간 후 지정된 콜백 함수를 실행하는 타이머를 작동시킵니다.',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'ms', label: 'Delay (ms)', direction: 'input', pinType: 'data', dataType: 'number' },
-      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
-      { id: 'respectSkip', label: 'Respect Skip', direction: 'input', pinType: 'data', dataType: 'boolean' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'timerId', label: 'Timer ID', direction: 'output', pinType: 'data', dataType: 'any' }
-    ]
-  },
-  {
-    type: 'ClearTimer',
-    label: 'Clear Timer',
-    category: 'control',
-    description: '생성된 타이머의 작동을 중지시킵니다.',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'timerId', label: 'Timer ID', direction: 'input', pinType: 'data', dataType: 'any' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
-    ]
-  },
-  {
-    type: 'Execute',
-    label: 'Execute',
-    category: 'control',
-    description: '타 모듈 커맨드를 호출합니다. 우측 패널에서 인자를 추가할 수 있습니다.',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'type', label: 'Type', direction: 'input', pinType: 'data', dataType: 'string' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
-    ]
-  },
-  {
-    type: 'Keys',
-    label: 'Keys',
-    category: 'math-util',
-    description: '객체의 모든 키들을 배열로 반환합니다.',
-    pins: [
-      { id: 'object', label: 'Object', direction: 'input', pinType: 'data', dataType: 'object' },
-      { id: 'keys', label: 'Keys', direction: 'output', pinType: 'data', dataType: 'array' }
-    ]
-  },
-  {
-    type: 'ForOf',
-    label: 'For Of',
-    category: 'control',
-    description: '배열을 순회하며 매 루프마다 콜백 함수를 실행합니다.',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'array', label: 'Array', direction: 'input', pinType: 'data', dataType: 'array' },
-      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
-      { id: 'index', label: 'Index', direction: 'output', pinType: 'data', dataType: 'number' },
-      { id: 'element', label: 'Element', direction: 'output', pinType: 'data', dataType: 'any' }
-    ]
-  },
-  {
-    type: 'While',
-    label: 'While',
-    category: 'control',
-    description: '조건이 만족하는 동안 루프하며 콜백 함수를 순회 실행합니다.',
-    pins: [
-      { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
-      { id: 'condition', label: 'Condition', direction: 'input', pinType: 'data', dataType: 'boolean' },
-      { id: 'callback', label: 'Callback', direction: 'input', pinType: 'data', dataType: 'function' },
-      { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' }
-    ]
   }
 ]
 

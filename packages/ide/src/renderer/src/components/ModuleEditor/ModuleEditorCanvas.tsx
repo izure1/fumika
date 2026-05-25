@@ -33,6 +33,7 @@ import {
   type GraphTab,
   type PinDataType,
   type ModuleDefinitions,
+  type NodeCategory,
 } from '../../types/blueprint'
 
 // ─── nodeTypes (컴포넌트 외부에 정의하여 re-render 방지) ──────
@@ -476,13 +477,19 @@ function ModuleEditorInner({ content, onChange }: ModuleEditorCanvasProps) {
                 const nodeType = n.data?.nodeType as string
                 const cat = NODE_CATALOG.find(c => c.type === nodeType)
                 if (!cat) return '#333'
-                const catColors: Record<string, string> = {
-                  event: '#dc2626',
-                  condition: '#16a34a',
-                  action: '#2563eb',
-                  data: '#ca8a04',
+                const catColors: Record<NodeCategory, string> = {
+                  system: '#dc2626',
+                  flow: '#2563eb',
+                  variable: '#ca8a04',
+                  utility: '#64748b',
+                  object: '#fb7185',
+                  'style-class': '#84cc16',
+                  motion: '#10b981',
+                  effect: '#ec4899',
+                  interaction: '#f59e0b',
+                  novel: '#f472b6',
                 }
-                return catColors[cat.category] ?? '#333'
+                return catColors[cat.category as NodeCategory] ?? '#333'
               }}
               maskColor="rgba(0,0,0,0.7)"
               style={{ background: '#0d0d0d' }}

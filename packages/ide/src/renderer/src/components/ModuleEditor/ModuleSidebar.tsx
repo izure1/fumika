@@ -12,17 +12,16 @@ import {
 import { ModuleDefPanel } from './ModuleDefPanel'
 
 const CATEGORY_ORDER: { key: NodeCategory, label: string }[] = [
-  { key: 'event', label: 'Event' },
-  { key: 'control', label: 'Control Flow' },
+  { key: 'system', label: 'System' },
+  { key: 'flow', label: 'Flow Control' },
+  { key: 'variable', label: 'Variables' },
+  { key: 'utility', label: 'Utility' },
+  { key: 'object', label: 'Object' },
+  { key: 'style-class', label: 'Style & Attribute' },
+  { key: 'motion', label: 'Motion' },
+  { key: 'effect', label: 'Effect' },
+  { key: 'interaction', label: 'Interaction' },
   { key: 'novel', label: 'Novel' },
-  { key: 'math-util', label: 'Math & Utility' },
-  { key: 'variable', label: 'Variable & State' },
-  { key: 'leviar-element', label: 'Leviar: Element' },
-  { key: 'leviar-hierarchy', label: 'Leviar: Hierarchy' },
-  { key: 'leviar-effect', label: 'Leviar: Effect' },
-  { key: 'leviar-physics', label: 'Leviar: Physics' },
-  { key: 'leviar-tracking', label: 'Leviar: Tracking' },
-  { key: 'leviar-class', label: 'Leviar: Style Class' },
 ]
 
 type SidebarTab = 'definitions' | 'nodes'
