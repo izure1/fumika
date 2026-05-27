@@ -444,7 +444,7 @@ const FILE_TEMPLATE_GENERATORS: Partial<
   Record<DeclarationFolder, (safeName: string, relativeDots: string) => string>
 > = {
   scenes: (_, _relativeDots) =>
-    `import { defineScene } from 'fumika'\nimport config from '@/novel.config'\nimport Initials from '@/declarations/initials'\nimport Hooks from '@/declarations/hooks'\n\nexport default defineScene({\n  config,\n  variables: {},\n  // next: { scene: '', preserve: true },\n  // initial: Initials[''],\n  // hooks: Hooks[''],\n})(({ label, goto, call, set, condition, next }) => [\n\n])\n`,
+    `import { defineScene } from 'fumika'\nimport config from '@/novel.config'\nimport Initials from '@/declarations/initials'\nimport Hooks from '@/declarations/hooks'\n\nexport default defineScene({\n  config,\n  variables: {},\n  actions: {},\n  next: { scene: '', preserve: true },\n  // initial: Initials[''],\n  // hooks: Hooks[''],\n})(({ label, goto, call, set, condition, next }) => [\n\n])\n`,
 
   characters: (safeName, _relativeDots) =>
     `import { defineCharacter } from 'fumika'\nimport assets from '@/declarations/assets'\n\nexport default defineCharacter(assets)({\n  name: '${safeName}',\n  bases: { },\n  emotions: { }\n})\n`,
@@ -888,8 +888,11 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "    } else if (nodeType === 'NovelSave') {",
   "      const slot = Number(evaluatePin(currentNodeId + '__slot', currentScope) ?? 0)",
   "      if (tabName !== 'command') {",
-  "        console.warn('NovelSave node can only be used in command flows.')",
-  "        outputs.set(currentNodeId + '__result', '')",
+  "        save(slot).then((res) => {",
+  "          outputs.set(currentNodeId + '__result', res)",
+  "        }).catch((e) => {",
+  "          console.error(e)",
+  "        })",
   "      } else {",
   "        let done = false",
   "        let err: any = null",
@@ -910,8 +913,11 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "    } else if (nodeType === 'NovelLoadSave') {",
   "      const slot = Number(evaluatePin(currentNodeId + '__slot', currentScope) ?? 0)",
   "      if (tabName !== 'command') {",
-  "        console.warn('NovelLoadSave node can only be used in command flows.')",
-  "        outputs.set(currentNodeId + '__result', '')",
+  "        load(slot).then((res) => {",
+  "          outputs.set(currentNodeId + '__result', res)",
+  "        }).catch((e) => {",
+  "          console.error(e)",
+  "        })",
   "      } else {",
   "        let done = false",
   "        let err: any = null",
@@ -931,8 +937,11 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "      }",
   "    } else if (nodeType === 'NovelSaveEnv') {",
   "      if (tabName !== 'command') {",
-  "        console.warn('NovelSaveEnv node can only be used in command flows.')",
-  "        outputs.set(currentNodeId + '__result', '')",
+  "        saveEnv().then((res) => {",
+  "          outputs.set(currentNodeId + '__result', res)",
+  "        }).catch((e) => {",
+  "          console.error(e)",
+  "        })",
   "      } else {",
   "        let done = false",
   "        let err: any = null",
@@ -952,8 +961,11 @@ export const BLUEPRINT_RUNTIME_CODE = [
   "      }",
   "    } else if (nodeType === 'NovelLoadEnv') {",
   "      if (tabName !== 'command') {",
-  "        console.warn('NovelLoadEnv node can only be used in command flows.')",
-  "        outputs.set(currentNodeId + '__result', '')",
+  "        loadEnv().then((res) => {",
+  "          outputs.set(currentNodeId + '__result', res)",
+  "        }).catch((e) => {",
+  "          console.error(e)",
+  "        })",
   "      } else {",
   "        let done = false",
   "        let err: any = null",
@@ -1156,13 +1168,13 @@ async function checkDataplyValue(key: string): Promise<boolean> {
   return val !== null
 }
 
-let activeNovel: Novel | null = null
+let activeNovel: Novel<any> | null = null
 
-export function setNovel(novel: Novel): void {
+export function setNovel(novel: Novel<any>): void {
   activeNovel = novel
 }
 
-function getNovel(): Novel {
+function getNovel(): Novel<any> {
   if (!activeNovel) {
     throw new Error('SaveManager has not been initialized with a Novel instance. Call setNovel(novel) first.')
   }

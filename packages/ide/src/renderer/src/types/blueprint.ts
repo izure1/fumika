@@ -1060,8 +1060,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'slot', label: 'Slot', direction: 'input', pinType: 'data', dataType: 'number' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
       { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
-    ],
-    allowedTabs: ['command']
+    ]
   },
   {
     type: 'NovelLoadSave',
@@ -1073,8 +1072,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'slot', label: 'Slot', direction: 'input', pinType: 'data', dataType: 'number' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
       { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
-    ],
-    allowedTabs: ['command']
+    ]
   },
   {
     type: 'NovelSaveEnv',
@@ -1085,8 +1083,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
       { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
-    ],
-    allowedTabs: ['command']
+    ]
   },
   {
     type: 'NovelLoadEnv',
@@ -1097,8 +1094,7 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'exec-in', label: '▶', direction: 'input', pinType: 'exec' },
       { id: 'exec-out', label: '▶', direction: 'output', pinType: 'exec' },
       { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
-    ],
-    allowedTabs: ['command']
+    ]
   }
 ]
 

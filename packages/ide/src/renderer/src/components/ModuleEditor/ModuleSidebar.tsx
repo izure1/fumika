@@ -8,6 +8,7 @@ import {
   NODE_CATALOG,
   NODE_CATEGORY_COLORS,
   type NodeCategory,
+  PIN_COLORS,
 } from '../../types/blueprint'
 import { ModuleDefPanel } from './ModuleDefPanel'
 
@@ -35,6 +36,16 @@ export function ModuleSidebar({ onAddNode }: Props) {
   const [search, setSearch] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
+  // Premium hover tooltip state
+  const [hoveredNode, setHoveredNode] = useState<{
+    node: typeof NODE_CATALOG[number]
+    rect: DOMRect
+    colors: typeof NODE_CATEGORY_COLORS[NodeCategory]
+    isDisabled: boolean
+    isTabNotAllowed?: boolean
+    isSingletonExists?: boolean
+  } | null>(null)
+
   const { activeTab, graphs } = useModuleStore()
   const currentGraph = graphs[activeTab]
   const currentNodes = currentGraph?.nodes || []
@@ -55,6 +66,29 @@ export function ModuleSidebar({ onAddNode }: Props) {
     e.dataTransfer.effectAllowed = 'move'
   }, [])
 
+  const handleMouseEnter = useCallback((
+    e: React.MouseEvent<HTMLDivElement>,
+    node: typeof NODE_CATALOG[number],
+    colors: typeof NODE_CATEGORY_COLORS[NodeCategory],
+    isDisabled: boolean,
+    isTabNotAllowed: boolean,
+    isSingletonExists: boolean
+  ) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setHoveredNode({
+      node,
+      rect,
+      colors,
+      isDisabled,
+      isTabNotAllowed,
+      isSingletonExists,
+    })
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredNode(null)
+  }, [])
+
   return (
     <div className="w-56 bg-[#141414] border-r border-surface-800 flex flex-col overflow-hidden select-none">
       {/* Sidebar Tab Toggle */}
@@ -65,7 +99,10 @@ export function ModuleSidebar({ onAddNode }: Props) {
               ? 'text-primary-400 border-b-2 border-primary-500 bg-surface-800/30'
               : 'text-surface-500 hover:text-surface-300'
           }`}
-          onClick={() => setSidebarTab('definitions')}
+          onClick={() => {
+            setSidebarTab('definitions')
+            setHoveredNode(null)
+          }}
         >
           Definitions
         </button>
@@ -75,7 +112,10 @@ export function ModuleSidebar({ onAddNode }: Props) {
               ? 'text-primary-400 border-b-2 border-primary-500 bg-surface-800/30'
               : 'text-surface-500 hover:text-surface-300'
           }`}
-          onClick={() => setSidebarTab('nodes')}
+          onClick={() => {
+            setSidebarTab('nodes')
+            setHoveredNode(null)
+          }}
         >
           Nodes
         </button>
@@ -113,7 +153,10 @@ export function ModuleSidebar({ onAddNode }: Props) {
                 <div key={cat.key} className="border-b border-surface-800/50">
                   <button
                     className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-surface-800/30 transition-colors"
-                    onClick={() => toggleCategory(cat.key)}
+                    onClick={() => {
+                      toggleCategory(cat.key)
+                      setHoveredNode(null)
+                    }}
                   >
                     <div
                       className="w-2 h-2 rounded-full shrink-0"
@@ -132,21 +175,14 @@ export function ModuleSidebar({ onAddNode }: Props) {
                   {!isCollapsed && (
                     <div className="pb-1">
                       {nodes.map(node => {
-                        const isTabNotAllowed = node.allowedTabs && !node.allowedTabs.includes(activeTab)
-                        const isSingletonExists = node.singleton && currentNodes.some(n => n.data?.nodeType === node.type)
+                        const isTabNotAllowed = !!(node.allowedTabs && !node.allowedTabs.includes(activeTab))
+                        const isSingletonExists = !!(node.singleton && currentNodes.some(n => n.data?.nodeType === node.type))
                         const isDisabled = isTabNotAllowed || isSingletonExists
-
-                        let tooltip = node.description
-                        if (isTabNotAllowed) {
-                          tooltip = `[${node.allowedTabs?.map(t => t.toUpperCase()).join(', ')} 탭 전용] ${node.description}`
-                        } else if (isSingletonExists) {
-                          tooltip = `[중복 생성 제한] 이 노드는 그래프당 하나만 존재할 수 있습니다.`
-                        }
 
                         return (
                           <div
                             key={node.type}
-                            className={`flex items-center gap-2 mx-1.5 px-2 py-1 rounded transition-colors ${
+                            className={`flex items-center gap-2 mx-1.5 px-2 py-1.5 rounded transition-colors ${
                               isDisabled
                                 ? 'opacity-30 cursor-not-allowed select-none bg-surface-900/10'
                                 : 'cursor-grab hover:bg-surface-800/50 active:cursor-grabbing'
@@ -158,13 +194,15 @@ export function ModuleSidebar({ onAddNode }: Props) {
                                 return
                               }
                               onDragStart(e, node.type)
+                              handleMouseLeave()
                             }}
                             onClick={() => {
                               if (!isDisabled) {
                                 onAddNode(node.type)
                               }
                             }}
-                            title={tooltip}
+                            onMouseEnter={(e) => handleMouseEnter(e, node, colors, isDisabled, isTabNotAllowed, isSingletonExists)}
+                            onMouseLeave={handleMouseLeave}
                           >
                             <div
                               className="w-1 h-4 rounded-full shrink-0"
@@ -186,9 +224,6 @@ export function ModuleSidebar({ onAddNode }: Props) {
                                   </span>
                                 )}
                               </div>
-                              <span className="text-[9px] text-surface-500 truncate">
-                                {node.description}
-                              </span>
                             </div>
                           </div>
                         )
@@ -200,6 +235,97 @@ export function ModuleSidebar({ onAddNode }: Props) {
             })}
           </div>
         </>
+      )}
+
+      {/* Premium Hover Tooltip */}
+      {hoveredNode && (
+        <div
+          className="fixed z-[9999] w-64 p-3 rounded-lg border backdrop-blur-md transition-all duration-150 ease-out pointer-events-none shadow-2xl shadow-black/80 flex flex-col gap-2"
+          style={{
+            left: `${hoveredNode.rect.right + 8}px`,
+            top: `${Math.max(16, Math.min(window.innerHeight - 250 - 16, hoveredNode.rect.top))}px`,
+            backgroundColor: 'rgba(20, 20, 23, 0.95)',
+            borderColor: `${hoveredNode.colors.border}60`,
+          }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between border-b pb-1.5" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="w-1.5 h-3 rounded-sm" style={{ background: hoveredNode.colors.border }} />
+              <span className="text-[12px] font-bold truncate" style={{ color: hoveredNode.colors.text }}>
+                {hoveredNode.node.label}
+              </span>
+            </div>
+            <span className="text-[8px] uppercase tracking-wider font-bold text-surface-500 px-1 py-0.5 rounded bg-surface-900 border border-surface-800">
+              {hoveredNode.node.category}
+            </span>
+          </div>
+
+          {/* Warnings & Restrictions */}
+          {(hoveredNode.isTabNotAllowed || hoveredNode.isSingletonExists) && (
+            <div className="flex flex-col gap-1 p-1.5 rounded bg-red-950/20 border border-red-900/30 text-[9px]">
+              {hoveredNode.isTabNotAllowed && (
+                <div className="text-red-400 font-medium flex items-center gap-1">
+                  ⚠️ [{hoveredNode.node.allowedTabs?.map(t => t.toUpperCase()).join(', ')}] 탭에서만 사용 가능합니다.
+                </div>
+              )}
+              {hoveredNode.isSingletonExists && (
+                <div className="text-amber-400 font-medium flex items-center gap-1">
+                  ⚠️ 이 노드는 이미 배치되어 중복 생성이 제한됩니다.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Description */}
+          <div className="text-[10px] leading-relaxed text-surface-300 whitespace-pre-wrap">
+            {hoveredNode.node.description}
+          </div>
+
+          {/* Pins Spec */}
+          {hoveredNode.node.pins && hoveredNode.node.pins.length > 0 && (
+            <div className="flex flex-col gap-1 mt-1 border-t pt-2" style={{ borderColor: 'rgba(255, 255, 255, 0.06)' }}>
+              <div className="text-[8px] uppercase tracking-wider font-bold text-surface-500">Node Pins</div>
+              <div className="grid grid-cols-2 gap-2 text-[9px] font-mono">
+                {/* Inputs */}
+                <div className="flex flex-col gap-1 border-r pr-1" style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}>
+                  <span className="text-[8px] text-surface-400 font-sans font-semibold">Inputs</span>
+                  {hoveredNode.node.pins.filter(p => p.direction === 'input').length > 0 ? (
+                    hoveredNode.node.pins.filter(p => p.direction === 'input').map(p => (
+                      <div key={p.id} className="flex items-center gap-1 min-w-0">
+                        <div
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ background: PIN_COLORS[p.dataType ?? (p.pinType === 'exec' ? 'exec' : 'any')] ?? PIN_COLORS['any'] }}
+                        />
+                        <span className="truncate text-surface-200" title={p.label}>{p.label}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-[8px] text-surface-600 italic">None</span>
+                  )}
+                </div>
+
+                {/* Outputs */}
+                <div className="flex flex-col gap-1 pl-1">
+                  <span className="text-[8px] text-surface-400 font-sans font-semibold">Outputs</span>
+                  {hoveredNode.node.pins.filter(p => p.direction === 'output').length > 0 ? (
+                    hoveredNode.node.pins.filter(p => p.direction === 'output').map(p => (
+                      <div key={p.id} className="flex items-center gap-1 min-w-0">
+                        <div
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ background: PIN_COLORS[p.dataType ?? (p.pinType === 'exec' ? 'exec' : 'any')] ?? PIN_COLORS['any'] }}
+                        />
+                        <span className="truncate text-surface-200" title={p.label}>{p.label}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-[8px] text-surface-600 italic">None</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
