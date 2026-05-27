@@ -91,6 +91,9 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
     { key: 'name', label: 'Global Name', type: 'text', placeholder: 'global variable name' },
   ],
   SetState: [],
+  ToString: [],
+  ToBoolean: [],
+  ToNumber: [],
   BindEvent: [
     { key: 'eventType', label: 'Event', type: 'select', options: [
       { value: 'click', label: 'click' },

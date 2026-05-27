@@ -675,6 +675,36 @@ export const NODE_CATALOG: BlueprintNodeDef[] = [
       { id: 'values', label: 'Values', direction: 'output', pinType: 'data', dataType: 'array' }
     ]
   },
+  {
+    type: 'ToString',
+    label: 'To String',
+    category: 'utility',
+    description: '값을 문자열로 변환합니다.',
+    pins: [
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'string' }
+    ]
+  },
+  {
+    type: 'ToBoolean',
+    label: 'To Boolean',
+    category: 'utility',
+    description: '값을 불리언으로 변환합니다.',
+    pins: [
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'boolean' }
+    ]
+  },
+  {
+    type: 'ToNumber',
+    label: 'To Number',
+    category: 'utility',
+    description: '값을 숫자로 변환합니다.',
+    pins: [
+      { id: 'value', label: 'Value', direction: 'input', pinType: 'data', dataType: 'any' },
+      { id: 'result', label: 'Result', direction: 'output', pinType: 'data', dataType: 'number' }
+    ]
+  },
 
   // ── Object ─────────────────────────────────────────────────
   {

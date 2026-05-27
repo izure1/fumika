@@ -483,6 +483,8 @@ export const useModuleStore = create<ModuleStoreState>((set) => ({
       initialData = { value: '' }
     } else if (nodeType === 'NovelLoadEnv') {
       initialData = { value: '' }
+    } else if (nodeType === 'ToString' || nodeType === 'ToBoolean' || nodeType === 'ToNumber') {
+      initialData = { value: '' }
     }
 
     const newNode: Node = {
