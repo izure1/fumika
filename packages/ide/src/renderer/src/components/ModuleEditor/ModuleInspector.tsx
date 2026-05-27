@@ -151,6 +151,20 @@ const NODE_INSPECTOR_FIELDS: Record<string, InspectorField[]> = {
   ],
   AddChild: [],
   GetCamera: [],
+  CanvasToWorld: [
+    { key: 'x', label: 'X Coordinate', type: 'number' },
+    { key: 'y', label: 'Y Coordinate', type: 'number' },
+    { key: 'targetZ', label: 'Target Z', type: 'number' },
+  ],
+  CanvasToLocal: [
+    { key: 'x', label: 'X Coordinate', type: 'number' },
+    { key: 'y', label: 'Y Coordinate', type: 'number' },
+    { key: 'targetZ', label: 'Target Z', type: 'number' },
+  ],
+  CalcDepthRatio: [
+    { key: 'targetZ', label: 'Target Z', type: 'number' },
+    { key: 'value', label: 'Value', type: 'number' },
+  ],
   RemoveChild: [],
   RemoveObject: [
     { key: 'child', label: 'Child', type: 'boolean' },
