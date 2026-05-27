@@ -1061,10 +1061,15 @@ export const BLUEPRINT_RUNTIME_CODE = [
 
 export const RUNTIME_CONTENT = `export function isWindowsEnv(): boolean {
   const isNode = typeof process !== 'undefined' && process.versions && process.versions.node
-  const isElectron = typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron')
   const isWin = (typeof process !== 'undefined' && process.platform === 'win32') || 
                 (typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('win'))
-  return !!(isNode || isElectron) && isWin
+  const isClient = typeof window !== 'undefined'
+  const hasRequire = typeof (globalThis as any).require !== 'undefined'
+
+  if (isClient && !hasRequire) {
+    return false
+  }
+  return !!isNode && isWin
 }
 
 export function isWebEnv(): boolean {
