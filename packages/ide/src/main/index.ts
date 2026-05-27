@@ -7,7 +7,7 @@ import sharp from 'sharp'
 import prettier from 'prettier'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { scaffoldProject, updateProject, ensureEffectsFiles, buildProject } from './services/project'
+import { scaffoldProject, updateProject, ensureEffectsFiles, buildProject, getProjectFileSpecs } from './services/project'
 import { ProjectWatcher } from './services/watcher'
 import { PreviewService } from './services/preview'
 import { settingsService } from './services/settings'
@@ -196,13 +196,17 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('project:update', async (_, projectPath: string) => {
+  ipcMain.handle('project:update', async (_, projectPath: string, overrideFiles: string[] = []) => {
     try {
-      await updateProject(projectPath)
+      await updateProject(projectPath, overrideFiles)
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
     }
+  })
+
+  ipcMain.handle('project:getFileSpecs', async () => {
+    return { success: true, specs: getProjectFileSpecs() }
   })
 
   ipcMain.handle('project:selectIcon', async (_, projectPath: string) => {

@@ -2,8 +2,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { execFile, spawn } from 'child_process'
 import prettier from 'prettier'
-import licenseContent from '../../../LICENSE?raw'
-import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, getDeclarationTemplate, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent, RUNTIME_CONTENT, SAVE_MANAGER_CONTENT, BLUEPRINT_RUNTIME_CODE } from '../../shared/templates'
+import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent, RUNTIME_CONTENT, SAVE_MANAGER_CONTENT, BLUEPRINT_RUNTIME_CODE } from '../../shared/templates'
 
 async function runCommandLive(
   cmd: string,
@@ -190,93 +189,128 @@ export async function ensureProjectDependencies(targetDir: string, options?: Par
   }
 }
 
-export async function ensureProjectStructure(targetDir: string, options?: Partial<ProjectOptions>): Promise<void> {
+// ─── 프로젝트 파일 룩업 테이블 ────────────────────────────────────
+// overwriteIfExists: true  → 파일이 이미 있어도 항상 최신 템플릿으로 덮어씀
+// overwriteIfExists: false → 파일이 이미 있으면 건드리지 않음 (사용자 수정 보호)
+// UI에서 overrideFiles 목록을 넘기면 해당 relativePath는 강제 덮어씀
+
+interface ProjectFileContext {
+  width: number
+  height: number
+  gameName: string
+}
+
+export interface ProjectFileSpec {
+  /** 프로젝트 루트 기준 상대 경로 (키로도 사용) */
+  relativePath: string
+  /** UI에 표시될 사람이 읽기 쉬운 이름 */
+  label: string
+  /** 파일 내용 생성 함수 */
+  getContent: (ctx: ProjectFileContext) => string
+  /** true면 파일이 이미 있어도 최신 템플릿으로 덮어씀 (기본값) */
+  overwriteIfExists: boolean
+}
+
+const PROJECT_FILE_SPECS: ProjectFileSpec[] = [
+  // ─── config & core ────────────────────────────────────
+  {
+    relativePath: 'novel.config.ts',
+    label: 'novel.config.ts',
+    getContent: (ctx) => getNovelConfigContent(ctx.width, ctx.height),
+    overwriteIfExists: false,
+  },
+  {
+    relativePath: 'main.ts',
+    label: 'main.ts',
+    getContent: () => MAIN_TS_CONTENT,
+    overwriteIfExists: false,
+  },
+  {
+    relativePath: 'index.html',
+    label: 'index.html',
+    getContent: (ctx) => getIndexHtmlContent(ctx.gameName),
+    overwriteIfExists: false,
+  },
+  {
+    relativePath: 'vite.config.ts',
+    label: 'vite.config.ts',
+    getContent: () => getViteConfigContent(),
+    overwriteIfExists: false,
+  },
+
+  // ─── helpers ──────────────────────────────────────────
+  // helpers 파일은 사용자가 직접 수정할 수 있으므로 기본적으로 덮어쓰지 않음
+  // blueprintRuntime.ts는 IDE가 자동 생성하는 코드이므로 항상 최신으로 갱신
+  {
+    relativePath: 'helpers/Runtime.ts',
+    label: 'helpers/Runtime.ts',
+    getContent: () => RUNTIME_CONTENT,
+    overwriteIfExists: true,
+  },
+  {
+    relativePath: 'helpers/SaveManager.ts',
+    label: 'helpers/SaveManager.ts',
+    getContent: () => SAVE_MANAGER_CONTENT,
+    overwriteIfExists: true,
+  },
+  {
+    relativePath: 'helpers/blueprintRuntime.ts',
+    label: 'helpers/blueprintRuntime.ts',
+    getContent: () => BLUEPRINT_RUNTIME_CODE,
+    overwriteIfExists: true,
+  },
+]
+
+/**
+ * UI에서 파일 목록을 조회할 수 있도록 spec의 직렬화 가능한 부분만 반환합니다.
+ */
+export function getProjectFileSpecs(): Array<{ relativePath: string; label: string; overwriteIfExists: boolean }> {
+  return PROJECT_FILE_SPECS.map(({ relativePath, label, overwriteIfExists }) => ({
+    relativePath,
+    label,
+    overwriteIfExists,
+  }))
+}
+
+export async function ensureProjectStructure(
+  targetDir: string,
+  options?: Partial<ProjectOptions>,
+  overrideFiles: string[] = []
+): Promise<void> {
   for (const folder of DEFAULT_FOLDERS) {
-    const dirPath = path.join(targetDir, folder)
-    await fs.mkdir(dirPath, { recursive: true })
-  }
-
-  const declareFiles = ['assets', 'scenes', 'sceneKeys', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks', 'audios', 'initials', 'hooks']
-  for (const file of declareFiles) {
-    const filePath = path.join(targetDir, 'declarations', `${file}.ts`)
-    try {
-      await fs.access(filePath)
-    } catch {
-      await fs.writeFile(filePath, getDeclarationTemplate(file as any), 'utf-8')
-    }
-  }
-
-  const typesDeclPath = path.join(targetDir, 'declarations', 'types.d.ts')
-  try {
-    await fs.access(typesDeclPath)
-  } catch {
-    await fs.writeFile(typesDeclPath, getDeclarationTemplate('types'), 'utf-8')
+    await fs.mkdir(path.join(targetDir, folder), { recursive: true })
   }
 
   await ensureEffectsFiles(targetDir)
 
-  // 기본 설정 파일 및 코어 파일 생성
-  const width = options?.width ?? 1920
-  const height = options?.height ?? 1080
-  const gameName = options?.gameName ?? 'My Novel Project'
-
-  const configPath = path.join(targetDir, 'novel.config.ts')
-  const mainPath = path.join(targetDir, 'main.ts')
-
-  try {
-    await fs.access(configPath)
-  } catch {
-    await fs.writeFile(configPath, getNovelConfigContent(width, height), 'utf-8')
+  const ctx: ProjectFileContext = {
+    width: options?.width ?? 1920,
+    height: options?.height ?? 1080,
+    gameName: options?.gameName ?? 'My Novel Project',
   }
 
-  try {
-    await fs.access(mainPath)
-  } catch {
-    await fs.writeFile(mainPath, MAIN_TS_CONTENT, 'utf-8')
-  }
+  const overrideSet = new Set(overrideFiles)
 
-  const indexPath = path.join(targetDir, 'index.html')
-  try {
-    await fs.access(indexPath)
-  } catch {
-    await fs.writeFile(indexPath, getIndexHtmlContent(gameName), 'utf-8')
-  }
+  for (const spec of PROJECT_FILE_SPECS) {
+    const filePath = path.join(targetDir, spec.relativePath)
+    await fs.mkdir(path.dirname(filePath), { recursive: true })
 
-  const licensePath = path.join(targetDir, 'LICENSE')
-  try {
-    await fs.access(licensePath)
-  } catch {
-    await fs.writeFile(licensePath, licenseContent, 'utf-8')
-  }
+    const shouldOverwrite = spec.overwriteIfExists || overrideSet.has(spec.relativePath)
 
-  const viteConfigPath = path.join(targetDir, 'vite.config.ts')
-  try {
-    await fs.access(viteConfigPath)
-  } catch {
-    await fs.writeFile(viteConfigPath, getViteConfigContent(), 'utf-8')
+    if (shouldOverwrite) {
+      await fs.writeFile(filePath, spec.getContent(ctx), 'utf-8')
+    } else {
+      try {
+        await fs.access(filePath)
+      } catch {
+        await fs.writeFile(filePath, spec.getContent(ctx), 'utf-8')
+      }
+    }
   }
-
-  const runtimeHelperPath = path.join(targetDir, 'helpers', 'Runtime.ts')
-  try {
-    await fs.access(runtimeHelperPath)
-  } catch {
-    await fs.writeFile(runtimeHelperPath, RUNTIME_CONTENT, 'utf-8')
-  }
-
-  const saveManagerHelperPath = path.join(targetDir, 'helpers', 'SaveManager.ts')
-  try {
-    await fs.access(saveManagerHelperPath)
-  } catch {
-    await fs.writeFile(saveManagerHelperPath, SAVE_MANAGER_CONTENT, 'utf-8')
-  }
-
-  const blueprintRuntimeHelperPath = path.join(targetDir, 'helpers', 'blueprintRuntime.ts')
-  await fs.writeFile(blueprintRuntimeHelperPath, BLUEPRINT_RUNTIME_CODE, 'utf-8')
 }
 
-export async function updateProject(targetDir: string): Promise<void> {
-  await ensureProjectStructure(targetDir)
-  // Force update by passing true
+export async function updateProject(targetDir: string, overrideFiles: string[] = []): Promise<void> {
+  await ensureProjectStructure(targetDir, undefined, overrideFiles)
   await ensureProjectDependencies(targetDir, undefined, true)
 }
 

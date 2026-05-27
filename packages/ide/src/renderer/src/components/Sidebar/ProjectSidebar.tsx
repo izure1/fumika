@@ -86,6 +86,19 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
   }
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null)
 
+  // ─── 의존성 업데이트 다이얼로그 상태 ──────────────────────────────
+  interface FileSpecItem {
+    relativePath: string
+    label: string
+    overwriteIfExists: boolean
+  }
+  interface UpdateDialogState {
+    isOpen: boolean
+    specs: FileSpecItem[]
+    checked: Set<string>
+  }
+  const [updateDialog, setUpdateDialog] = useState<UpdateDialogState | null>(null)
+
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
   const [lastSelected, setLastSelected] = useState<string | null>(null)
 
@@ -304,27 +317,34 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
 
   const handleUpdateProject = async () => {
     if (!projectPath) return
-    
+
+    // 파일 스펙 목록을 먼저 조회해서 체크박스 다이얼로그 표시
+    const res = await window.api.project.getFileSpecs()
+    if (!res.success || !res.specs) return
+
+    // 기본 체크: overwriteIfExists=true인 파일은 미리 체크
+    const defaultChecked = new Set(
+      res.specs.filter(s => s.overwriteIfExists).map(s => s.relativePath)
+    )
+    setUpdateDialog({ isOpen: true, specs: res.specs, checked: defaultChecked })
+  }
+
+  const handleUpdateConfirm = async () => {
+    if (!projectPath || !updateDialog) return
+    const overrideFiles = Array.from(updateDialog.checked)
+    setUpdateDialog(null)
+    setGlobalLoading(true)
+    const res = await window.api.project.update(projectPath, overrideFiles)
+    setGlobalLoading(false)
     setConfirmState({
       isOpen: true,
-      title: '프로젝트 업데이트',
-      message: '프로젝트의 누락된 설정 파일을 복구하고 \n최신 버전의 엔진 의존성을 설치하시겠습니까?\n\n(이 작업은 네트워크 환경에 따라 수십 초 정도 소요될 수 있습니다)',
-      type: 'info',
-      onConfirm: async () => {
-        setConfirmState(null)
-        setGlobalLoading(true)
-        const res = await window.api.project.update(projectPath)
-        setGlobalLoading(false)
-        
-        setConfirmState({
-          isOpen: true,
-          title: res.success ? '업데이트 완료' : '업데이트 실패',
-          message: res.success ? '프로젝트 의존성이 성공적으로 업데이트되었습니다!' : `업데이트 중 오류가 발생했습니다:\n${res.error}`,
-          type: res.success ? 'info' : 'danger',
-          showCancel: false,
-          onConfirm: () => setConfirmState(null)
-        })
-      }
+      title: res.success ? '업데이트 완료' : '업데이트 실패',
+      message: res.success
+        ? '프로젝트 의존성이 성공적으로 업데이트되었습니다!'
+        : `업데이트 중 오류가 발생했습니다:\n${res.error}`,
+      type: res.success ? 'info' : 'danger',
+      showCancel: false,
+      onConfirm: () => setConfirmState(null)
     })
   }
 
@@ -865,6 +885,90 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
         onConfirm={() => confirmState?.onConfirm()}
         onCancel={() => setConfirmState(null)}
       />
+
+      {/* 의존성 업데이트 — 파일 덮어쓰기 선택 다이얼로그 */}
+      {updateDialog?.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-900 border border-surface-700 rounded-xl shadow-2xl w-[480px] max-h-[80vh] flex flex-col">
+            {/* 헤더 */}
+            <div className="px-6 py-4 border-b border-surface-700">
+              <h3 className="text-base font-semibold text-surface-100">프로젝트 업데이트</h3>
+              <p className="mt-1 text-xs text-surface-400 leading-relaxed">
+                최신 엔진 의존성을 설치하고 누락된 파일을 복구합니다.<br />
+                <span className="text-yellow-400">이미 존재하는 파일</span>은 기본적으로 건드리지 않습니다.
+                덮어쓸 파일을 직접 선택하세요.
+              </p>
+            </div>
+
+            {/* 파일 목록 */}
+            <div className="flex-1 overflow-y-auto px-6 py-3 custom-scrollbar space-y-1">
+              {updateDialog.specs.map(spec => {
+                const isAlwaysOn = spec.overwriteIfExists
+                const isChecked = isAlwaysOn || updateDialog.checked.has(spec.relativePath)
+                return (
+                  <label
+                    key={spec.relativePath}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors select-none ${
+                      isAlwaysOn
+                        ? 'cursor-not-allowed opacity-60 bg-primary-600/10'
+                        : isChecked
+                          ? 'bg-primary-600/20 cursor-pointer'
+                          : 'hover:bg-surface-800 cursor-pointer'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 accent-primary-500 shrink-0"
+                      checked={isChecked}
+                      disabled={isAlwaysOn}
+                      onChange={() => {
+                        if (isAlwaysOn) return
+                        setUpdateDialog(prev => {
+                          if (!prev) return prev
+                          const next = new Set(prev.checked)
+                          if (next.has(spec.relativePath)) next.delete(spec.relativePath)
+                          else next.add(spec.relativePath)
+                          return { ...prev, checked: next }
+                        })
+                      }}
+                    />
+                    <span className="flex-1 min-w-0 block">
+                      <span className="text-xs font-mono text-surface-200 truncate">{spec.label}</span>
+                    </span>
+                    {isAlwaysOn && (
+                      <span className="shrink-0 text-[10px] text-primary-400">자동 갱신 대상</span>
+                    )}
+                    {isChecked && !isAlwaysOn && (
+                      <span className="shrink-0 text-[10px] text-yellow-400 font-medium">덮어씀</span>
+                    )}
+                  </label>
+                )
+              })}
+            </div>
+
+            {/* 푸터 */}
+            <div className="px-6 py-4 border-t border-surface-700 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-surface-500">
+                {updateDialog.checked.size}개 파일 갱신 예정 · 네트워크에 따라 수십 초 소요
+              </p>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => setUpdateDialog(null)}
+                  className="px-4 py-2 text-xs rounded-lg bg-surface-700 text-surface-300 hover:bg-surface-600 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleUpdateConfirm}
+                  className="px-4 py-2 text-xs rounded-lg bg-primary-600 text-white hover:bg-primary-500 transition-colors font-medium"
+                >
+                  업데이트 시작
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

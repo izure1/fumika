@@ -10,7 +10,8 @@ const api = {
   project: {
     scaffold: (targetDir: string, options: { folderName: string, gameName: string, projectId: string, processName: string, width: number, height: number }) => ipcRenderer.invoke('project:scaffold', targetDir, options),
     load: (projectPath: string) => ipcRenderer.invoke('project:load', projectPath),
-    update: (projectPath: string) => ipcRenderer.invoke('project:update', projectPath),
+    update: (projectPath: string, overrideFiles: string[] = []) => ipcRenderer.invoke('project:update', projectPath, overrideFiles),
+    getFileSpecs: () => ipcRenderer.invoke('project:getFileSpecs'),
     build: (projectPath: string, options?: { target: string }) => ipcRenderer.invoke('project:build', projectPath, options),
     selectIcon: (projectPath: string) => ipcRenderer.invoke('project:selectIcon', projectPath),
     getTypes: (projectPath: string) => ipcRenderer.invoke('project:getTypes', projectPath),
