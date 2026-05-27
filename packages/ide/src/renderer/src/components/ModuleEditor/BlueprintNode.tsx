@@ -88,7 +88,6 @@ function inferPinDataType(val: unknown): PinDataType {
 
 function BlueprintNodeInner({ id, data, selected }: NodeProps): React.JSX.Element | null {
   const nodeType = data.nodeType as string
-  const nodes = useModuleStore((s) => s.graphs[s.activeTab]?.nodes ?? [])
   const edges = useModuleStore((s) => s.graphs[s.activeTab]?.edges ?? [])
   const definitions = useModuleStore((s) => s.definitions)
 

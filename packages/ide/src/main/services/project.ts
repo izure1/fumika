@@ -271,11 +271,7 @@ export async function ensureProjectStructure(targetDir: string, options?: Partia
   }
 
   const blueprintRuntimeHelperPath = path.join(targetDir, 'helpers', 'blueprintRuntime.ts')
-  try {
-    await fs.access(blueprintRuntimeHelperPath)
-  } catch {
-    await fs.writeFile(blueprintRuntimeHelperPath, BLUEPRINT_RUNTIME_CODE, 'utf-8')
-  }
+  await fs.writeFile(blueprintRuntimeHelperPath, BLUEPRINT_RUNTIME_CODE, 'utf-8')
 }
 
 export async function updateProject(targetDir: string): Promise<void> {
