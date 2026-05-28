@@ -16,7 +16,7 @@ declare global {
         getTypes: (projectPath: string) => Promise<{ success: boolean; types?: { path: string; content: string }[]; error?: string }>
         checkTypes: (projectPath: string) => Promise<{ success: boolean; errorMap?: Record<string, { line: number; message: string }[]>; error?: string }>
         getTsFileCache: () => Promise<{ success: boolean; files?: { path: string; content: string }[]; error?: string }>
-        build: (projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean }) => Promise<{ success: boolean; error?: string }>
+        build: (projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean, devTools?: boolean }) => Promise<{ success: boolean; error?: string }>
         selectIcon: (projectPath: string) => Promise<{ success: boolean; error?: string }>
       }
       preview: {

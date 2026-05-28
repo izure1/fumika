@@ -248,7 +248,7 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('project:build', async (event, projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean }) => {
+  ipcMain.handle('project:build', async (event, projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean, devTools?: boolean }) => {
     try {
       await watcher.compileAllBlueprints(projectPath)
       const iconPath = path.join(projectPath, 'assets', 'icon.png')

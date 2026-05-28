@@ -10,7 +10,7 @@ type MainCategory = 'web' | 'windows' | 'android'
 interface BuildDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (target: BuildTarget, options?: { resizable?: boolean, installer?: boolean }) => void
+  onConfirm: (target: BuildTarget, options?: { resizable?: boolean, installer?: boolean, devTools?: boolean }) => void
 }
 
 export function BuildDialog({ isOpen, onClose, onConfirm }: BuildDialogProps) {

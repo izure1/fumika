@@ -230,7 +230,7 @@ export function getIndexHtmlContent(opts: IndexHtmlOptions | string): string {
 `
 }
 
-export function getElectronMainContent(width: number, height: number, resizable: boolean): string {
+export function getElectronMainContent(width: number, height: number, resizable: boolean, devTools?: boolean): string {
   return `const { app, BrowserWindow } = require('electron')
 
 app.whenReady().then(() => {
@@ -253,6 +253,7 @@ app.whenReady().then(() => {
   }
 
   win.loadFile('index.html')
+  ${devTools ? '\n  win.webContents.openDevTools()\n' : ''}
 })
 
 app.on('window-all-closed', () => {
@@ -1109,15 +1110,16 @@ export const BLUEPRINT_RUNTIME_CODE = [
 
 export const RUNTIME_CONTENT = `export function isWindowsEnv(): boolean {
   const isNode = typeof process !== 'undefined' && process.versions && process.versions.node
+  const isElectron = typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron')
   const isWin = (typeof process !== 'undefined' && process.platform === 'win32') || 
                 (typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('win'))
   const isClient = typeof window !== 'undefined'
   const hasRequire = typeof (globalThis as any).require !== 'undefined'
 
-  if (isClient && !hasRequire) {
+  if (isClient && !hasRequire && !isElectron) {
     return false
   }
-  return !!isNode && isWin
+  return (!!isNode || isElectron) && isWin
 }
 
 export function isWebEnv(): boolean {

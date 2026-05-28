@@ -72,7 +72,7 @@ export function DebugToolbar() {
     }
   }
 
-  const runBuild = async (target: BuildTarget, options?: { resizable?: boolean, installer?: boolean }) => {
+  const runBuild = async (target: BuildTarget, options?: { resizable?: boolean, installer?: boolean, devTools?: boolean }) => {
     if (!projectPath || isBuilding) return
     setIsBuilding(true)
     setPanelOpen(true)

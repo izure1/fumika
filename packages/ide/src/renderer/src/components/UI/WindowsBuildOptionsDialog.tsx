@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 export interface WindowsBuildOptions {
   resizable: boolean
   installer: boolean
+  devTools: boolean
 }
 
 interface WindowsBuildOptionsDialogProps {
@@ -14,6 +15,7 @@ interface WindowsBuildOptionsDialogProps {
 
 export function WindowsBuildOptionsDialog({ isOpen, onClose, onConfirm }: WindowsBuildOptionsDialogProps) {
   const [isResizable, setIsResizable] = useState(false)
+  const [isDevToolsEnabled, setIsDevToolsEnabled] = useState(false)
   const [buildType, setBuildType] = useState<'portable' | 'installer'>('portable')
 
   useEffect(() => {
@@ -86,6 +88,19 @@ export function WindowsBuildOptionsDialog({ isOpen, onClose, onConfirm }: Window
                 <span className="text-[10px] text-surface-400">체크 시 플레이어가 창 크기를 임의로 조절할 수 있습니다. (비율 유지)</span>
               </div>
             </label>
+
+            <label className="flex items-center gap-2 p-3 border border-surface-700 bg-surface-900 rounded cursor-pointer hover:border-surface-600 transition-colors">
+              <input
+                type="checkbox"
+                checked={isDevToolsEnabled}
+                onChange={(e) => setIsDevToolsEnabled(e.target.checked)}
+                className="w-4 h-4 rounded text-primary-500 bg-surface-800 border-surface-600 focus:ring-primary-500 focus:ring-offset-surface-900"
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-surface-200">개발자 도구 포함 (DevTools)</span>
+                <span className="text-[10px] text-surface-400">체크 시 실행 파일에 개발자 도구가 포함되며 실행 시 함께 열립니다.</span>
+              </div>
+            </label>
           </div>
         </div>
 
@@ -100,7 +115,8 @@ export function WindowsBuildOptionsDialog({ isOpen, onClose, onConfirm }: Window
             onClick={() => {
               onConfirm({
                 resizable: isResizable,
-                installer: buildType === 'installer'
+                installer: buildType === 'installer',
+                devTools: isDevToolsEnabled
               })
             }}
             className="px-4 py-2 text-sm font-semibold rounded bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"

@@ -12,7 +12,7 @@ const api = {
     load: (projectPath: string) => ipcRenderer.invoke('project:load', projectPath),
     update: (projectPath: string, overrideFiles: string[] = []) => ipcRenderer.invoke('project:update', projectPath, overrideFiles),
     getFileSpecs: () => ipcRenderer.invoke('project:getFileSpecs'),
-    build: (projectPath: string, options?: { target: string }) => ipcRenderer.invoke('project:build', projectPath, options),
+    build: (projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean, devTools?: boolean }) => ipcRenderer.invoke('project:build', projectPath, options),
     selectIcon: (projectPath: string) => ipcRenderer.invoke('project:selectIcon', projectPath),
     getTypes: (projectPath: string) => ipcRenderer.invoke('project:getTypes', projectPath),
     checkTypes: (projectPath: string) => ipcRenderer.invoke('project:checkTypes', projectPath),

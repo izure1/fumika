@@ -341,7 +341,7 @@ async function copyProjectAssets(targetDir: string, outDir: string) {
 /**
  * 프로젝트 빌드 (Vite 정적 웹 빌드 및 플랫폼별 패키징)
  */
-export async function buildProject(targetDir: string, options?: { target: string, resizable?: boolean, installer?: boolean }, onLog?: (msg: string) => void): Promise<string> {
+export async function buildProject(targetDir: string, options?: { target: string, resizable?: boolean, installer?: boolean, devTools?: boolean }, onLog?: (msg: string) => void): Promise<string> {
   const log = (msg: string) => {
     console.log(msg)
     if (onLog) onLog(msg)
@@ -513,7 +513,7 @@ export async function buildProject(targetDir: string, options?: { target: string
           const builderConfigPath = path.join(targetDir, 'electron-builder.json')
           await fs.writeFile(builderConfigPath, getElectronBuilderConfigContent(electronVersion, outDir, outWindowsDir, !!options?.installer, appId, appProductName, appAuthor), 'utf-8')
 
-          const mainJsContent = getElectronMainContent(width, height, !!options?.resizable)
+          const mainJsContent = getElectronMainContent(width, height, !!options?.resizable, !!options?.devTools)
           await fs.writeFile(path.join(distPath, 'main.js'), mainJsContent, 'utf-8')
 
           log('[IDE] Ensuring electron and electron-builder are installed...')
