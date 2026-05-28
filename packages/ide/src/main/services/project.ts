@@ -358,6 +358,7 @@ export async function buildProject(targetDir: string, options?: { target: string
   let appVersion = '1.0.0'
   let appAuthor = 'Fumika'
   let appDescription = 'Fumika Visual Novel'
+  let appDependencies: Record<string, string> = {}
   try {
     const projectPkgContent = await fs.readFile(path.join(targetDir, 'package.json'), 'utf-8')
     const projectPkg = JSON.parse(projectPkgContent)
@@ -367,6 +368,7 @@ export async function buildProject(targetDir: string, options?: { target: string
     if (projectPkg.version) appVersion = projectPkg.version
     if (projectPkg.author) appAuthor = projectPkg.author
     if (projectPkg.description) appDescription = projectPkg.description
+    if (projectPkg.dependencies) appDependencies = projectPkg.dependencies
   } catch (e) {
     log(`[IDE] Warning: Could not read package.json for app info: ${e}`)
   }
@@ -496,7 +498,7 @@ export async function buildProject(targetDir: string, options?: { target: string
 
           const distPath = path.join(targetDir, outDir)
           // 앱 런타임 구동용 package.json
-          await fs.writeFile(path.join(distPath, 'package.json'), getAppPackageJsonContent(appName, appProductName, appVersion, appAuthor, appDescription), 'utf-8')
+          await fs.writeFile(path.join(distPath, 'package.json'), getAppPackageJsonContent(appName, appProductName, appVersion, appAuthor, appDescription, appDependencies), 'utf-8')
 
           // electron 버전 추출
           let electronVersion = '28.2.0'

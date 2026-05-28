@@ -534,18 +534,22 @@ app.whenReady().then(() => {
 
   ipcMain.handle('fs:deleteFile', async (_, targetPath: string) => {
     try {
-      await shell.trashItem(targetPath)
+      const normalizedPath = path.normalize(targetPath)
+      await shell.trashItem(normalizedPath)
       return { success: true }
     } catch (error: any) {
+      console.error('[IDE] fs:deleteFile error:', error)
       return { success: false, error: error.message }
     }
   })
 
   ipcMain.handle('fs:deleteDir', async (_, targetPath: string) => {
     try {
-      await shell.trashItem(targetPath)
+      const normalizedPath = path.normalize(targetPath)
+      await shell.trashItem(normalizedPath)
       return { success: true }
     } catch (error: any) {
+      console.error('[IDE] fs:deleteDir error:', error)
       return { success: false, error: error.message }
     }
   })

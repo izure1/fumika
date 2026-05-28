@@ -241,8 +241,8 @@ app.whenReady().then(() => {
     resizable: ${resizable ? 'true' : 'false'},
     autoHideMenuBar: true,
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true
+      nodeIntegration: true,
+      contextIsolation: false
     }
   })
   
@@ -262,13 +262,28 @@ app.on('window-all-closed', () => {
 `
 }
 
-export function getAppPackageJsonContent(name?: string, productName?: string, version?: string, author?: string, description?: string): string {
+export function getAppPackageJsonContent(
+  name?: string,
+  productName?: string,
+  version?: string,
+  author?: string,
+  description?: string,
+  dependencies?: Record<string, string>
+): string {
+  const deps: Record<string, string> = {}
+  if (dependencies && dependencies['document-dataply']) {
+    deps['document-dataply'] = dependencies['document-dataply']
+  } else {
+    deps['document-dataply'] = '^0.0.1'
+  }
+
   return JSON.stringify({
     name: name || 'fumika-game',
     version: version || '1.0.0',
     main: 'main.js',
     author: author || 'Fumika',
-    description: description || productName || 'Fumika Visual Novel'
+    description: description || productName || 'Fumika Visual Novel',
+    dependencies: deps
   }, null, 2)
 }
 
@@ -1188,8 +1203,13 @@ async function getDataplyDb(): Promise<any> {
   if (dataplyDb) {
     return dataplyDb
   }
-  // @ts-ignore
-  const mod = await import(/* @vite-ignore */ 'document-dataply')
+  let mod: any
+  if (typeof (globalThis as any).require !== 'undefined') {
+    mod = (globalThis as any).require('document-dataply')
+  } else {
+    // @ts-ignore
+    mod = await import(/* @vite-ignore */ 'document-dataply')
+  }
   const db = mod.DocumentDataply.Define()
     .Options({ wal: 'save.wal' })
     .Open('save.db')

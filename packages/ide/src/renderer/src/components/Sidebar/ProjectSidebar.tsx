@@ -442,18 +442,45 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
       type: 'danger',
       onConfirm: async () => {
         setConfirmState(null)
+        let hasError = false
+        let errorMessage = ''
+        
         for (const fullPath of targetPaths) {
           const isDirectory = !fullPath.match(/\.[^/.]+$/)
           if (isDirectory) {
-            await window.api.fs.deleteDir(fullPath)
-            window.dispatchEvent(new CustomEvent('dir-deleted', { detail: { path: fullPath } }))
+            const res = await window.api.fs.deleteDir(fullPath)
+            if (res.success) {
+              window.dispatchEvent(new CustomEvent('dir-deleted', { detail: { path: fullPath } }))
+            } else {
+              hasError = true
+              errorMessage = res.error || '알 수 없는 오류가 발생했습니다.'
+              break
+            }
           } else {
-            await window.api.fs.deleteFile(fullPath)
-            window.dispatchEvent(new CustomEvent('file-deleted', { detail: { path: fullPath } }))
-            if (activeFile === fullPath) setActiveFile(null)
+            const res = await window.api.fs.deleteFile(fullPath)
+            if (res.success) {
+              window.dispatchEvent(new CustomEvent('file-deleted', { detail: { path: fullPath } }))
+              if (activeFile === fullPath) setActiveFile(null)
+            } else {
+              hasError = true
+              errorMessage = res.error || '알 수 없는 오류가 발생했습니다.'
+              break
+            }
           }
         }
-        if (isMultiDelete) setSelectedFiles(new Set())
+        
+        if (hasError) {
+          setConfirmState({
+            isOpen: true,
+            title: '삭제 실패',
+            message: `항목을 휴지통으로 이동하는 데 실패했습니다:\n${errorMessage}`,
+            type: 'danger',
+            showCancel: false,
+            onConfirm: () => setConfirmState(null)
+          })
+        }
+        
+        if (isMultiDelete && !hasError) setSelectedFiles(new Set())
         fetchFiles()
       }
     })
