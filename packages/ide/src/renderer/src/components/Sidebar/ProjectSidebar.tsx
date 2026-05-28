@@ -432,8 +432,8 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     if (targetPaths.length === 0) return
 
     const confirmMessage = isMultiDelete
-      ? `선택된 ${targetPaths.length}개 항목을 모두 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
-      : `정말 '${node.name}'을(를) 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+      ? `선택된 ${targetPaths.length}개 항목을 모두 삭제하시겠습니까?\n삭제된 항목은 휴지통으로 이동합니다.`
+      : `정말 '${node.name}'을(를) 삭제하시겠습니까?\n삭제된 항목은 휴지통으로 이동합니다.`
 
     setConfirmState({
       isOpen: true,

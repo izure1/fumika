@@ -534,7 +534,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('fs:deleteFile', async (_, targetPath: string) => {
     try {
-      await fs.unlink(targetPath)
+      await shell.trashItem(targetPath)
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
@@ -543,7 +543,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('fs:deleteDir', async (_, targetPath: string) => {
     try {
-      await fs.rm(targetPath, { recursive: true, force: true })
+      await shell.trashItem(targetPath)
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
