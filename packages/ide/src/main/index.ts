@@ -17,6 +17,13 @@ const watcher = new ProjectWatcher()
 const previewService = new PreviewService()
 let mainWindow: BrowserWindow | null = null
 
+// ── 타입 파일 인메모리 캐시 ──
+// node_modules mtime 기반으로 무효화. 프로세스 생존 기간 동안 유효.
+const typeScanCache = new Map<string, {
+  mtime: number
+  types: { path: string, content: string }[]
+}>()
+
 const originalLog = console.log
 const originalError = console.error
 const originalWarn = console.warn
@@ -348,59 +355,86 @@ app.whenReady().then(() => {
 
   ipcMain.handle('project:getTypes', async (_, projectPath: string) => {
     try {
-      const types: { path: string, content: string }[] = []
       const nodeModulesDir = path.join(projectPath, 'node_modules')
 
-      const readTypesRecursively = async (currentPath: string, relativeRoot: string) => {
+      // ── 1. 캐시 유효성 검사 (node_modules mtime 기반) ──
+      let nodeModulesMtime = 0
+      try {
+        const stat = await fs.stat(nodeModulesDir)
+        nodeModulesMtime = stat.mtimeMs
+      } catch {
+        return { success: true, types: [] } // node_modules 없으면 스킵
+      }
+
+      const cached = typeScanCache.get(projectPath)
+      if (cached && cached.mtime === nodeModulesMtime) {
+        console.log(`[IDE] getTypes cache hit: ${cached.types.length} files`)
+        return { success: true, types: cached.types }
+      }
+
+      // ── 2. 병렬 재귀 스캔 (패키지 내부 엔트리를 Promise.all로 처리) ──
+      const scanPackage = async (currentPath: string, relativeRoot: string): Promise<{ path: string, content: string }[]> => {
         try {
           const entries = await fs.readdir(currentPath, { withFileTypes: true })
-          for (const entry of entries) {
-            if (entry.name === 'node_modules') continue // Skip nested node_modules
-            const entryPath = path.join(currentPath, entry.name)
-            const relPath = `${relativeRoot}/${entry.name}`
-
-            if (entry.isDirectory()) {
-              await readTypesRecursively(entryPath, relPath)
-            } else if (entry.name.endsWith('.d.ts') || entry.name === 'package.json') {
-              const content = await fs.readFile(entryPath, 'utf-8')
-              types.push({ path: relPath, content })
-            }
-          }
-        } catch (e) {
-          // Ignore missing folders or read errors
+          const results = await Promise.all(
+            entries.map(async (entry) => {
+              if (entry.name === 'node_modules') return []
+              const entryPath = path.join(currentPath, entry.name)
+              const relPath = `${relativeRoot}/${entry.name}`
+              if (entry.isDirectory()) {
+                return scanPackage(entryPath, relPath)
+              }
+              if (entry.name.endsWith('.d.ts') || entry.name === 'package.json') {
+                const content = await fs.readFile(entryPath, 'utf-8')
+                return [{ path: relPath, content }]
+              }
+              return []
+            })
+          )
+          return results.flat()
+        } catch {
+          return []
         }
       }
 
-      // node_modules 아래의 모든 실제 폴더를 감지하여 스캔 목록에 추가
-      const deps = new Set<string>()
+      // ── 3. 전체 패키지 목록 수집 ──
+      const deps: string[] = []
       try {
         const dirEntries = await fs.readdir(nodeModulesDir, { withFileTypes: true })
-        for (const entry of dirEntries) {
-          if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== '.bin') {
+        await Promise.all(
+          dirEntries.map(async (entry) => {
+            if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === '.bin') return
             if (entry.name.startsWith('@')) {
-              // @types/* 와 같은 네임스페이스 폴더 감지 및 하위 모듈 추가
               const nsPath = path.join(nodeModulesDir, entry.name)
               const nsEntries = await fs.readdir(nsPath, { withFileTypes: true })
-              for (const nsEntry of nsEntries) {
-                if (nsEntry.isDirectory()) {
-                  deps.add(`${entry.name}/${nsEntry.name}`)
-                }
-              }
+              nsEntries.forEach((nsEntry) => {
+                if (nsEntry.isDirectory()) deps.push(`${entry.name}/${nsEntry.name}`)
+              })
             } else {
-              deps.add(entry.name)
+              deps.push(entry.name)
             }
-          }
-        }
+          })
+        )
       } catch (e) {
-        console.warn('[IDE] Failed to read node_modules for dynamic types:', e)
+        console.warn('[IDE] Failed to read node_modules:', e)
       }
 
-      for (const dep of deps) {
-        const depPath = path.join(nodeModulesDir, dep)
-        await readTypesRecursively(depPath, dep)
+      // ── 4. 배치 병렬 스캔 (fd 고갈 방지: 동시성 20 제한) ──
+      const CONCURRENCY = 20
+      const allTypes: { path: string, content: string }[] = []
+      for (let i = 0; i < deps.length; i += CONCURRENCY) {
+        const batch = deps.slice(i, i + CONCURRENCY)
+        const batchResults = await Promise.all(
+          batch.map((dep) => scanPackage(path.join(nodeModulesDir, dep), dep))
+        )
+        batchResults.forEach((r) => allTypes.push(...r))
       }
 
-      return { success: true, types }
+      // ── 5. 캐시 저장 ──
+      typeScanCache.set(projectPath, { mtime: nodeModulesMtime, types: allTypes })
+      console.log(`[IDE] getTypes scan complete: ${allTypes.length} files from ${deps.length} packages`)
+
+      return { success: true, types: allTypes }
     } catch (error: any) {
       return { success: false, error: error.message }
     }
