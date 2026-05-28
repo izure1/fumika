@@ -139,6 +139,7 @@ export type NovelModule<TCmd = any, TSchema extends Record<string, any> = any, T
 export function define<TCmd, TSchema extends Record<string, any> = Record<string, any>, THook extends ListenerSignature<THook> = DefaultHook>(schema?: TSchema): NovelModule<TCmd, TSchema, THook> {
   let _onUpdate: ((data: TSchema, ctx?: SceneContext) => void) | null = null
   let _moduleKey: string | null = null
+  let _activeCtx: SceneContext | null = null
 
   // 이 모듈 전용 훅 시스템 (target 객체 기반 로컬 훅)
   const _hookerTarget = {}
@@ -151,7 +152,10 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
   const setState: SetStateFn<TSchema> = (partial) => {
     const updates = typeof partial === 'function' ? partial(data) : partial
     Object.assign(data, updates)
-    _onUpdate?.(data)
+    _onUpdate?.(data, _activeCtx ?? undefined)
+    if (_activeCtx && _moduleKey) {
+      _activeCtx.state.set(_moduleKey, { ...data })
+    }
   }
 
   // ─── 내부 핸들러 참조 ─────────────────────────────────────
@@ -178,12 +182,16 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
       handler: (cmd: TCmd, ctx: SceneContext, state: Readonly<TSchema>, setState: SetStateFn<TSchema>) => Generator<CommandResult, CommandResult, any>
     ): NovelModule<TCmd, TSchema, THook> {
       _handlerFn = function* (rawParams: any, ctx: SceneContext) {
+        _activeCtx = ctx
         const resolved = resolveParams(rawParams, ctx)
         // 커맨드 실행 시점의 ctx를 onUpdate에 전달하기 위해 setState를 래핑
         const ctxSetState: SetStateFn<TSchema> = (partial) => {
           const updates = typeof partial === 'function' ? partial(data) : partial
           Object.assign(data, updates)
           _onUpdate?.(data, ctx)
+          if (_moduleKey) {
+            ctx.state.set(_moduleKey, { ...data })
+          }
         }
         const gen = handler(resolved as TCmd, ctx, data, ctxSetState)
         let res = gen.next()
@@ -209,6 +217,7 @@ export function define<TCmd, TSchema extends Record<string, any> = Record<string
        * `__viewBuilder`: Novel 엔진이 씬 시작 / 세이브 로드 시 직접 호출.
        */
       _viewBuilderFn = (ctx: SceneContext, mergedData: TSchema): UIRuntimeEntry<TSchema> => {
+        _activeCtx = ctx
         // 기존 상태(data)를 스키마 기본값으로 초기화하여 이전 씬/세이브의 잔여 상태를 제거합니다.
         for (const key of Object.keys(data)) {
           delete (data as any)[key]

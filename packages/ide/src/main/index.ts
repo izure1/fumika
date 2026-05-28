@@ -348,30 +348,58 @@ app.whenReady().then(() => {
 
   ipcMain.handle('project:getTypes', async (_, projectPath: string) => {
     try {
-      const typesDir = path.join(projectPath, 'node_modules', 'fumika', 'dist', 'types')
-
       const types: { path: string, content: string }[] = []
+      const nodeModulesDir = path.join(projectPath, 'node_modules')
 
-      const readTypesRecursively = async (currentPath: string, relativeRoot: string = '') => {
+      const readTypesRecursively = async (currentPath: string, relativeRoot: string) => {
         try {
           const entries = await fs.readdir(currentPath, { withFileTypes: true })
           for (const entry of entries) {
+            if (entry.name === 'node_modules') continue // Skip nested node_modules
             const entryPath = path.join(currentPath, entry.name)
-            const relPath = relativeRoot ? `${relativeRoot}/${entry.name}` : entry.name
+            const relPath = `${relativeRoot}/${entry.name}`
 
             if (entry.isDirectory()) {
               await readTypesRecursively(entryPath, relPath)
-            } else if (entry.name.endsWith('.d.ts')) {
+            } else if (entry.name.endsWith('.d.ts') || entry.name === 'package.json') {
               const content = await fs.readFile(entryPath, 'utf-8')
               types.push({ path: relPath, content })
             }
           }
         } catch (e) {
-          console.error('[IDE] Failed to read types dir:', currentPath, e)
+          // Ignore missing folders or read errors
         }
       }
 
-      await readTypesRecursively(typesDir)
+      // node_modules 아래의 모든 실제 폴더를 감지하여 스캔 목록에 추가
+      const deps = new Set<string>()
+      try {
+        const dirEntries = await fs.readdir(nodeModulesDir, { withFileTypes: true })
+        for (const entry of dirEntries) {
+          if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== '.bin') {
+            if (entry.name.startsWith('@')) {
+              // @types/* 와 같은 네임스페이스 폴더 감지 및 하위 모듈 추가
+              const nsPath = path.join(nodeModulesDir, entry.name)
+              const nsEntries = await fs.readdir(nsPath, { withFileTypes: true })
+              for (const nsEntry of nsEntries) {
+                if (nsEntry.isDirectory()) {
+                  deps.add(`${entry.name}/${nsEntry.name}`)
+                }
+              }
+            } else {
+              deps.add(entry.name)
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[IDE] Failed to read node_modules for dynamic types:', e)
+      }
+
+      for (const dep of deps) {
+        const depPath = path.join(nodeModulesDir, dep)
+        await readTypesRecursively(depPath, dep)
+      }
+
       return { success: true, types }
     } catch (error: any) {
       return { success: false, error: error.message }

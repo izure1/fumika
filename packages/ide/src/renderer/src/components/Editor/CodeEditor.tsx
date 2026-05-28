@@ -202,18 +202,12 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
           }
         }
 
-        // ── 2. fumika 타입 파일 ──
+        // ── 2. 의존 모듈 타입 파일 주입 ──
         if (typesRes.success && typesRes.types) {
           for (const type of typesRes.types) {
-            const absPath = projectPath + '\\node_modules\\fumika\\dist\\types\\' + type.path.replace(/\//g, '\\')
+            const absPath = projectPath + '\\node_modules\\' + type.path.replace(/\//g, '\\')
             ts.typescriptDefaults.addExtraLib(type.content, toFileUri(absPath))
           }
-
-          const fumikaIndexUri = toFileUri(projectPath + '\\node_modules\\fumika\\index.d.ts')
-          ts.typescriptDefaults.addExtraLib(
-            `export * from './dist/types/index'`,
-            fumikaIndexUri
-          )
         }
       } catch (e) {
         console.error('Failed to inject project files:', e)

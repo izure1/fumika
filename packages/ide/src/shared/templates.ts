@@ -463,6 +463,9 @@ interface MyHook {
 }
 
 export default define<MyCmd, MySchema, MyHook>({ })
+  .onBoot(async (world) => {
+    // 이 모듈이 로드되었을 때 딱 한 번 실행됩니다.
+  })
   .defineCommand(function* (cmd, ctx, state, setState) {
     // 커맨드 구현
   })
