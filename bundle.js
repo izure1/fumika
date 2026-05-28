@@ -729,13 +729,17 @@
   function define2(schema) {
     let _onUpdate = null;
     let _moduleKey = null;
+    let _activeCtx = null;
     const _hookerTarget = {};
     const _hooker = useHookallSync(_hookerTarget);
     const data = { ...schema ?? {} };
     const setState = (partial) => {
       const updates = typeof partial === "function" ? partial(data) : partial;
       Object.assign(data, updates);
-      _onUpdate?.(data);
+      _onUpdate?.(data, _activeCtx ?? void 0);
+      if (_activeCtx && _moduleKey) {
+        _activeCtx.state.set(_moduleKey, { ...data });
+      }
     };
     let _handlerFn = null;
     let _viewBuilderFn = null;
@@ -763,11 +767,15 @@
       },
       defineCommand(handler) {
         _handlerFn = function* (rawParams, ctx) {
+          _activeCtx = ctx;
           const resolved = resolveParams(rawParams, ctx);
           const ctxSetState = (partial) => {
             const updates = typeof partial === "function" ? partial(data) : partial;
             Object.assign(data, updates);
             _onUpdate?.(data, ctx);
+            if (_moduleKey) {
+              ctx.state.set(_moduleKey, { ...data });
+            }
           };
           const gen = handler(resolved, ctx, data, ctxSetState);
           let res = gen.next();
@@ -787,6 +795,7 @@
       },
       defineView(builder) {
         _viewBuilderFn = (ctx, mergedData) => {
+          _activeCtx = ctx;
           for (const key of Object.keys(data)) {
             delete data[key];
           }
