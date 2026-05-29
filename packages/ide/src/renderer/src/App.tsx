@@ -16,6 +16,7 @@ import welcomeFumika from './assets/welcome/char_fumika.png'
 import welcomeBg from './assets/welcome/bg.png'
 import welcomeSakura from './assets/welcome/particle_sakura.png'
 import { ToastContainer } from './components/UI/Toast'
+import { UpdateNotification } from './components/UI/UpdateNotification'
 
 interface WelcomeSceneProps {
   onOpenProject: () => Promise<void>;
@@ -374,6 +375,7 @@ function App() {
           onCancel={() => setNewProjectData(null)}
         />
         <LoadingOverlay />
+        <UpdateNotification />
         <ToastContainer />
       </div>
     )
@@ -426,6 +428,7 @@ function App() {
 
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <LoadingOverlay />
+      <UpdateNotification />
       <ToastContainer />
     </div>
   )

@@ -18,6 +18,7 @@ interface ProjectState {
   themeColor: ThemeColor
   themeBg: ThemeBg
   formatOnSave: boolean
+  autoUpdate: boolean
   isSettingsOpen: boolean
   isGraphOpen: boolean
   pendingLine: number | null
@@ -33,6 +34,7 @@ interface ProjectState {
   setThemeColor: (color: ThemeColor) => void
   setThemeBg: (bg: ThemeBg) => void
   setFormatOnSave: (format: boolean) => void
+  setAutoUpdate: (enabled: boolean) => void
   setIsSettingsOpen: (open: boolean) => void
   setIsGraphOpen: (open: boolean) => void
   setPendingLine: (line: number | null) => void
@@ -52,6 +54,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   themeColor: 'amber',
   themeBg: 'neutral',
   formatOnSave: true,
+  autoUpdate: true,
   isSettingsOpen: false,
   isGraphOpen: false,
   pendingLine: null,
@@ -82,6 +85,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ formatOnSave: format })
     window.api.settings.set({ formatOnSave: format }).catch(console.error)
   },
+  setAutoUpdate: (enabled) => {
+    set({ autoUpdate: enabled })
+    window.api.settings.set({ autoUpdate: enabled }).catch(console.error)
+  },
   setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
   setIsGraphOpen: (open) => set({ isGraphOpen: open }),
   setPendingLine: (line) => set({ pendingLine: line }),
@@ -95,7 +102,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         set({ 
           themeColor: res.settings.themeColor || 'amber',
           themeBg: res.settings.themeBg || 'neutral',
-          formatOnSave: res.settings.formatOnSave ?? true
+          formatOnSave: res.settings.formatOnSave ?? true,
+          autoUpdate: res.settings.autoUpdate ?? true
         })
       }
     } catch (e) {

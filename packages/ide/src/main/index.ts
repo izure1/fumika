@@ -1,4 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, dialog, protocol, Notification } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import path, { join } from 'node:path'
 import { promises as fs } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -596,6 +597,64 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  // ── Auto Updater Configuration ──
+  autoUpdater.logger = console
+  if (is.dev) {
+    autoUpdater.updateConfigPath = path.join(__dirname, '../../dev-app-update.yml')
+    autoUpdater.forceDevUpdateConfig = true
+  }
+
+  autoUpdater.on('checking-for-update', () => {
+    mainWindow?.webContents.send('updater:checking-for-update')
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    mainWindow?.webContents.send('updater:update-available', info)
+  })
+
+  autoUpdater.on('update-not-available', (info) => {
+    mainWindow?.webContents.send('updater:update-not-available', info)
+  })
+
+  autoUpdater.on('error', (err) => {
+    mainWindow?.webContents.send('updater:error', err?.message || String(err))
+  })
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    mainWindow?.webContents.send('updater:download-progress', progressObj)
+  })
+
+  autoUpdater.on('update-downloaded', (info) => {
+    mainWindow?.webContents.send('updater:update-downloaded', info)
+  })
+
+  ipcMain.handle('updater:checkForUpdates', async () => {
+    try {
+      const result = await autoUpdater.checkForUpdates()
+      return { success: true, result }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('updater:quitAndInstall', () => {
+    autoUpdater.quitAndInstall()
+  })
+
+  ipcMain.handle('updater:getAppVersion', () => {
+    return app.getVersion()
+  })
+
+  // 자동 업데이트 설정이 켜져있다면, 시작 후 5초 뒤 자동 검사 실행
+  const settings = settingsService.getSettings()
+  if (settings.autoUpdate) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch((err) => {
+        console.error('[Updater] Failed to run startup check:', err)
+      })
+    }, 5000)
+  }
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

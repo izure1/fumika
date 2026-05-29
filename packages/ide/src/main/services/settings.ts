@@ -6,12 +6,14 @@ export interface IdeSettings {
   themeColor: 'indigo' | 'rose' | 'emerald' | 'amber' | 'sky' | 'violet'
   themeBg: 'slate' | 'zinc' | 'neutral' | 'stone' | 'gray'
   formatOnSave?: boolean
+  autoUpdate?: boolean
 }
 
 const DEFAULT_SETTINGS: IdeSettings = {
   themeColor: 'amber',
   themeBg: 'neutral',
-  formatOnSave: true
+  formatOnSave: true,
+  autoUpdate: true
 }
 
 export class SettingsService {

@@ -58,6 +58,17 @@ declare global {
       output: {
         onOutputLog: (callback: (data: { channel: string; message: string }) => void) => () => void
       }
+      updater: {
+        checkForUpdates: () => Promise<any>
+        quitAndInstall: () => Promise<void>
+        getAppVersion: () => Promise<string>
+        onCheckingForUpdate: (callback: () => void) => () => void
+        onUpdateAvailable: (callback: (info: any) => void) => () => void
+        onUpdateNotAvailable: (callback: (info: any) => void) => () => void
+        onDownloadProgress: (callback: (progress: any) => void) => () => void
+        onUpdateDownloaded: (callback: (info: any) => void) => () => void
+        onError: (callback: (error: string) => void) => () => void
+      }
     }
   }
 }
