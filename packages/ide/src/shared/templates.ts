@@ -11,19 +11,19 @@ export type EffectType = typeof EFFECT_TYPES[number]
 const EFFECT_PARTICLE_PRESETS: Record<EffectType, Record<string, any>> = {
   dust: {
     attribute: { frictionAir: 0, gravityScale: 0.001 },
-    style: { width: 10, height: 10, blendMode: 'lighter' }
+    style: { width: 15, height: 15, blendMode: 'lighter' }
   },
   rain: {
     attribute: { gravityScale: 1.5 },
     style: { width: 25, height: 100, opacity: 1, blendMode: 'screen' }
   },
   snow: {
-    attribute: { gravityScale: 0.01, frictionAir: 0 },
-    style: { width: 32, height: 32, blendMode: 'screen' }
+    attribute: { gravityScale: 0.06, frictionAir: 0 },
+    style: { width: 124, height: 124, blendMode: 'screen' }
   },
   sakura: {
     attribute: { gravityScale: 0.02, frictionAir: 0.001 },
-    style: { width: 32, height: 32, blendMode: 'screen' }
+    style: { width: 48, height: 48, blendMode: 'screen' }
   },
   sparkle: {
     attribute: { gravityScale: 0.1 },
@@ -31,15 +31,15 @@ const EFFECT_PARTICLE_PRESETS: Record<EffectType, Record<string, any>> = {
   },
   fog: {
     attribute: { frictionAir: 0, gravityScale: 0.003 },
-    style: { width: 120, height: 120, blendMode: 'screen' }
+    style: { width: 180, height: 180, blendMode: 'screen' }
   },
   leaves: {
     attribute: { gravityScale: 0.1, frictionAir: 0.005 },
-    style: { width: 40, height: 40, blendMode: 'screen' }
+    style: { width: 60, height: 60, blendMode: 'screen' }
   },
   fireflies: {
     attribute: { gravityScale: -0.015, frictionAir: 0.001 },
-    style: { width: 50, height: 50, blendMode: 'lighter' }
+    style: { width: 75, height: 75, blendMode: 'lighter' }
   },
 }
 
