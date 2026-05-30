@@ -196,6 +196,15 @@ app.whenReady().then(() => {
 
   ipcMain.handle('project:load', async (_, projectPath: string) => {
     try {
+      const configPath = path.join(projectPath, 'novel.config.ts')
+      const packageJsonPath = path.join(projectPath, 'package.json')
+      try {
+        await fs.access(configPath)
+        await fs.access(packageJsonPath)
+      } catch {
+        throw new Error('올바른 Fumika 프로젝트 폴더가 아닙니다. novel.config.ts 또는 package.json 파일이 존재하지 않습니다.')
+      }
+
       await ensureEffectsFiles(projectPath)
       await watcher.start(projectPath, mainWindow ?? undefined)
       return { success: true }

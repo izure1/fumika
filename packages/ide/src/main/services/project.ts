@@ -2,7 +2,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { execFile, spawn } from 'child_process'
 import prettier from 'prettier'
-import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent, RUNTIME_CONTENT, SAVE_MANAGER_CONTENT, BLUEPRINT_RUNTIME_CODE } from '../../shared/templates'
+import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent, RUNTIME_CONTENT, SAVE_MANAGER_CONTENT, BLUEPRINT_RUNTIME_CODE, getDeclarationTemplate } from '../../shared/templates'
 
 async function runCommandLive(
   cmd: string,
@@ -99,6 +99,50 @@ export async function ensureEffectsFiles(targetDir: string) {
         })
       } catch (e) {
         console.warn('[IDE] Failed to format effect file:', e)
+      }
+      await fs.writeFile(filePath, content, 'utf-8')
+    }
+  }
+}
+
+export async function ensureDeclarationsFiles(targetDir: string) {
+  const declDir = path.join(targetDir, 'declarations')
+  try {
+    await fs.access(declDir)
+  } catch {
+    await fs.mkdir(declDir, { recursive: true })
+  }
+
+  const DECLARATION_KEYS = [
+    'assets',
+    'scenes',
+    'sceneKeys',
+    'characters',
+    'modules',
+    'backgrounds',
+    'effects',
+    'fallbacks',
+    'audios',
+    'types',
+    'initials',
+    'hooks'
+  ]
+
+  for (const key of DECLARATION_KEYS) {
+    const filePath = path.join(declDir, `${key}.ts`)
+    try {
+      await fs.access(filePath)
+    } catch {
+      let content = getDeclarationTemplate(key)
+      try {
+        content = await prettier.format(content, {
+          parser: 'typescript',
+          semi: false,
+          singleQuote: true,
+          trailingComma: 'none'
+        })
+      } catch (e) {
+        console.warn(`[IDE] Failed to format declaration file (${key}):`, e)
       }
       await fs.writeFile(filePath, content, 'utf-8')
     }
@@ -282,6 +326,7 @@ export async function ensureProjectStructure(
   }
 
   await ensureEffectsFiles(targetDir)
+  await ensureDeclarationsFiles(targetDir)
 
   const ctx: ProjectFileContext = {
     width: options?.width ?? 1920,

@@ -70,7 +70,10 @@ export function CharacterFormEditor({ content, onChange, filePath }: Props) {
   }
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null)
   
-  const handleBrowseImage = async (onSelect: (src: string) => void) => {
+  const handleBrowseImage = async (
+    getTargetPath: (fileName: string, ext: string) => { dest: string; src: string },
+    onSelect: (src: string) => void
+  ) => {
     if (!projectPath) return
     const defaultPath = `${projectPath}/assets`.replace(/\\/g, '/')
     const paths = await window.api.dialog.openFile({
@@ -93,13 +96,13 @@ export function CharacterFormEditor({ content, onChange, filePath }: Props) {
         onSelect(selectedPath)
       } else {
         const fileName = selectedPath.split('/').pop() || 'unnamed.png'
-        const charBasename = filePath.replace(/\\/g, '/').split('/').pop()?.split('.')[0] || 'unnamed'
-        const destPath = `${projPath}/assets/characters/${charBasename}/${fileName}`
+        const ext = fileName.split('.').pop() || 'png'
+        const { dest, src } = getTargetPath(fileName, ext)
+        const destPath = `${projPath}/assets/${dest}`
         
         await window.api.fs.copyFile(selectedPath, destPath)
         
-        const importedSrc = `characters/${charBasename}/${fileName}`
-        onSelect(importedSrc)
+        onSelect(src)
       }
     }
   }
@@ -784,7 +787,18 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
                       placeholder="예: characters/fumika/base/idle.png"
                     />
                     <button
-                      onClick={() => handleBrowseImage((src) => updateChar(prev => { prev.bases[activeBase].src = src; return prev }))}
+                      onClick={() =>
+                        handleBrowseImage(
+                          (fileName, ext) => {
+                            const charBasename = filePath.replace(/\\/g, '/').split('/').pop()?.split('.')[0] || 'unnamed'
+                            return {
+                              dest: `characters/${charBasename}/bases/${activeBase}.${ext}`,
+                              src: `characters/${charBasename}/bases/${activeBase}.${ext}`
+                            }
+                          },
+                          (src) => updateChar(prev => { prev.bases[activeBase].src = src; return prev })
+                        )
+                      }
                       className="px-2 bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded text-surface-300 transition-colors flex items-center justify-center shrink-0"
                       title="탐색기에서 열기"
                     >
@@ -901,7 +915,18 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
                         placeholder="이미지 src"
                       />
                       <button
-                        onClick={() => handleBrowseImage((src) => updateChar(prev => { prev.emotions[activeEmotion][ptName] = src; return prev }))}
+                        onClick={() =>
+                          handleBrowseImage(
+                            (fileName, ext) => {
+                              const charBasename = filePath.replace(/\\/g, '/').split('/').pop()?.split('.')[0] || 'unnamed'
+                              return {
+                                dest: `characters/${charBasename}/emotions/${ptName}/${activeEmotion}.${ext}`,
+                                src: `characters/${charBasename}/emotions/${ptName}/${activeEmotion}.${ext}`
+                              }
+                            },
+                            (src) => updateChar(prev => { prev.emotions[activeEmotion][ptName] = src; return prev })
+                          )
+                        }
                         className="px-2 bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded text-surface-300 transition-colors flex items-center justify-center shrink-0"
                         title="탐색기에서 열기"
                       >

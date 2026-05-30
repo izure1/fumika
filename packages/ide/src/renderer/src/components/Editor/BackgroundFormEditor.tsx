@@ -82,10 +82,12 @@ export function BackgroundFormEditor({ content, onChange, filePath }: Props) {
         finalSrc = withoutAssets
         setPreviewAbsPath(selectedPath)
       } else {
-        const fileName = selectedPath.split('/').pop() || 'unnamed'
-        const destPath = `${projPath}/assets/backgrounds/${fileName}`
+        const fileName = selectedPath.split('/').pop() || 'unnamed.png'
+        const ext = fileName.split('.').pop() || 'png'
+        const bgBasename = filePath.replace(/\\/g, '/').split('/').pop()?.split('.')[0] || 'unnamed'
+        const destPath = `${projPath}/assets/backgrounds/${bgBasename}.${ext}`
         await window.api.fs.copyFile(selectedPath, destPath)
-        finalSrc = `backgrounds/${fileName}`
+        finalSrc = `backgrounds/${bgBasename}.${ext}`
         setPreviewAbsPath(destPath)
       }
       
