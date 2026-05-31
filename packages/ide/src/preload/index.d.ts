@@ -18,6 +18,31 @@ declare global {
         getTsFileCache: () => Promise<{ success: boolean; files?: { path: string; content: string }[]; error?: string }>
         build: (projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean, devTools?: boolean }) => Promise<{ success: boolean; error?: string }>
         selectIcon: (projectPath: string) => Promise<{ success: boolean; error?: string }>
+        parseScenes: (filePaths: string[], projectPath?: string) => Promise<{
+          success: boolean
+          scenes?: {
+            path: string
+            parsed: {
+              flowItems: {
+                kind: 'label' | 'goto' | 'call' | 'next' | 'condition'
+                name?: string
+                target?: string
+                id?: number
+                expression?: string
+                line: number
+                ifBranch?: any[]
+                elseBranch?: any[]
+              }[]
+              externalConnections: {
+                type: 'next' | 'call'
+                target: string
+                conditional: boolean
+              }[]
+              error?: string
+            }
+          }[]
+          error?: string
+        }>
       }
       preview: {
         start: (projectPath: string, targetScene?: string) => Promise<{ success: boolean; url?: string; error?: string }>

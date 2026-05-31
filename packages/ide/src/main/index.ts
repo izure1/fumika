@@ -13,6 +13,7 @@ import { ProjectWatcher } from './services/watcher'
 import { PreviewService } from './services/preview'
 import { settingsService } from './services/settings'
 import { checkProjectTypes } from './services/typescript'
+import { parseSceneFile } from './services/sceneParser'
 
 const watcher = new ProjectWatcher()
 const previewService = new PreviewService()
@@ -320,6 +321,20 @@ app.whenReady().then(() => {
     try {
       const errorMap = await checkProjectTypes(projectPath)
       return { success: true, errorMap }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('project:parseScenes', async (_, filePaths: string[], projectPath?: string) => {
+    try {
+      const results = await Promise.all(
+        filePaths.map(async (filePath) => {
+          const parsed = await parseSceneFile(filePath, projectPath)
+          return { path: filePath, parsed }
+        })
+      )
+      return { success: true, scenes: results }
     } catch (error: any) {
       return { success: false, error: error.message }
     }

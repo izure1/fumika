@@ -789,7 +789,7 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
                     <button
                       onClick={() =>
                         handleBrowseImage(
-                          (fileName, ext) => {
+                          (_fileName, ext) => {
                             const charBasename = filePath.replace(/\\/g, '/').split('/').pop()?.split('.')[0] || 'unnamed'
                             return {
                               dest: `characters/${charBasename}/bases/${activeBase}.${ext}`,
@@ -917,7 +917,7 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
                       <button
                         onClick={() =>
                           handleBrowseImage(
-                            (fileName, ext) => {
+                            (_fileName, ext) => {
                               const charBasename = filePath.replace(/\\/g, '/').split('/').pop()?.split('.')[0] || 'unnamed'
                               return {
                                 dest: `characters/${charBasename}/emotions/${ptName}/${activeEmotion}.${ext}`,

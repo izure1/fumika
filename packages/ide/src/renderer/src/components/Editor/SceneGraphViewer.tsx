@@ -27,23 +27,12 @@ interface FileNode {
   children?: FileNode[]
 }
 
-interface SceneConnection {
-  type: 'next' | 'call'
-  target: string
-  conditional: boolean
-}
-
 type FlowItem =
   | { kind: 'label', name: string, line: number }
   | { kind: 'goto', target: string, line: number }
   | { kind: 'call', target: string, line: number }
   | { kind: 'next', target: string, line: number }
   | { kind: 'condition', id: number, expression?: string, ifBranch: FlowItem[], elseBranch: FlowItem[], line: number }
-
-interface ParseResult {
-  flowItems: FlowItem[]
-  externalConnections: SceneConnection[]
-}
 
 interface HandleInfo {
   id: string
@@ -113,15 +102,17 @@ function SceneBlockComponent({ data, id }: NodeProps) {
   const [hoveredParentLine, setHoveredParentLine] = useState<{ sourceRi: number, targetRi: number, color: string } | null>(null)
   const [hoveredCondition, setHoveredCondition] = useState<{ ri: number, expr: string, raw: string, color: string } | null>(null)
 
-  const rowCount = Math.max(1, rows.length)
+  const rowCount = data.error ? 2 : Math.max(1, rows.length)
   const totalHeight = HEADER_H + ROWS_PAD_TOP * 2 + rowCount * ROW_STRIDE
 
   return (
     <div
-      className={`group relative backdrop-blur-md border rounded-lg shadow-xl transition-[border-color,box-shadow,background-color] duration-300 hover:shadow-primary-500/15 hover:border-primary-500/40 ${
+      className={`group relative backdrop-blur-md border rounded-lg shadow-xl transition-[border-color,box-shadow,background-color] duration-300 ${
         data.highlighted
           ? 'bg-surface-800 border-primary-500 shadow-lg shadow-primary-500/30 z-50'
-          : 'bg-surface-900/95 border-surface-700/60 z-10'
+          : data.error
+            ? 'bg-surface-900/95 border-red-500/40 shadow-red-500/5 hover:border-red-500/70 hover:shadow-red-500/10 z-10'
+            : 'bg-surface-900/95 border-surface-700/60 z-10'
       }`}
       style={{ width: NODE_W, height: totalHeight }}
     >
@@ -130,7 +121,12 @@ function SceneBlockComponent({ data, id }: NodeProps) {
       {/* ── Header ── */}
       <div
         className="relative flex items-center gap-3 px-4 border-b border-surface-700/40 rounded-t-lg"
-        style={{ height: HEADER_H, background: 'linear-gradient(135deg, rgba(139,92,246,0.08), transparent)' }}
+        style={{
+          height: HEADER_H,
+          background: data.error
+            ? 'linear-gradient(135deg, rgba(239,68,68,0.08), transparent)'
+            : 'linear-gradient(135deg, rgba(139,92,246,0.08), transparent)'
+        }}
       >
         {entryHandle && (
           <Handle
@@ -141,13 +137,25 @@ function SceneBlockComponent({ data, id }: NodeProps) {
             style={{ top: HEADER_H / 2, left: -6 }}
           />
         )}
-        <div className="flex items-center justify-center w-7 h-7 rounded-md bg-surface-800/80 border border-surface-700/50 text-primary-400 shrink-0">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-          </svg>
+        <div className={`flex items-center justify-center w-7 h-7 rounded-md bg-surface-800/80 border shrink-0 ${
+          data.error
+            ? 'border-red-500/30 text-red-400'
+            : 'border-surface-700/50 text-primary-400'
+        }`}>
+          {data.error ? (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+            </svg>
+          )}
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-[9px] font-bold text-primary-500/70 uppercase tracking-wider">Scene</span>
+          <span className={`text-[9px] font-bold uppercase tracking-wider ${
+            data.error ? 'text-red-500/70' : 'text-primary-500/70'
+          }`}>Scene</span>
           <span className="text-xs font-bold text-surface-100 font-mono truncate" title={String(data.label || '')}>
             {String(data.label || '')}
           </span>
@@ -428,11 +436,23 @@ function SceneBlockComponent({ data, id }: NodeProps) {
             </div>
           )
         })}
-        {rows.length === 0 && (
+        {data.error ? (
+          <div className="mx-1 px-3 py-2 bg-red-950/40 border border-red-900/40 rounded flex flex-col gap-1 text-[10px] text-red-300">
+            <div className="flex items-center gap-1.5 font-bold text-red-400">
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              평가 실패 (Evaluation Failed)
+            </div>
+            <div className="font-mono text-[9px] line-clamp-3 leading-normal break-all" title={String(data.error)}>
+              {String(data.error)}
+            </div>
+          </div>
+        ) : rows.length === 0 ? (
           <div className="h-7 flex items-center justify-center text-[10px] text-surface-500 italic">
             (empty)
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
@@ -527,172 +547,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], direction = 'LR') {
   return { nodes: layoutedNodes, edges }
 }
 
-// ─── Bracket-depth-tracking scene parser ─────────────────────
-
-function extractStringArg(content: string, start: number): { value: string, end: number } | null {
-  let i = start
-  while (i < content.length && /\s/.test(content[i])) i++
-  const q = content[i]
-  if (q !== "'" && q !== '"' && q !== '`') return null
-  i++
-  let val = ''
-  while (i < content.length && content[i] !== q) {
-    if (content[i] === '\\') { val += content[++i]; i++; continue }
-    val += content[i++]
-  }
-  return { value: val, end: i }
-}
-
-function findMatchingBracket(content: string, pos: number, open: string, close: string): number {
-  let depth = 1
-  let i = pos + 1
-  while (i < content.length && depth > 0) {
-    const ch = content[i]
-    if (ch === "'" || ch === '"' || ch === '`') {
-      i++
-      while (i < content.length && content[i] !== ch) {
-        if (content[i] === '\\') i++
-        i++
-      }
-    } else if (ch === open) {
-      depth++
-    } else if (ch === close) {
-      depth--
-    }
-    i++
-  }
-  return i - 1
-}
-
-let _condUid = 0
-
-function parseSceneContent(rawContent: string): ParseResult {
-  // Strip comments but preserve length and newlines to keep line numbers accurate
-  const content = rawContent.replace(/(["'`])(?:(?!\1)[^\\]|\\.)*\1|\/\/.*|\/\*[\s\S]*?\*\//g, (match) => {
-    if (match.startsWith('//') || match.startsWith('/*')) {
-      return match.replace(/[^\n]/g, ' ')
-    }
-    return match
-  })
-
-  const externalConnections: SceneConnection[] = []
-  const seen = new Set<string>()
-  _condUid = 0
-  const optionFlowItems: FlowItem[] = []
-
-  // Helper: character offset → 1-based line number
-  function offsetToLine(offset: number): number {
-    let line = 1
-    for (let i = 0; i < offset && i < content.length; i++) {
-      if (content[i] === '\n') line++
-    }
-    return line
-  }
-
-  // 1. defineScene option-level next
-  const optNextMatch = content.match(/defineScene\s*\(\s*\{/)
-  if (optNextMatch && optNextMatch.index != null) {
-    const braceStart = content.indexOf('{', optNextMatch.index)
-    const braceEnd = findMatchingBracket(content, braceStart, '{', '}')
-    const optBlock = content.slice(braceStart, braceEnd + 1)
-    const objNext = optBlock.match(/next\s*:\s*\{\s*scene\s*:\s*['"`]([^'"`]+)['"`]/)
-    if (objNext && objNext.index != null) {
-      const k = `next:${objNext[1]}`
-      if (!seen.has(k)) {
-        seen.add(k)
-        externalConnections.push({ type: 'next', target: objNext[1], conditional: false })
-        optionFlowItems.push({ kind: 'next', target: objNext[1], line: offsetToLine(braceStart + objNext.index) })
-      }
-    }
-    const strNext = optBlock.match(/next\s*:\s*['"`]([^'"`]+)['"`]/)
-    if (strNext && strNext.index != null) {
-      const k = `next:${strNext[1]}`
-      if (!seen.has(k)) {
-        seen.add(k)
-        externalConnections.push({ type: 'next', target: strNext[1], conditional: false })
-        optionFlowItems.push({ kind: 'next', target: strNext[1], line: offsetToLine(braceStart + strNext.index) })
-      }
-    }
-  }
-
-  // 2. Find builder array
-  const builderMatch = content.match(/\)\s*\(\s*\(\s*\{[^}]*\}\s*\)\s*=>\s*\[/)
-  if (!builderMatch || builderMatch.index == null) {
-    return { flowItems: optionFlowItems, externalConnections }
-  }
-  const arrayStart = content.indexOf('[', builderMatch.index + builderMatch[0].length - 1)
-  const arrayEnd = findMatchingBracket(content, arrayStart, '[', ']')
-  const body = content.slice(arrayStart, arrayEnd + 1)
-
-  // 3. Recursive scan → FlowItem[]
-  // textOffset = offset of `text` within the full `content`
-  function scan(text: string, isConditional: boolean, textOffset: number): FlowItem[] {
-    const items: FlowItem[] = []
-    const tokenRegex = /\b(label|goto|next|call|condition)\s*\(|goto\s*:\s*['"`]([^'"`]+)['"`]/g
-    let m: RegExpExecArray | null
-
-    while ((m = tokenRegex.exec(text)) !== null) {
-      const matchLine = offsetToLine(textOffset + m.index)
-      if (m[2]) { items.push({ kind: 'goto', target: m[2], line: matchLine }); continue }
-      const fnName = m[1]
-      const afterName = m.index + m[0].length
-
-      if (fnName === 'condition') {
-        const parenStart = afterName - 1
-        const parenEnd = findMatchingBracket(text, parenStart, '(', ')')
-        const condBody = text.slice(afterName, parenEnd)
-        
-        let rawExpr = ''
-        const firstBracket = condBody.indexOf('[')
-        if (firstBracket !== -1) {
-          rawExpr = condBody.slice(0, firstBracket).trim()
-          if (rawExpr.endsWith(',')) rawExpr = rawExpr.slice(0, -1).trim()
-        }
-
-        const arrays: { text: string, offset: number }[] = []
-        let sf = 0
-        while (sf < condBody.length) {
-          const bi = condBody.indexOf('[', sf)
-          if (bi === -1) break
-          const be = findMatchingBracket(condBody, bi, '[', ']')
-          arrays.push({ text: condBody.slice(bi + 1, be), offset: textOffset + afterName + bi + 1 })
-          sf = be + 1
-        }
-        const ifBranch = arrays[0] ? scan(arrays[0].text, true, arrays[0].offset) : []
-        const elseBranch = arrays[1] ? scan(arrays[1].text, true, arrays[1].offset) : []
-        
-        if (ifBranch.length > 0 || elseBranch.length > 0) {
-          items.push({ kind: 'condition', id: _condUid++, expression: rawExpr, ifBranch, elseBranch, line: matchLine })
-        }
-        
-        tokenRegex.lastIndex = afterName + (parenEnd - afterName)
-        continue
-      }
-
-      const arg = extractStringArg(text, afterName)
-      if (!arg) continue
-      switch (fnName) {
-        case 'label': items.push({ kind: 'label', name: arg.value, line: matchLine }); break
-        case 'goto': items.push({ kind: 'goto', target: arg.value, line: matchLine }); break
-        case 'next': {
-          items.push({ kind: 'next', target: arg.value, line: matchLine })
-          const k = `next:${arg.value}:${isConditional}`
-          if (!seen.has(k)) { seen.add(k); externalConnections.push({ type: 'next', target: arg.value, conditional: isConditional }) }
-          break
-        }
-        case 'call': {
-          items.push({ kind: 'call', target: arg.value, line: matchLine })
-          const k = `call:${arg.value}:${isConditional}`
-          if (!seen.has(k)) { seen.add(k); externalConnections.push({ type: 'call', target: arg.value, conditional: isConditional }) }
-          break
-        }
-      }
-    }
-    return items
-  }
-
-  return { flowItems: [...scan(body, false, arrayStart), ...optionFlowItems], externalConnections }
-}
+// ─── Scene dynamic evaluation parser has been moved to main process ───
 
 // ─── FlowItem → handles + rows + edges builder ───────────────
 
@@ -872,15 +727,18 @@ export function SceneGraphViewer() {
       const allNodes: Node[] = []
       const allEdges: Edge[] = []
 
+      const filePaths = allFiles.map(f => f.fullPath)
+      const parseRes = await window.api.project.parseScenes(filePaths, projectPath || undefined)
+      const sceneParsedMap = new Map<string, any>()
+      if (parseRes.success && parseRes.scenes) {
+        for (const s of parseRes.scenes) {
+          sceneParsedMap.set(s.path, s.parsed)
+        }
+      }
+
       for (const file of allFiles) {
         const fileId = file.name
-        let content = ''
-        const contentRes = await window.api.fs.readFile(file.fullPath)
-        if (contentRes.success && contentRes.content) {
-          content = contentRes.content
-        }
-
-        const parsed = parseSceneContent(content)
+        const parsed = sceneParsedMap.get(file.fullPath) || { flowItems: [], externalConnections: [] }
 
         // Build handles + rows from flow items
         const { rows, handles, edges: itemEdges } = buildHandlesAndEdges(fileId, parsed.flowItems)
@@ -899,7 +757,7 @@ export function SceneGraphViewer() {
         allNodes.push({
           id: fileId,
           type: 'scene-block',
-          data: { label: fileId, fullPath: file.fullPath, rows, handles: allHandles },
+          data: { label: fileId, fullPath: file.fullPath, rows, handles: allHandles, error: parsed.error },
           position: { x: 0, y: 0 },
         })
 
