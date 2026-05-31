@@ -2,36 +2,26 @@ import config from '../novel.config'
 import { defineScene, shortcut, CharacterKeysOf, ImageKeysOf } from 'fumika'
 
 // ─── 숏컷 정의 ───────────────────────────────────────────────
-const screenFadeOut = shortcut('screen-fade')((
-  duration: number = 300,
-  preset: 'black' = 'black'
-) => ({
+const screenFadeOut = shortcut(config)('screen-fade', ['duration', 'preset'], (duration = 300, preset = 'black') => ({
   dir: 'out' as const,
   preset,
   duration,
 }))
 
-const screenFadeIn = shortcut('screen-fade')((
-  duration: number = 500,
-  preset: 'black' = 'black',
-  disable: boolean = true
-) => ({
+const screenFadeIn = shortcut(config)('screen-fade', ['duration', 'preset', 'disable'], (duration = 500, preset = 'black', disable = true) => ({
   dir: 'in' as const,
   preset,
   duration,
   disable,
 }))
 
-const audioPause = shortcut('audio')((
-  name: string,
-  duration?: number
-) => ({
+const audioPause = shortcut(config)('audio', ['name', 'duration'], (name, duration) => ({
   action: 'pause' as const,
   name,
   duration
 }))
 
-const dialogue = shortcut('dialogue')((text: string, speaker?: string) => ({
+const dialogue = shortcut(config)('dialogue', ['text', 'speaker'], (text, speaker) => ({
   text,
   speaker,
 }))
@@ -39,23 +29,17 @@ const dialogue = shortcut('dialogue')((text: string, speaker?: string) => ({
 const d = (text: string) => dialogue(text)
 const f = (text: string) => dialogue(text, 'fumika')
 
-const cameraShake = shortcut('camera-effect')((duration: number = 150) => ({
+const cameraShake = shortcut(config)('camera-effect', ['duration'], (duration = 150) => ({
   preset: 'shake' as const,
   duration
 }))
 
-const characterShow = <N extends CharacterKeysOf<typeof config>>(
-  name: N,
-  image?: ImageKeysOf<typeof config, N>,
-  duration: number = 300
-) => {
-  return shortcut('character')(() => ({
-    action: 'show' as const,
-    name,
-    image,
-    duration
-  }))()
-}
+const characterShow = shortcut(config)('character', ['name', 'image', 'duration'], (name, image, duration = 300) => ({
+  action: 'show' as const,
+  name,
+  image,
+  duration
+}))
 
 
 export default defineScene({
