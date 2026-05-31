@@ -1,6 +1,6 @@
 {
   "name": "@fumika/ide",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Fumika visual novel engine IDE",
   "main": "./out/main/index.js",
   "author": "izure <admin@izure.org>",
