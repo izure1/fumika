@@ -1,7 +1,22 @@
 import * as fs from 'fs'
 import Module from 'module'
 import path from 'path'
+import { app } from 'electron'
 import { register } from 'esbuild-register/dist/node'
+
+// ─── ASAR-safe esbuild binary path resolution ──────────────────────────────
+// Electron's ASAR support does NOT intercept child_process.spawn.
+// esbuild internally spawns its native binary via spawn(), which fails
+// inside app.asar with ENOENT. We must point it to the unpacked location.
+if (app.isPackaged && !process.env.ESBUILD_BINARY_PATH) {
+  const appPath = app.getAppPath() // e.g. .../resources/app.asar
+  const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked')
+  const platformArch = `${process.platform}-${process.arch}` // e.g. win32-x64
+  const binaryName = process.platform === 'win32' ? 'esbuild.exe' : 'esbuild'
+  process.env.ESBUILD_BINARY_PATH = path.join(
+    unpackedPath, 'node_modules', '@esbuild', platformArch, binaryName
+  )
+}
 
 export interface SceneConnection {
   type: 'next' | 'call'

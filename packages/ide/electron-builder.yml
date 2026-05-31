@@ -11,6 +11,8 @@ files:
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
 asarUnpack:
   - resources/**
+  - node_modules/esbuild/**
+  - node_modules/@esbuild/**
 win:
   executableName: fumika
 nsis:
