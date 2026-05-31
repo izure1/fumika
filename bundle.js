@@ -39,20 +39,20 @@
           if (!c.phoneme) continue;
           let h = c.phoneme === " " || c.phoneme === "\u3000", C = this.punctuations.includes(c.phoneme);
           if (C && (n = 0, o = 0, s = 0, r = 0), h && this.config.spaceDelay) {
-            let S = this.config.sampler.sampleRate ?? 44100, f = Math.floor(this.config.spaceDelay * S);
-            if (f > 0) {
-              let g = new Float32Array(f);
-              o += f, s += f;
+            let S = this.config.sampler.sampleRate ?? 44100, f2 = Math.floor(this.config.spaceDelay * S);
+            if (f2 > 0) {
+              let g = new Float32Array(f2);
+              o += f2, s += f2;
               let x = u === 0 ? l + a : "";
               l = "", u++, yield { char: x, phoneme: " ", pitch: 1, buffer: this.asInt16 ? M.float32ToInt16(g) : g };
             }
             continue;
           } else if (h) continue;
           if (C && this.config.punctuationDelay) {
-            let S = this.config.sampler.sampleRate ?? 44100, f = Math.floor(this.config.punctuationDelay * S);
-            if (f > 0) {
-              let g = new Float32Array(f);
-              o += f, s += f;
+            let S = this.config.sampler.sampleRate ?? 44100, f2 = Math.floor(this.config.punctuationDelay * S);
+            if (f2 > 0) {
+              let g = new Float32Array(f2);
+              o += f2, s += f2;
               let x = u === 0 ? l + a : "";
               l = "", u++, yield { char: x, phoneme: c.phoneme, pitch: 1, buffer: this.asInt16 ? M.float32ToInt16(g) : g };
             }
@@ -60,14 +60,14 @@
           } else if (C) continue;
           let w = await this.config.sampler.getSample(c.phoneme);
           if (w) if (A && b) {
-            let S = Math.max(b.length, w.length), f = new Float32Array(S);
+            let S = Math.max(b.length, w.length), f2 = new Float32Array(S);
             for (let g = 0; g < S; g++) {
               let x = g < b.length ? b[g] : 0, P = g < w.length ? w[g] : 0, T = x + P;
-              f[g] = Math.max(-1, Math.min(1, T));
+              f2[g] = Math.max(-1, Math.min(1, T));
             }
-            if (c.mergeWithNext) b = f, y = y + c.phoneme, A = true;
+            if (c.mergeWithNext) b = f2, y = y + c.phoneme, A = true;
             else {
-              let g = this.config.effect.calculatePitch(n++), x = this.config.effect.apply(f, g);
+              let g = this.config.effect.calculatePitch(n++), x = this.config.effect.apply(f2, g);
               r === 0 && (r = x.length), s += r;
               let P = u === 0 ? l + a : "";
               if (l = "", u++, o > s) {
@@ -82,29 +82,29 @@
             }
           } else {
             if (b) {
-              let S = this.config.effect.calculatePitch(n++), f = this.config.effect.apply(b, S);
-              r === 0 && (r = f.length), s += r;
+              let S = this.config.effect.calculatePitch(n++), f2 = this.config.effect.apply(b, S);
+              r === 0 && (r = f2.length), s += r;
               let g = u === 0 ? l + a : "";
               if (l = "", u++, o > s) {
                 let x = new Float32Array(0);
                 yield { char: g, phoneme: y, pitch: S, buffer: this.asInt16 ? M.float32ToInt16(x) : x };
               } else {
-                r = f.length, o += f.length;
-                let x = this.asInt16 ? M.float32ToInt16(f) : f;
+                r = f2.length, o += f2.length;
+                let x = this.asInt16 ? M.float32ToInt16(f2) : f2;
                 yield { char: g, phoneme: y, pitch: S, buffer: x };
               }
             }
             if (c.mergeWithNext) b = w, y = c.phoneme, A = true;
             else {
-              let S = this.config.effect.calculatePitch(n++), f = this.config.effect.apply(w, S);
-              r === 0 && (r = f.length), s += r;
+              let S = this.config.effect.calculatePitch(n++), f2 = this.config.effect.apply(w, S);
+              r === 0 && (r = f2.length), s += r;
               let g = u === 0 ? l + a : "";
               if (l = "", u++, o > s) {
                 let x = new Float32Array(0);
                 yield { char: g, phoneme: c.phoneme, pitch: S, buffer: this.asInt16 ? M.float32ToInt16(x) : x };
               } else {
-                r = f.length, o += f.length;
-                let x = this.asInt16 ? M.float32ToInt16(f) : f;
+                r = f2.length, o += f2.length;
+                let x = this.asInt16 ? M.float32ToInt16(f2) : f2;
                 yield { char: g, phoneme: c.phoneme, pitch: S, buffer: x };
               }
               b = null, y = "", A = false;
@@ -805,7 +805,7 @@
             ctx.state.set(_moduleKey, { ...data });
           }
           const entry = builder(ctx, data, setState);
-          _onUpdate = (d2, cmdCtx) => entry.onUpdate?.(cmdCtx ?? ctx, d2, setState);
+          _onUpdate = (d3, cmdCtx) => entry.onUpdate?.(cmdCtx ?? ctx, d3, setState);
           entry.onUpdate?.(ctx, data, setState);
           return entry;
         };
@@ -1249,7 +1249,7 @@
           const btnH = fSize * lineH * lineCount + BTN_PAD_Y_SUM;
           return { w: btnW, h: btnH, lines: lineCount };
         });
-        const totalHeight = dims.reduce((acc, d2, i) => acc + d2.h + (i > 0 ? gap : 0), 0);
+        const totalHeight = dims.reduce((acc, d3, i) => acc + d3.h + (i > 0 ? gap : 0), 0);
         let startY = h / 2 - totalHeight / 2 + dims[0].h / 2;
         choices.forEach((choice, i) => {
           if (i > 0) startY += dims[i - 1].h / 2 + gap + dims[i].h / 2;
@@ -1680,8 +1680,8 @@
     const m = position.match(/^(\d+)\/(\d+)$/);
     if (m) {
       const n = parseInt(m[1], 10);
-      const d2 = parseInt(m[2], 10);
-      if (d2 > 0) return n / (d2 + 1);
+      const d3 = parseInt(m[2], 10);
+      if (d3 > 0) return n / (d3 + 1);
     }
     return 0.5;
   }
@@ -1829,16 +1829,16 @@
         Object.keys(_charObjs).forEach((k2) => delete _charObjs[k2]);
       },
       getObj: (name) => _charObjs[name],
-      onUpdate: (_ctx, d2, _setState) => {
-        const dur = d2._lastDuration;
-        const ease = d2._lastEase ?? "easeInOutQuad";
-        const newNames = new Set(Object.keys(d2._characters));
+      onUpdate: (_ctx, d3, _setState) => {
+        const dur = d3._lastDuration;
+        const ease = d3._lastEase ?? "easeInOutQuad";
+        const newNames = new Set(Object.keys(d3._characters));
         for (const name of Object.keys(_charObjs)) {
           if (!newNames.has(name)) {
             _removeCharacter(name, dur, ease);
           }
         }
-        for (const [name, info] of Object.entries(d2._characters)) {
+        for (const [name, info] of Object.entries(d3._characters)) {
           _showCharacter(name, info.position, info.imageKey, dur, ease);
         }
       }
@@ -2229,8 +2229,8 @@
       }
       const [min, max] = cfg.range;
       const next = baseOpacity * (min + Math.random() * (max - min));
-      const d2 = ctx.renderer.dur(cfg.interval);
-      if (d2 === 0) {
+      const d3 = ctx.renderer.dur(cfg.interval);
+      if (d3 === 0) {
         ctx.renderer.animate(target, { style: { opacity: next } }, cfg.interval, "linear");
         requestAnimationFrame(step);
       } else {
@@ -2947,8 +2947,8 @@
       const m = resolvedPreset.match(/^(\d+)\/(\d+)$/);
       if (m) {
         const n = parseInt(m[1], 10);
-        const d2 = parseInt(m[2], 10);
-        if (d2 > 0) ratio = n / (d2 + 1);
+        const d3 = parseInt(m[2], 10);
+        if (d3 > 0) ratio = n / (d3 + 1);
       }
       targetX = ctx.renderer.width * (ratio - 0.5);
       targetY = 0;
@@ -4702,6 +4702,29 @@
         actions
       };
     };
+  }
+  function shortcut(configOrType) {
+    if (typeof configOrType === "object" && configOrType !== null) {
+      return (type, keysOrFactory, factory) => {
+        const realFactory = Array.isArray(keysOrFactory) ? factory : keysOrFactory;
+        return (...args) => {
+          return {
+            type,
+            ...realFactory(...args)
+          };
+        };
+      };
+    } else {
+      const type = configOrType;
+      return (factory) => {
+        return (...args) => {
+          return {
+            type,
+            ...factory(...args)
+          };
+        };
+      };
+    }
   }
   var __create = Object.create;
   var __defProp = Object.defineProperty;
@@ -11572,14 +11595,14 @@ ${addLineNumbers(fragment)}`);
     return out;
   }
   function perspective(out, fovy, aspect, near, far) {
-    let f = 1 / Math.tan(fovy / 2);
+    let f2 = 1 / Math.tan(fovy / 2);
     let nf = 1 / (near - far);
-    out[0] = f / aspect;
+    out[0] = f2 / aspect;
     out[1] = 0;
     out[2] = 0;
     out[3] = 0;
     out[4] = 0;
-    out[5] = f;
+    out[5] = f2;
     out[6] = 0;
     out[7] = 0;
     out[8] = 0;
@@ -12454,12 +12477,12 @@ ${addLineNumbers(fragment)}`);
       this.beforeRenderCallbacks = [];
       this.afterRenderCallbacks = [];
     }
-    onBeforeRender(f) {
-      this.beforeRenderCallbacks.push(f);
+    onBeforeRender(f2) {
+      this.beforeRenderCallbacks.push(f2);
       return this;
     }
-    onAfterRender(f) {
-      this.afterRenderCallbacks.push(f);
+    onAfterRender(f2) {
+      this.afterRenderCallbacks.push(f2);
       return this;
     }
     draw({ camera } = {}) {
@@ -12483,11 +12506,11 @@ ${addLineNumbers(fragment)}`);
         this.program.uniforms.modelViewMatrix.value = this.modelViewMatrix;
         this.program.uniforms.normalMatrix.value = this.normalMatrix;
       }
-      this.beforeRenderCallbacks.forEach((f) => f && f({ mesh: this, camera }));
+      this.beforeRenderCallbacks.forEach((f2) => f2 && f2({ mesh: this, camera }));
       let flipFaces = this.program.cullFace && this.worldMatrix.determinant() < 0;
       this.program.use({ flipFaces });
       this.geometry.draw({ mode: this.mode, program: this.program });
-      this.afterRenderCallbacks.forEach((f) => f && f({ mesh: this, camera }));
+      this.afterRenderCallbacks.forEach((f2) => f2 && f2({ mesh: this, camera }));
     }
   };
   var emptyPixel = new Uint8Array(4);
@@ -18397,8 +18420,8 @@ ${addLineNumbers(fragment)}`);
      * @param d 원본 소요 시간(ms)
      * @returns 스킵 중이면 0, 아니면 원본 시간
      */
-    dur(d2) {
-      return this._isSkipping ? 0 : d2;
+    dur(d3) {
+      return this._isSkipping ? 0 : d3;
     }
     /**
      * 객체에 애니메이션을 적용합니다. 
@@ -18413,7 +18436,7 @@ ${addLineNumbers(fragment)}`);
      * @returns 생성된 애니메이션 인스턴스 (즉시 적용 시 null)
      */
     animate(obj, props, duration, easing = "linear", onEnd) {
-      const d2 = this.dur(duration);
+      const d3 = this.dur(duration);
       const propKeys = _extractPropKeys(props);
       if (!obj.__activeAnims) obj.__activeAnims = /* @__PURE__ */ new Map();
       for (const key of propKeys) {
@@ -18423,13 +18446,13 @@ ${addLineNumbers(fragment)}`);
           _applyPropsImmediate(obj, existing.target);
         }
       }
-      if (d2 === 0) {
+      if (d3 === 0) {
         _applyPropsImmediate(obj, props);
         for (const key of propKeys) obj.__activeAnims.delete(key);
         onEnd?.();
         return null;
       }
-      const anim = obj.animate(props, d2, easing);
+      const anim = obj.animate(props, d3, easing);
       const entry = { anim, target: props };
       for (const key of propKeys) obj.__activeAnims.set(key, entry);
       const cleanup = () => {
@@ -19833,7 +19856,7 @@ ${addLineNumbers(fragment)}`);
       const resolvedData = this._novelHooker.trigger(
         "novel:load",
         data,
-        (d2) => d2
+        (d3) => d3
       );
       const def = this._scenes.get(resolvedData.sceneName);
       if (!def || def.kind !== "dialogue") {
@@ -22347,22 +22370,54 @@ ${addLineNumbers(fragment)}`);
   ]);
 
   // scenes/scene-sub.ts
+  var screenFadeOut = shortcut(novel_config_default)("screen-fade", ["duration", "preset"], (duration = 300, preset = "black") => ({
+    dir: "out",
+    preset,
+    duration
+  }));
+  var screenFadeIn = shortcut(novel_config_default)("screen-fade", ["duration", "preset", "disable"], (duration = 500, preset = "black", disable = true) => ({
+    dir: "in",
+    preset,
+    duration,
+    disable
+  }));
+  var audioPause = shortcut(novel_config_default)("audio", ["name", "duration"], (name, duration) => ({
+    action: "pause",
+    name,
+    duration
+  }));
+  var dialogue = shortcut(novel_config_default)("dialogue", ["text", "speaker"], (text, speaker) => ({
+    text,
+    speaker
+  }));
+  var d2 = (text) => dialogue(text);
+  var f = (text) => dialogue(text, "fumika");
+  var cameraShake = shortcut(novel_config_default)("camera-effect", ["duration"], (duration = 150) => ({
+    preset: "shake",
+    duration
+  }));
+  var characterShow = shortcut(novel_config_default)("character", ["name", "image", "duration"], (name, image, duration = 300) => ({
+    action: "show",
+    name,
+    image,
+    duration
+  }));
   var scene_sub_default = defineScene({
     config: novel_config_default
   })(({}) => [
-    { type: "screen-fade", dir: "out", preset: "black", duration: 300 },
-    { type: "audio", action: "pause", name: "bgm", duration: 500 },
-    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uB294 \uC228\uC744 \uC8FD\uC778 \uCC44 \uD559\uAD50 \uD3EC\uD138 \uC0AC\uC774\uD2B8\uC5D0 \uC811\uC18D\uD588\uB2E4." },
-    { type: "dialogue", speaker: "fumika", text: "\uC81C\uBC1C... \uC804\uACF5 \uD544\uC218 \uC81C\uBC1C..." },
-    { type: "camera-effect", preset: "shake", duration: 150 },
-    { type: "dialogue", text: "\uB85C\uB529 \uCC3D\uC774 \uBE59\uAE00\uBE59\uAE00 \uB3CC \uB54C\uB9C8\uB2E4 \uADF8\uB140\uC758 \uB2E4\uB9AC\uB3C4 \uCD08\uC870\uD558\uAC8C \uB5A8\uB838\uB2E4." },
-    { type: "dialogue", speaker: "fumika", text: "...\uC5B4?" },
-    { type: "character", action: "show", name: "fumika", image: "normal:embarrassed", duration: 300 },
-    { type: "dialogue", speaker: "fumika", text: "\uB0B4\uAC00... C+?" },
-    { type: "dialogue", text: "\uD6C4\uBBF8\uCE74\uC758 \uC601\uD63C\uC774 \uBE60\uC838\uB098\uAC00\uB294 \uC18C\uB9AC\uAC00 \uB4E4\uB9AC\uB294 \uB4EF\uD588\uB2E4." },
-    { type: "dialogue", text: "\uC2A4\uB9C8\uD2B8\uD3F0 \uD654\uBA74\uC774 \uAEBC\uC9C0\uBA70, \uADF8\uB140\uC758 \uC5B4\uAE68\uB3C4 \uD568\uAED8 \uCD95 \uCC98\uC84C\uB2E4." },
-    { type: "dialogue", speaker: "fumika", text: "\uB0B4 \uC7A5\uD559\uAE08\uC774..." },
-    { type: "screen-fade", dir: "in", preset: "black", duration: 500, disable: true }
+    screenFadeOut(300),
+    audioPause("bgm", 500),
+    d2("\uD6C4\uBBF8\uCE74\uB294 \uC228\uC744 \uC8FD\uC778 \uCC44 \uD559\uAD50 \uD3EC\uD138 \uC0AC\uC774\uD2B8\uC5D0 \uC811\uC18D\uD588\uB2E4."),
+    f("\uC81C\uBC1C... \uC804\uACF5 \uD544\uC218 \uC81C\uBC1C..."),
+    cameraShake(150),
+    d2("\uB85C\uB529 \uCC3D\uC774 \uBE59\uAE00\uBE59\uAE00 \uB3CC \uB54C\uB9C8\uB2E4 \uADF8\uB140\uC758 \uB2E4\uB9AC\uB3C4 \uCD08\uC870\uD558\uAC8C \uB5A8\uB838\uB2E4."),
+    f("...\uC5B4?"),
+    characterShow("fumika", "normal:embarrassed", 300),
+    f("\uB0B4\uAC00... C+?"),
+    d2("\uD6C4\uBBF8\uCE74\uC758 \uC601\uD63C\uC774 \uBE60\uC838\uB098\uAC00\uB294 \uC18C\uB9AC\uAC00 \uB4E4\uB9AC\uB294 \uB4EF\uD588\uB2E4."),
+    d2("\uC2A4\uB9C8\uD2B8\uD3F0 \uD654\uBA74\uC774 \uAEBC\uC9C0\uBA70, \uADF8\uB140\uC758 \uC5B4\uAE68\uB3C4 \uD568\uAED8 \uCD95 \uCC98\uC84C\uB2E4."),
+    f("\uB0B4 \uC7A5\uD559\uAE08\uC774..."),
+    screenFadeIn(500, "black", true)
   ]);
 
   // scenes/scene-ending.ts
