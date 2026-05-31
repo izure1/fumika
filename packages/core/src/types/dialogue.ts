@@ -93,7 +93,7 @@ interface _StepBase {
  * 새 빌트인 명령어 추가 시 여기에 한 줄 추가하면 됩니다.
  * 흐름제어 예약어(label, goto, next, call, condition)는 포함하지 않습니다.
  */
-type BuiltinCmdMap<TConfig, TVars, TLocalVars> = {
+export type BuiltinCmdMap<TConfig = any, TVars = any, TLocalVars = any> = {
   'dialogue': DialogueCmd<TConfig>
   'choice': ChoiceCmd<TConfig, TLocalVars>
   'background': BackgroundCmd<TConfig>

@@ -36,6 +36,7 @@ export type { BuiltinModules } from './define/defineNovelConfig'
 export { defineCharacter } from './define/defineCharacter'
 export { defineAssets, defineBackgrounds, defineAudios, defineEffects, defineFallback, defineCustomModules } from './define/defineConfigHelpers'
 export { defineScene, defineInitial } from './define/defineScene'
+export { shortcut } from './define/shortcut'
 export type { SceneDefinition, SceneBuilders } from './define/defineScene'
 
 // ─── 모듈 팩토리 ─────────────────────────────────────────────
