@@ -14,7 +14,7 @@ asarUnpack:
 win:
   executableName: fumika
 nsis:
-  artifactName: ${productName}-${version}-setup.${ext}
+  artifactName: Fumika.IDE-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
