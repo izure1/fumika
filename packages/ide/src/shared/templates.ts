@@ -270,20 +270,13 @@ export function getAppPackageJsonContent(
   description?: string,
   dependencies?: Record<string, string>
 ): string {
-  const deps: Record<string, string> = {}
-  if (dependencies && dependencies['document-dataply']) {
-    deps['document-dataply'] = dependencies['document-dataply']
-  } else {
-    deps['document-dataply'] = '^0.0.1'
-  }
-
   return JSON.stringify({
     name: name || 'fumika-game',
     version: version || '1.0.0',
     main: 'main.js',
     author: author || 'Fumika',
     description: description || productName || 'Fumika Visual Novel',
-    dependencies: deps
+    dependencies: {}
   }, null, 2)
 }
 
@@ -1147,7 +1140,6 @@ export function getRuntimeEnv(): 'web' | 'windows' {
 `
 
 export const SAVE_MANAGER_CONTENT = `import { Novel } from 'fumika'
-import { isWindowsEnv } from './Runtime'
 
 interface SaveDoc {
   key: string
@@ -1197,55 +1189,6 @@ async function checkIndexedDBValue(key: string): Promise<boolean> {
   return val !== null
 }
 
-let dataplyDb: any = null
-
-async function getDataplyDb(): Promise<any> {
-  if (dataplyDb) {
-    return dataplyDb
-  }
-  let mod: any
-  if (typeof (globalThis as any).require !== 'undefined') {
-    mod = (globalThis as any).require('document-dataply')
-  } else {
-    // @ts-ignore
-    mod = await import(/* @vite-ignore */ 'document-dataply')
-  }
-  const db = mod.DocumentDataply.Define()
-    .Options({ wal: 'save.wal' })
-    .Open('save.db')
-  
-  await db.init()
-  await db.migration(1, async (tx: any) => {
-    await db.createIndex('idx_key', { type: 'btree', fields: ['key'] }, tx)
-  })
-  
-  dataplyDb = db
-  return db
-}
-
-async function getDataplyValue(key: string): Promise<string | null> {
-  const db = await getDataplyDb()
-  const query = db.select({ key })
-  const results = await query.drain()
-  if (results && results.length > 0) {
-    return results[0].value
-  }
-  return null
-}
-
-async function setDataplyValue(key: string, value: string): Promise<void> {
-  const db = await getDataplyDb()
-  const updatedCount = await db.partialUpdate({ key }, { value })
-  if (updatedCount === 0) {
-    await db.insert({ key, value })
-  }
-}
-
-async function checkDataplyValue(key: string): Promise<boolean> {
-  const val = await getDataplyValue(key)
-  return val !== null
-}
-
 let activeNovel: Novel<any> | null = null
 
 export function setNovel(novel: Novel<any>): void {
@@ -1261,11 +1204,7 @@ function getNovel(): Novel<any> {
 
 export async function check(slot: number): Promise<boolean> {
   const key = \`slot_\${slot}\`
-  if (isWindowsEnv()) {
-    return await checkDataplyValue(key)
-  } else {
-    return await checkIndexedDBValue(key)
-  }
+  return await checkIndexedDBValue(key)
 }
 
 export async function save(slot: number): Promise<string> {
@@ -1273,23 +1212,14 @@ export async function save(slot: number): Promise<string> {
   const data = novel.save()
   const serialized = JSON.stringify(data)
   const key = \`slot_\${slot}\`
-  if (isWindowsEnv()) {
-    await setDataplyValue(key, serialized)
-  } else {
-    await setIndexedDBValue(key, serialized)
-  }
+  await setIndexedDBValue(key, serialized)
   return serialized
 }
 
 export async function load(slot: number): Promise<string> {
   const novel = getNovel()
   const key = \`slot_\${slot}\`
-  let serialized: string | null = null
-  if (isWindowsEnv()) {
-    serialized = await getDataplyValue(key)
-  } else {
-    serialized = await getIndexedDBValue(key)
-  }
+  const serialized = await getIndexedDBValue(key)
   if (!serialized) {
     throw new Error(\`No save data found in slot \${slot}\`)
   }
@@ -1303,23 +1233,14 @@ export async function saveEnv(): Promise<string> {
   const data = novel.saveEnv()
   const serialized = JSON.stringify(data)
   const key = 'env'
-  if (isWindowsEnv()) {
-    await setDataplyValue(key, serialized)
-  } else {
-    await setIndexedDBValue(key, serialized)
-  }
+  await setIndexedDBValue(key, serialized)
   return serialized
 }
 
 export async function loadEnv(): Promise<string> {
   const novel = getNovel()
   const key = 'env'
-  let serialized: string | null = null
-  if (isWindowsEnv()) {
-    serialized = await getDataplyValue(key)
-  } else {
-    serialized = await getIndexedDBValue(key)
-  }
+  const serialized = await getIndexedDBValue(key)
   if (!serialized) {
     throw new Error('No environment save data found')
   }

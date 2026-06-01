@@ -209,13 +209,13 @@ export async function ensureProjectDependencies(targetDir: string, options?: Par
   }
 
   if (needsInstall || forceUpdate) {
-    console.log('[IDE] Installing fumika, document-dataply and vite from npm to', targetDir)
+    console.log('[IDE] Installing fumika and vite from npm to', targetDir)
     const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
     await new Promise<void>((resolve, reject) => {
-      execFile(npmCmd, ['install', 'fumika', 'document-dataply'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
+      execFile(npmCmd, ['install', 'fumika'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
         if (err) {
-          console.error('[IDE] npm install fumika and document-dataply failed:', stderr)
+          console.error('[IDE] npm install fumika failed:', stderr)
           reject(err)
         } else {
           execFile(npmCmd, ['install', '--save-dev', 'vite', 'typescript@6', 'vite-plugin-pwa', '@types/node'], { cwd: targetDir, shell: true }, (err, _stdout, stderr) => {
