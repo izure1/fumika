@@ -1139,7 +1139,8 @@ export function getRuntimeEnv(): 'web' | 'windows' {
 }
 `
 
-export const SAVE_MANAGER_CONTENT = `import { Novel } from 'fumika'
+export function getSaveManagerContent(appId: string): string {
+  return `import { Novel } from 'fumika'
 
 interface SaveDoc {
   key: string
@@ -1148,7 +1149,7 @@ interface SaveDoc {
 
 function openIndexedDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('fumika-save-db', 1)
+    const request = indexedDB.open('fumika-save-db-${appId}', 1)
     request.onupgradeneeded = () => {
       const db = request.result
       if (!db.objectStoreNames.contains('saves')) {
@@ -1249,4 +1250,5 @@ export async function loadEnv(): Promise<string> {
   return serialized
 }
 `
+}
 

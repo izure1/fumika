@@ -2,7 +2,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { execFile, spawn } from 'child_process'
 import prettier from 'prettier'
-import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent, RUNTIME_CONTENT, SAVE_MANAGER_CONTENT, BLUEPRINT_RUNTIME_CODE, getDeclarationTemplate } from '../../shared/templates'
+import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent, RUNTIME_CONTENT, getSaveManagerContent, BLUEPRINT_RUNTIME_CODE, getDeclarationTemplate } from '../../shared/templates'
 
 async function runCommandLive(
   cmd: string,
@@ -242,6 +242,7 @@ interface ProjectFileContext {
   width: number
   height: number
   gameName: string
+  appId: string
 }
 
 export interface ProjectFileSpec {
@@ -294,7 +295,7 @@ const PROJECT_FILE_SPECS: ProjectFileSpec[] = [
   {
     relativePath: 'helpers/SaveManager.ts',
     label: 'helpers/SaveManager.ts',
-    getContent: () => SAVE_MANAGER_CONTENT,
+    getContent: (ctx) => getSaveManagerContent(ctx.appId),
     overwriteIfExists: true,
   },
   {
@@ -332,6 +333,7 @@ export async function ensureProjectStructure(
     width: options?.width ?? 1920,
     height: options?.height ?? 1080,
     gameName: options?.gameName ?? 'My Novel Project',
+    appId: options?.projectId ?? 'com.example.game',
   }
 
   const overrideSet = new Set(overrideFiles)
