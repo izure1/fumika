@@ -276,7 +276,7 @@ export function getAppPackageJsonContent(
     main: 'main.js',
     author: author || 'Fumika',
     description: description || productName || 'Fumika Visual Novel',
-    dependencies: {}
+    dependencies: dependencies || {}
   }, null, 2)
 }
 

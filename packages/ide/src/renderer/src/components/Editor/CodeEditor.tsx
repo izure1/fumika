@@ -279,6 +279,7 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
           wordWrap: 'on',
           scrollBeyondLastLine: false,
           padding: { top: 16, bottom: 16 },
+          fixedOverflowWidgets: true
         }}
       />
     </div>
