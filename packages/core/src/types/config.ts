@@ -68,7 +68,20 @@ export interface CharDef {
    * 감정(표정 파트) 목록: emotionKey → { pointKey: assetKey }.
    * pointKey는 베이스의 `points` 키와 일치해야 합니다.
    */
-  emotions: Record<string, Record<string, string>>
+  emotions: Record<
+    string,
+    Record<
+      string,
+      | string
+      | {
+          src: string
+          offset?: {
+            x?: number
+            y?: number
+          }
+        }
+    >
+  >
 }
 /** 캐릭터 목록 정의: charKey → CharDef 매핑 */
 export type CharDefs = Record<string, CharDef>

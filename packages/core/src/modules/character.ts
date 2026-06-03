@@ -167,7 +167,17 @@ characterModule.defineView((ctx, data, setState) => {
   const _updateEmotionParts = (
     baseObj: CharacterRenderObj,
     baseDef: CharBaseDef,
-    emotionDef: Record<string, string>,
+    emotionDef: Record<
+      string,
+      | string
+      | {
+          src: string
+          offset?: {
+            x?: number
+            y?: number
+          }
+        }
+    >,
     dur: number,
     ease: EasingType = 'easeInOutQuad'
   ) => {
@@ -187,12 +197,26 @@ characterModule.defineView((ctx, data, setState) => {
     )
 
     for (const [pointKey, point] of Object.entries(baseDef.points)) {
-      const partSrc = emotionDef[pointKey]
-      if (!partSrc) continue
+      const partVal = emotionDef[pointKey]
+      if (!partVal) continue
+
+      let partSrc: string
+      let offsetX = 0
+      let offsetY = 0
+
+      if (typeof partVal === 'string') {
+        partSrc = partVal
+      } else {
+        partSrc = partVal.src
+        if (partVal.offset) {
+          offsetX = partVal.offset.x ?? 0
+          offsetY = partVal.offset.y ?? 0
+        }
+      }
 
       // base 로컬 좌표 (addChild → base 기준 상대 좌표)
-      const localX = baseWidth * (point.x - 0.5)
-      const localY = baseHeight * (0.5 - point.y)
+      const localX = baseWidth * (point.x + offsetX - 0.5)
+      const localY = baseHeight * (0.5 - (point.y + offsetY))
 
       const existingPart = baseObj._partObjs[pointKey]
 

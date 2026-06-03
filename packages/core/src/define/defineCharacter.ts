@@ -33,7 +33,20 @@ type CharBaseDefOf<TAssets extends Record<string, string>> = Omit<CharBaseDef, '
 export function defineCharacter<TAssets extends Record<string, string>>(assets: TAssets) {
   return <
     const TBases extends Record<string, CharBaseDefOf<TAssets>>,
-    const TEmotions extends Record<string, Record<string, AssetKey<TAssets>>>,
+    const TEmotions extends Record<
+      string,
+      Record<
+        string,
+        | AssetKey<TAssets>
+        | {
+            src: AssetKey<TAssets>
+            offset?: {
+              x?: number
+              y?: number
+            }
+          }
+      >
+    >,
     const TName extends string | undefined = undefined
   >(def: {
     name?: TName

@@ -14,7 +14,12 @@ export default defineCharacter(assets)({
     }
   },
   emotions: {
-    normal: { face: 'fumika_emotion_base_normal' },
+    normal: {
+      face: {
+        src: 'fumika_emotion_base_normal',
+        offset: { x: -0, y: 0 }
+      }
+    },
     smile: { face: 'fumika_emotion_base_smile' },
     angry: { face: 'fumika_emotion_base_angry' },
     embarrassed: { face: 'fumika_emotion_base_embarrassed' },
