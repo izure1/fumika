@@ -10,10 +10,14 @@ interface ParsedBase {
   width: number
   points: Record<string, ParsedPoint>
 }
+interface ParsedEmotionObject {
+  src: string
+  offset?: { x?: number; y?: number }
+}
 interface ParsedCharacter {
   name: string
   bases: Record<string, ParsedBase>
-  emotions: Record<string, Record<string, string>>
+  emotions: Record<string, Record<string, string | ParsedEmotionObject>>
 }
 
 interface Props {
@@ -147,13 +151,14 @@ export function CharacterFormEditor({ content, onChange, filePath }: Props) {
 
   // 코드 생성
   const generateCode = useCallback((char: ParsedCharacter) => {
-    const formatValue = (val: any, indent = 0): string => {
+    const formatValue = (val: unknown, indent = 0): string => {
       const space = ' '.repeat(indent)
       if (typeof val === 'string') return `'${val}'`
       if (typeof val === 'number') return `${val}`
       if (typeof val === 'object' && val !== null) {
         const lines: string[] = []
         for (const [k, v] of Object.entries(val)) {
+          if (v === undefined) continue
           const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k) ? k : `'${k}'`
           lines.push(`${space}  ${key}: ${formatValue(v, indent + 2)}`)
         }
@@ -249,10 +254,10 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
       return
     }
 
-    Object.entries(slots).forEach(([slot, src]) => {
+    Object.entries(slots).forEach(([slot, val]) => {
       const img = new Image()
       
-      let srcPath = src
+      let srcPath = typeof val === 'string' ? val : val.src
       if (!srcPath.startsWith('assets/')) {
         srcPath = `assets/${srcPath}`
       }
@@ -324,13 +329,19 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
 
     // 이모션 오버레이 그리기
     if (activeEmotion && parsed.emotions[activeEmotion]) {
-      Object.entries(parsed.emotions[activeEmotion]).forEach(([slot]) => {
+      Object.entries(parsed.emotions[activeEmotion]).forEach(([slot, val]) => {
         const img = emotionImgsRef.current[slot]
         const pt = base.points[slot]
         if (img && pt) {
-          // pt.x, pt.y 는 0~1 좌표. 이미지 상의 위치
-          const px = x + pt.x * w
-          const py = y + pt.y * h
+          let offsetX = 0
+          let offsetY = 0
+          if (typeof val !== 'string' && val.offset) {
+            offsetX = val.offset.x ?? 0
+            offsetY = val.offset.y ?? 0
+          }
+          // pt.x, pt.y 는 0~1 좌표. 이미지 상의 위치 + 오프셋
+          const px = x + (pt.x + offsetX) * w
+          const py = y + (pt.y + offsetY) * h
           // 오버레이 이미지 중앙을 pt에 맞춤 (가정)
           const ew = img.naturalWidth * scale
           const eh = img.naturalHeight * scale
@@ -897,54 +908,126 @@ export default defineCharacter(assets)(${formatValue(char, 0)})
                 </div>
                 
                 {/* 현재 이모션에 연결된 포인트 목록 */}
-                {Object.entries(parsedChar.emotions[activeEmotion]).map(([ptName, val]) => (
-                  <div key={ptName}>
-                    <label className="block text-[10px] text-surface-500 mb-1">Slot: {ptName}</label>
-                    <div className="flex gap-1">
-                      <input 
-                        type="text" 
-                        value={val}
-                        onChange={(e) => {
-                          const src = e.target.value
-                          updateChar(prev => {
-                            prev.emotions[activeEmotion][ptName] = src
-                            return prev
-                          })
-                        }}
-                        className="flex-1 min-w-0 bg-surface-900 border border-surface-700 rounded p-1.5 text-xs text-white focus:border-primary-500 outline-none"
-                        placeholder="이미지 src"
-                      />
-                      <button
-                        onClick={() =>
-                          handleBrowseImage(
-                            (_fileName, ext) => {
-                              const charBasename = filePath.replace(/\\/g, '/').split('/').pop()?.split('.')[0] || 'unnamed'
-                              return {
-                                dest: `characters/${charBasename}/emotions/${ptName}/${activeEmotion}.${ext}`,
-                                src: `characters/${charBasename}/emotions/${ptName}/${activeEmotion}.${ext}`
+                {Object.entries(parsedChar.emotions[activeEmotion]).map(([ptName, val]) => {
+                  const srcValue = typeof val === 'string' ? val : val.src
+                  const offsetVal = typeof val === 'string' ? undefined : val.offset
+                  const ox = offsetVal?.x ?? 0
+                  const oy = offsetVal?.y ?? 0
+
+                  return (
+                    <div key={ptName} className="space-y-2 border-b border-surface-700/50 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+                      <label className="block text-[10px] text-surface-500">Slot: {ptName}</label>
+                      <div className="flex gap-1">
+                        <input 
+                          type="text" 
+                          value={srcValue}
+                          onChange={(e) => {
+                            const src = e.target.value
+                            updateChar(prev => {
+                              const currentVal = prev.emotions[activeEmotion][ptName]
+                              if (typeof currentVal === 'string') {
+                                prev.emotions[activeEmotion][ptName] = src
+                              } else {
+                                prev.emotions[activeEmotion][ptName] = {
+                                  ...currentVal,
+                                  src
+                                }
                               }
-                            },
-                            (src) => updateChar(prev => { prev.emotions[activeEmotion][ptName] = src; return prev })
-                          )
-                        }
-                        className="px-2 bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded text-surface-300 transition-colors flex items-center justify-center shrink-0"
-                        title="탐색기에서 열기"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-                      </button>
-                      <button
-                        onClick={() => updateChar(prev => {
-                          delete prev.emotions[activeEmotion][ptName]
-                          return prev
-                        })}
-                        className="px-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded transition-colors flex items-center justify-center shrink-0"
-                        title="포인트 연결 해제"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
+                              return prev
+                            })
+                          }}
+                          className="flex-1 min-w-0 bg-surface-900 border border-surface-700 rounded p-1.5 text-xs text-white focus:border-primary-500 outline-none"
+                          placeholder="이미지 src"
+                        />
+                        <button
+                          onClick={() =>
+                            handleBrowseImage(
+                              (_fileName, ext) => {
+                                const charBasename = filePath.replace(/\\/g, '/').split('/').pop()?.split('.')[0] || 'unnamed'
+                                return {
+                                  dest: `characters/${charBasename}/emotions/${ptName}/${activeEmotion}.${ext}`,
+                                  src: `characters/${charBasename}/emotions/${ptName}/${activeEmotion}.${ext}`
+                                }
+                              },
+                              (src) => updateChar(prev => {
+                                const currentVal = prev.emotions[activeEmotion][ptName]
+                                if (typeof currentVal === 'string') {
+                                  prev.emotions[activeEmotion][ptName] = src
+                                } else {
+                                  prev.emotions[activeEmotion][ptName] = {
+                                    ...currentVal,
+                                    src
+                                  }
+                                }
+                                return prev
+                              })
+                            )
+                          }
+                          className="px-2 bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded text-surface-300 transition-colors flex items-center justify-center shrink-0"
+                          title="탐색기에서 열기"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                        </button>
+                        <button
+                          onClick={() => updateChar(prev => {
+                            delete prev.emotions[activeEmotion][ptName]
+                            return prev
+                          })}
+                          className="px-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded transition-colors flex items-center justify-center shrink-0"
+                          title="포인트 연결 해제"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+
+                      <div className="flex gap-2 items-center bg-surface-900/30 p-1.5 rounded border border-surface-800">
+                        <span className="text-[10px] text-surface-500 font-semibold select-none">Offset:</span>
+                        <div className="flex items-center gap-1 flex-1">
+                          <span className="text-[10px] text-surface-400">X</span>
+                          <input
+                            type="number"
+                            step="0.005"
+                            value={ox}
+                            onChange={(e) => {
+                              const xVal = Number(e.target.value)
+                              updateChar(prev => {
+                                const currentVal = prev.emotions[activeEmotion][ptName]
+                                const currentSrc = typeof currentVal === 'string' ? currentVal : currentVal.src
+                                prev.emotions[activeEmotion][ptName] = {
+                                  src: currentSrc,
+                                  offset: { x: xVal, y: oy }
+                                }
+                                return prev
+                              })
+                            }}
+                            className="w-full bg-surface-950 border border-surface-800 rounded px-1.5 py-0.5 text-[10px] text-white focus:border-primary-500 outline-none font-mono"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1 flex-1">
+                          <span className="text-[10px] text-surface-400">Y</span>
+                          <input
+                            type="number"
+                            step="0.005"
+                            value={oy}
+                            onChange={(e) => {
+                              const yVal = Number(e.target.value)
+                              updateChar(prev => {
+                                const currentVal = prev.emotions[activeEmotion][ptName]
+                                const currentSrc = typeof currentVal === 'string' ? currentVal : currentVal.src
+                                prev.emotions[activeEmotion][ptName] = {
+                                  src: currentSrc,
+                                  offset: { x: ox, y: yVal }
+                                }
+                                return prev
+                              })
+                            }}
+                            className="w-full bg-surface-950 border border-surface-800 rounded px-1.5 py-0.5 text-[10px] text-white focus:border-primary-500 outline-none font-mono"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
 
                 {/* 포인트 연결 추가 */}
                 <div className="pt-2 border-t border-surface-700/50 flex gap-1 mt-2">
