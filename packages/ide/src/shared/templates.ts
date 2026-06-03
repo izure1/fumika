@@ -384,6 +384,7 @@ export type DeclarationFolder =
   | 'types'
   | 'initials'
   | 'hooks'
+  | 'shortcuts'
 
 const DECLARATION_TEMPLATES: Partial<Record<DeclarationFolder, string>> = {
   assets: `import { defineAssets } from 'fumika'\n\nexport default defineAssets({\n\n})\n`,
@@ -398,6 +399,7 @@ const DECLARATION_TEMPLATES: Partial<Record<DeclarationFolder, string>> = {
   types: `import type { FallbackRuleOf } from 'fumika'\nimport type Modules from '@/declarations/modules'\n\ndeclare global {\n  type FallbackItem = FallbackRuleOf<typeof Modules>\n}\n`,
   initials: `export default {}\n`,
   hooks: `export default {}\n`,
+  shortcuts: `export {}\n`,
 }
 
 export function getDeclarationTemplate(type: DeclarationFolder | string): string {
@@ -453,7 +455,7 @@ const FILE_TEMPLATE_GENERATORS: Partial<
   Record<DeclarationFolder, (safeName: string, relativeDots: string) => string>
 > = {
   scenes: (_, _relativeDots) =>
-    `import { defineScene } from 'fumika'\nimport config from '@/novel.config'\nimport Initials from '@/declarations/initials'\nimport Hooks from '@/declarations/hooks'\n\nexport default defineScene({\n  config,\n  variables: {},\n  actions: {},\n  next: { scene: '', preserve: true },\n  // initial: Initials[''],\n  // hooks: Hooks[''],\n})(({ label, goto, call, set, condition, next }) => [\n\n])\n`,
+    `import { defineScene } from 'fumika'\nimport config from '@/novel.config'\nimport Initials from '@/declarations/initials'\nimport Hooks from '@/declarations/hooks'\nimport S from '@/declarations/shortcuts'\n\nexport default defineScene({\n  config,\n  variables: {},\n  actions: {},\n  next: { scene: '', preserve: true },\n  // initial: Initials[''],\n  // hooks: Hooks[''],\n})(({ label, goto, call, set, condition, next }) => [\n\n])\n`,
 
   characters: (safeName, _relativeDots) =>
     `import { defineCharacter } from 'fumika'\nimport assets from '@/declarations/assets'\n\nexport default defineCharacter(assets)({\n  name: '${safeName}',\n  bases: { },\n  emotions: { }\n})\n`,
@@ -501,6 +503,55 @@ export default define<MyCmd, MySchema, MyHook>({ })
 
   hooks: (_, _relativeDots) =>
     `import { defineHook } from 'fumika'\nimport config from '@/novel.config'\n\nexport default defineHook(config)({\n  \n})\n`,
+
+  shortcuts: (safeName) =>
+    getShortcutContent(safeName, 'dialogue', [{ name: 'text', defaultValue: "''" }], [{ key: 'text', value: 'text' }]),
+}
+
+// ─── 숏컷 GUI 에디터용 코드 생성 헬퍼 ───────────────────────
+
+export interface ShortcutParam {
+  name: string
+  defaultValue?: string   // 예: "'black'", "300", "true"
+}
+
+export interface ShortcutPayloadEntry {
+  key: string             // 반환 객체의 속성 이름
+  value: string           // 매핑 표현식 (매개변수 이름, 리터럴, 'as const' 포함 가능)
+}
+
+/**
+ * GUI 에디터의 폼 상태를 받아 유효한 TypeScript 숏컷 코드를 생성합니다.
+ *
+ * @example
+ * getShortcutContent('screenFadeOut', 'screen-fade',
+ *   [{ name: 'duration', defaultValue: '300' }, { name: 'preset', defaultValue: "'black'" }],
+ *   [{ key: 'dir', value: "'out' as const" }, { key: 'preset', value: 'preset' }, { key: 'duration', value: 'duration' }]
+ * )
+ */
+export function getShortcutContent(
+  exportName: string,
+  targetCommand: string,
+  params: ShortcutParam[],
+  payload: ShortcutPayloadEntry[]
+): string {
+  const keysArr = params.map(p => `'${p.name}'`).join(', ')
+  const paramsList = params
+    .map(p => p.defaultValue ? `${p.name} = ${p.defaultValue}` : p.name)
+    .join(', ')
+  const payloadBody = payload
+    .map(e => `  ${e.key}: ${e.value},`)
+    .join('\n')
+
+  return [
+    `import { shortcut } from 'fumika'`,
+    `import config from '@/novel.config'`,
+    ``,
+    `export default shortcut(config)('${targetCommand}', [${keysArr}], (${paramsList}) => ({`,
+    payloadBody,
+    `}))`,
+    ``,
+  ].join('\n')
 }
 
 export function getFileTemplate(

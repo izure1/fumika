@@ -18,6 +18,9 @@ const api = {
     checkTypes: (projectPath: string) => ipcRenderer.invoke('project:checkTypes', projectPath),
     getTsFileCache: () => ipcRenderer.invoke('project:getTsFileCache'),
     parseScenes: (filePaths: string[], projectPath?: string) => ipcRenderer.invoke('project:parseScenes', filePaths, projectPath),
+    getCommandFields: (filePath: string, interfaceName: string) => ipcRenderer.invoke('project:getCommandFields', filePath, interfaceName),
+    getAvailableCommands: (projectPath: string) => ipcRenderer.invoke('project:getAvailableCommands', projectPath),
+    resolveCommandFields: (projectPath: string, moduleKey: string) => ipcRenderer.invoke('project:resolveCommandFields', projectPath, moduleKey),
   },
   preview: {
     start: (projectPath: string, targetScene?: string) => ipcRenderer.invoke('preview:start', projectPath, targetScene),

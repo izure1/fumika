@@ -12,7 +12,8 @@ import { scaffoldProject, updateProject, ensureEffectsFiles, buildProject, getPr
 import { ProjectWatcher } from './services/watcher'
 import { PreviewService } from './services/preview'
 import { settingsService } from './services/settings'
-import { checkProjectTypes } from './services/typescript'
+import { checkProjectTypes, parseInterfaceFieldsFromAST } from './services/typescript'
+import { getAvailableCommands, resolveCommandFields } from './services/configLoader'
 import { parseSceneFile } from './services/sceneParser'
 
 const watcher = new ProjectWatcher()
@@ -326,6 +327,34 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('project:getCommandFields', async (_, filePath: string, interfaceName: string) => {
+    try {
+      const content = await fs.readFile(filePath, 'utf-8')
+      const fields = parseInterfaceFieldsFromAST(content, interfaceName)
+      return { success: true, fields }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('project:getAvailableCommands', async (_, projectPath: string) => {
+    try {
+      const commands = await getAvailableCommands(projectPath)
+      return { success: true, ...commands }
+    } catch (error: any) {
+      return { success: false, error: error.message, builtin: [], custom: [] }
+    }
+  })
+
+  ipcMain.handle('project:resolveCommandFields', async (_, projectPath: string, moduleKey: string) => {
+    try {
+      const fields = await resolveCommandFields(projectPath, moduleKey)
+      return { success: true, fields }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle('project:parseScenes', async (_, filePaths: string[], projectPath?: string) => {
     try {
       const results = await Promise.all(
@@ -560,6 +589,11 @@ app.whenReady().then(() => {
   ipcMain.handle('fs:deleteFile', async (_, targetPath: string) => {
     try {
       const normalizedPath = path.normalize(targetPath)
+      try {
+        await fs.access(normalizedPath)
+      } catch {
+        return { success: true }
+      }
       await shell.trashItem(normalizedPath)
       return { success: true }
     } catch (error: any) {

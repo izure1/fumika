@@ -1,4 +1,5 @@
 import { exec } from 'child_process'
+import ts from 'typescript'
 
 export interface TsError {
   line: number;
@@ -93,4 +94,98 @@ export const checkProjectTypes = async (projectPath: string): Promise<TsErrorMap
 
   return firstResult;
 };
+
+export function parseInterfaceFieldsFromAST(content: string, interfaceName: string): string[] {
+  const sourceFile = ts.createSourceFile('temp.ts', content, ts.ScriptTarget.Latest, true)
+  const fields: string[] = []
+
+  const extractFieldsFromType = (typeNode: ts.TypeNode) => {
+    if (ts.isTypeLiteralNode(typeNode)) {
+      for (const member of typeNode.members) {
+        if (ts.isPropertySignature(member) && ts.isIdentifier(member.name)) {
+          if (!fields.includes(member.name.text)) {
+            fields.push(member.name.text)
+          }
+        }
+      }
+    } else if (ts.isUnionTypeNode(typeNode) || ts.isIntersectionTypeNode(typeNode)) {
+      for (const t of typeNode.types) {
+        extractFieldsFromType(t)
+      }
+    } else if (ts.isTypeReferenceNode(typeNode) && ts.isIdentifier(typeNode.typeName)) {
+      const refName = typeNode.typeName.text
+      const findDeclaration = (innerNode: ts.Node) => {
+        if (ts.isInterfaceDeclaration(innerNode) && innerNode.name.text === refName) {
+          for (const member of innerNode.members) {
+            if (ts.isPropertySignature(member) && ts.isIdentifier(member.name)) {
+              if (!fields.includes(member.name.text)) {
+                fields.push(member.name.text)
+              }
+            }
+          }
+        } else if (ts.isTypeAliasDeclaration(innerNode) && innerNode.name.text === refName) {
+          extractFieldsFromType(innerNode.type)
+        }
+        ts.forEachChild(innerNode, findDeclaration)
+      }
+      ts.forEachChild(sourceFile, findDeclaration)
+    }
+  }
+
+  function visit(node: ts.Node) {
+    if (ts.isInterfaceDeclaration(node) && node.name.text === interfaceName) {
+      for (const member of node.members) {
+        if (ts.isPropertySignature(member) && ts.isIdentifier(member.name)) {
+          fields.push(member.name.text)
+        }
+      }
+    } else if (ts.isTypeAliasDeclaration(node) && node.name.text === interfaceName) {
+      extractFieldsFromType(node.type)
+    } else if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      const varName = node.name.text
+      const normalize = (s: string) => s.toLowerCase().replace(/-/g, '')
+      const nVar = normalize(varName)
+      const nIface = normalize(interfaceName)
+      const matches =
+        nVar === nIface ||
+        nVar + 'module' === nIface ||
+        nVar === nIface + 'module'
+
+      if (matches) {
+        if (node.initializer) {
+          let callNode = node.initializer
+          while (ts.isCallExpression(callNode)) {
+            const expression = callNode.expression
+            if (ts.isPropertyAccessExpression(expression)) {
+              callNode = expression.expression
+            } else if (ts.isIdentifier(expression) && expression.text === 'define') {
+              if (callNode.typeArguments && callNode.typeArguments.length > 0) {
+                extractFieldsFromType(callNode.typeArguments[0])
+              }
+              break
+            } else {
+              break
+            }
+          }
+        } else if (node.type && (ts.isTypeReferenceNode(node.type) || ts.isImportTypeNode(node.type))) {
+          const typeNameText = ts.isTypeReferenceNode(node.type)
+            ? node.type.typeName.getText(sourceFile)
+            : node.type.qualifier ? node.type.qualifier.getText(sourceFile) : ''
+          if (typeNameText.includes('NovelModule') && node.type.typeArguments && node.type.typeArguments.length > 0) {
+            extractFieldsFromType(node.type.typeArguments[0])
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+
+  if (fields.length > 0 && !fields.includes('skip')) {
+    fields.push('skip')
+  }
+
+  return fields
+}
 

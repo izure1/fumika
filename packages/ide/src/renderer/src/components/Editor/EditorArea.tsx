@@ -6,6 +6,7 @@ import { BackgroundFormEditor } from './BackgroundFormEditor'
 import { CharacterFormEditor } from './CharacterFormEditor'
 import { EffectFormEditor } from './EffectFormEditor'
 import { ModuleEditorCanvas } from '../ModuleEditor/ModuleEditorCanvas'
+import { ShortcutFormEditor } from './ShortcutFormEditor'
 
 interface TabData {
   content: string
@@ -459,6 +460,7 @@ export function EditorArea() {
           const isBackground = isTs && pathParts.includes('backgrounds')
           const isCharacter = isTs && pathParts.includes('characters')
           const isEffect = isTs && pathParts.includes('effects')
+          const isShortcut = isTs && pathParts.includes('shortcuts')
           
           if (isBlueprint && !data.isLoading) {
             return (
@@ -500,6 +502,18 @@ export function EditorArea() {
             return (
               <div className="absolute inset-0">
                 <EffectFormEditor 
+                  content={data.content} 
+                  onChange={(val) => handleContentChange(activeFile, val)} 
+                  filePath={activeFile}
+                />
+              </div>
+            )
+          }
+
+          if (isShortcut && !data.isLoading) {
+            return (
+              <div className="absolute inset-0">
+                <ShortcutFormEditor 
                   content={data.content} 
                   onChange={(val) => handleContentChange(activeFile, val)} 
                   filePath={activeFile}

@@ -15,6 +15,7 @@ const WATCH_FOLDERS = [
   'fallbacks',
   'initials',
   'hooks',
+  'shortcuts',
 ]
 
 export class ProjectWatcher {
@@ -260,6 +261,15 @@ export class ProjectWatcher {
         console.log(`[IDE] Generated declaration: ${keysPath}`)
         this.notifyFileChanged(keysPath, keysContent)
       }
+
+      // shortcuts 생성 시 Named Export 형태의 선언 파일 갱신
+      if (folder === 'shortcuts') {
+        const shortcutsContent = buildShortcutsDecl(files)
+        await fs.mkdir(path.dirname(declPath), { recursive: true })
+        await fs.writeFile(declPath, shortcutsContent, 'utf-8')
+        console.log(`[IDE] Generated declaration: ${declPath}`)
+        this.notifyFileChanged(declPath, shortcutsContent)
+      }
     } catch (e) {
       console.error(`[IDE] Failed to generate declaration for ${folder}:`, e)
     }
@@ -479,6 +489,21 @@ function buildSceneKeysDecl(files: FileEntry[]): string {
     .map((f) => `  '${removeExt(f.rel).replace(/\\/g, '/')}'`)
     .join(',\n')
   return `export default [\n${keys}\n] as const\n`
+}
+
+function buildShortcutsDecl(files: FileEntry[]): string {
+  const tsFiles = files.filter((f) => f.name.endsWith('.ts'))
+  if (tsFiles.length === 0) {
+    return `export {}\n`
+  }
+  const exports = tsFiles
+    .map((f) => {
+      const key = removeExt(f.rel).replace(/\\/g, '/')
+      const importName = key.replace(/[^a-zA-Z0-9_]/g, '_')
+      return `export { default as ${importName} } from '@/shortcuts/${key}'`
+    })
+    .join('\n')
+  return `${exports}\n`
 }
 
 async function handleBlueprintChange(filePath: string): Promise<void> {

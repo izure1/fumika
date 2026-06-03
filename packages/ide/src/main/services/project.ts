@@ -62,7 +62,8 @@ const DEFAULT_FOLDERS = [
   'fallbacks',
   'initials',
   'hooks',
-  'helpers'
+  'helpers',
+  'shortcuts'
 ]
 
 export interface ProjectOptions {
@@ -125,7 +126,8 @@ export async function ensureDeclarationsFiles(targetDir: string) {
     'audios',
     'types',
     'initials',
-    'hooks'
+    'hooks',
+    'shortcuts'
   ]
 
   for (const key of DECLARATION_KEYS) {

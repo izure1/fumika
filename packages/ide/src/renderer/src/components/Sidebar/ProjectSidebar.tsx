@@ -4,7 +4,7 @@ import { DialogBox } from '../UI/DialogBox'
 import { ConfirmDialogBox } from '../UI/ConfirmDialogBox'
 import { getFileTemplate } from '../../../../shared/templates'
 
-const WATCH_FOLDERS = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks', 'initials', 'hooks']
+const WATCH_FOLDERS = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks', 'initials', 'hooks', 'shortcuts']
 
 /**
  * 해당 폴더의 기존 이름 목록을 받아, 충돌 시 _1, _2, ... 형태의 고유 이름을 반환합니다.
@@ -72,6 +72,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     fallbacks: true,
     initials: true,
     hooks: true,
+    shortcuts: true,
   })
   const [folderFiles, setFolderFiles] = useState<Record<string, FileNode[]>>({})
   const [promptData, setPromptData] = useState<PromptData | null>(null)
