@@ -35,8 +35,24 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
   const injectedProjectRef = useRef<string | null>(null)
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
 
+  const isTypingRef = useRef(false)
+  const typingTimerRef = useRef<NodeJS.Timeout | null>(null)
+
   const handleEditorMount: OnMount = useCallback((editor) => {
     editorRef.current = editor
+
+    editor.onDidBlurEditorText(() => {
+      isTypingRef.current = false
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current)
+      }
+      if (codeRef.current !== undefined) {
+        const currentVal = editor.getValue()
+        if (codeRef.current !== currentVal) {
+          editor.setValue(codeRef.current)
+        }
+      }
+    })
   }, [])
 
   const handleValidate = useCallback((markers: monaco.editor.IMarker[]) => {
@@ -230,6 +246,9 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
       const currentFile = filePathRef.current?.replace(/\\/g, '/')
       if (normalized === currentFile) return
 
+      // 임시 드래프트 파일(.draft) 및 임시 파일들은 타입 정보 주입에서 제외
+      if (normalized.endsWith('.draft') || normalized.includes('.draft.')) return
+
       ts.typescriptDefaults.addExtraLib(content, toFileUri(changedPath))
     })
 
@@ -238,6 +257,40 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
 
   const codeRef = useRef(code)
   useEffect(() => { codeRef.current = code }, [code])
+
+  // 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current)
+      }
+    }
+  }, [])
+
+  // 저장 단축키 입력 시 타이핑 상태 강제 해제
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        isTypingRef.current = false
+        if (typingTimerRef.current) {
+          clearTimeout(typingTimerRef.current)
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // 외부에서 code가 명시적으로 바뀌었을 때 (사용자 입력 외의 상황, 예: 저장 포맷팅, 외부 변경 등) 동기화
+  useEffect(() => {
+    if (!editorRef.current) return
+    if (isTypingRef.current) return
+
+    const currentVal = editorRef.current.getValue()
+    if (code !== currentVal) {
+      editorRef.current.setValue(code)
+    }
+  }, [code])
 
   // 현재 에디터가 열린 파일의 extraLib을 제거하여 model/extraLib 충돌 방지
   // Monaco는 같은 URI에 model과 extraLib이 동시 존재하면
@@ -260,6 +313,26 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
     }
   }, [monacoInstance, filePath])
 
+  const handleValueChange = (val: string | undefined) => {
+    isTypingRef.current = true
+
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current)
+    }
+
+    typingTimerRef.current = setTimeout(() => {
+      isTypingRef.current = false
+      if (editorRef.current && codeRef.current !== undefined) {
+        const currentVal = editorRef.current.getValue()
+        if (codeRef.current !== currentVal) {
+          editorRef.current.setValue(codeRef.current)
+        }
+      }
+    }, 150)
+
+    onChange(val)
+  }
+
   const fileUri = filePath ? toFileUri(filePath) : undefined
 
   return (
@@ -268,8 +341,8 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
         height="100%"
         defaultLanguage={language}
         path={fileUri}
-        value={code}
-        onChange={onChange}
+        defaultValue={code}
+        onChange={handleValueChange}
         onMount={handleEditorMount}
         onValidate={handleValidate}
         theme="vs-dark"
