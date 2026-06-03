@@ -30,12 +30,12 @@ const d = (text: string) => dialogue(text)
 const f = (text: string) => dialogue(text, 'fumika')
 
 const cameraShake = shortcut(config)('camera-effect', ['duration'], (duration = 150) => ({
-  preset: 'shake' as const,
+  preset: 'shake',
   duration
 }))
 
 const characterShow = shortcut(config)('character', ['name', 'image', 'duration'], (name, image, duration = 300) => ({
-  action: 'show' as const,
+  action: 'show',
   name,
   image,
   duration

@@ -12,6 +12,26 @@ type GetProp<TCmd, K> = TCmd extends any
     : never
   : never
 
+// 유니언 T에 대해 속성 K가 항상 필수인지 판별
+type IsRequiredInAll<T, K extends keyof any> =
+  T extends any
+    ? K extends keyof T
+      ? {} extends Pick<T, K>
+        ? false
+        : true
+      : false
+    : never
+
+type IsRequired<T, K extends keyof any> = false extends IsRequiredInAll<T, K> ? false : true
+
+// 유니언 타입의 필수/선택적 성질을 유지하며 평탄화하는 유틸리티
+type Flatten<T> =
+  {
+    [K in KeysOfUnion<T> as IsRequired<T, K> extends true ? K : never]: GetProp<T, K>
+  } & {
+    [K in KeysOfUnion<T> as IsRequired<T, K> extends false ? K : never]?: GetProp<T, K>
+  }
+
 // 튜플로 정의된 키들을 모듈의 실제 프로퍼티 타입 튜플로 변환하는 유틸리티
 type MapKeysToTypes<TCmd, TKeys extends readonly any[]> = {
   [I in keyof TKeys]: GetProp<TCmd, TKeys[I]>
@@ -41,7 +61,7 @@ export interface ShortcutConfigReturn<TConfig> {
   <
     TType extends (keyof BuiltinCmdMap<TConfig> | keyof ModulesOf<TConfig>) & string,
     const TKeys extends readonly (KeysOfUnion<TargetCmdOf<TConfig, TType>>)[],
-    TReturn extends object
+    TReturn extends Flatten<TargetCmdOf<TConfig, TType>>
   >(
     type: TType,
     keys: TKeys,
