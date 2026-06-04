@@ -1,5 +1,5 @@
 import config from '../novel.config'
-import { defineScene, shortcut, CharacterKeysOf, ImageKeysOf } from 'fumika'
+import { defineScene, shortcut } from 'fumika'
 
 // ─── 숏컷 정의 ───────────────────────────────────────────────
 const screenFadeOut = shortcut(config)('screen-fade', ['duration', 'preset'], (duration = 300, preset = 'black') => ({

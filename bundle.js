@@ -1708,10 +1708,22 @@
       const scale2 = baseWidth / baseNaturalW;
       const baseHeight = baseDef.height ?? ((baseObj.__renderedSize?.h ?? 0) > 0 ? baseObj.__renderedSize.h : baseImg ? baseWidth * (baseImg.naturalHeight / baseImg.naturalWidth) : baseWidth * 2);
       for (const [pointKey, point] of Object.entries(baseDef.points)) {
-        const partSrc = emotionDef[pointKey];
-        if (!partSrc) continue;
-        const localX = baseWidth * (point.x - 0.5);
-        const localY = baseHeight * (0.5 - point.y);
+        const partVal = emotionDef[pointKey];
+        if (!partVal) continue;
+        let partSrc;
+        let offsetX = 0;
+        let offsetY = 0;
+        if (typeof partVal === "string") {
+          partSrc = partVal;
+        } else {
+          partSrc = partVal.src;
+          if (partVal.offset) {
+            offsetX = partVal.offset.x ?? 0;
+            offsetY = partVal.offset.y ?? 0;
+          }
+        }
+        const localX = baseWidth * (point.x + offsetX - 0.5);
+        const localY = baseHeight * (0.5 - (point.y + offsetY));
         const existingPart = baseObj._partObjs[pointKey];
         if (existingPart) {
           if (existingPart.attribute && existingPart.attribute.src !== partSrc) {
@@ -20507,7 +20519,12 @@ ${addLineNumbers(fragment)}`);
       }
     },
     emotions: {
-      normal: { face: "fumika_emotion_base_normal" },
+      normal: {
+        face: {
+          src: "fumika_emotion_base_normal",
+          offset: { x: -0, y: 0 }
+        }
+      },
       smile: { face: "fumika_emotion_base_smile" },
       angry: { face: "fumika_emotion_base_angry" },
       embarrassed: { face: "fumika_emotion_base_embarrassed" }
