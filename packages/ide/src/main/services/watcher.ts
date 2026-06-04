@@ -192,8 +192,14 @@ export class ProjectWatcher {
 
   private handleFileChange(filePath: string) {
     try {
-      const relativePath = path.relative(this.projectPath, filePath)
-      const folder = relativePath.split(path.sep)[0]
+      const normProj = this.projectPath.replace(/\\/g, '/')
+      const normFile = filePath.replace(/\\/g, '/')
+
+      let relativePath = normFile
+      if (normFile.toLowerCase().startsWith(normProj.toLowerCase())) {
+        relativePath = normFile.slice(normProj.length).replace(/^[/\\]/, '')
+      }
+      const folder = relativePath.split('/')[0]
 
       if (WATCH_FOLDERS.includes(folder)) {
         if (this.debounceMap.has(folder)) {

@@ -318,9 +318,9 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('project:checkTypes', async (_, projectPath: string) => {
+  ipcMain.handle('project:checkTypes', async (_, projectPath: string, modifiedFile?: string) => {
     try {
-      const errorMap = await checkProjectTypes(projectPath)
+      const errorMap = await checkProjectTypes(projectPath, modifiedFile)
       return { success: true, errorMap }
     } catch (error: any) {
       return { success: false, error: error.message }

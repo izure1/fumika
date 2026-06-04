@@ -2,6 +2,7 @@ import Editor, { useMonaco, loader, type OnMount } from '@monaco-editor/react'
 import * as monaco from 'monaco-editor'
 import { useEffect, useRef, useCallback } from 'react'
 import { useProjectStore } from '../../store/useProjectStore'
+
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
@@ -55,26 +56,6 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
     })
   }, [])
 
-  const handleValidate = useCallback((markers: monaco.editor.IMarker[]) => {
-    if (!filePath || !projectPath) return
-    const errors = markers
-      .filter(m => m.severity === monaco.MarkerSeverity.Error)
-      .map(m => ({ line: m.startLineNumber, message: m.message }))
-    
-    const normFile = filePath.replace(/\\/g, '/')
-    const normProj = projectPath.replace(/\\/g, '/')
-    
-    let relPath = normFile
-    if (normFile.toLowerCase().startsWith(normProj.toLowerCase())) {
-      relPath = normFile.slice(normProj.length).replace(/^[/\\]/, '')
-    }
-
-    const store = useProjectStore.getState()
-    store.setTsErrors({
-      ...store.tsErrors,
-      [relPath]: errors
-    })
-  }, [filePath, projectPath])
 
   // pendingLine 감지 → 해당 라인으로 커서 이동
   useEffect(() => {
@@ -344,7 +325,6 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
         defaultValue={code}
         onChange={handleValueChange}
         onMount={handleEditorMount}
-        onValidate={handleValidate}
         theme="vs-dark"
         options={{
           minimap: { enabled: false },

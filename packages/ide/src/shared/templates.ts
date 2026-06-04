@@ -530,7 +530,7 @@ export interface ShortcutPayloadEntry {
  * )
  */
 export function getShortcutContent(
-  exportName: string,
+  _exportName: string,
   targetCommand: string,
   params: ShortcutParam[],
   payload: ShortcutPayloadEntry[]

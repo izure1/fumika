@@ -179,7 +179,7 @@ export function EditorArea() {
       }
       
       let contentToSave = data.content
-      const { formatOnSave } = useProjectStore.getState()
+      const { formatOnSave, projectPath } = useProjectStore.getState()
       
       if (formatOnSave && (activeFile.endsWith('.ts') || activeFile.endsWith('.json') || activeFile.endsWith('.js') || activeFile.endsWith('.tsx') || activeFile.endsWith('.jsx'))) {
         const formatRes = await window.api.fs.formatCode(data.content)
@@ -189,15 +189,44 @@ export function EditorArea() {
       }
       
       const res = await window.api.fs.writeFile(activeFile, contentToSave)
-      if (res.success) {
-        setTabData(prev => ({
-          ...prev,
-          [activeFile]: { ...prev[activeFile], content: contentToSave, isDirty: false }
-        }))
-        // 저장 시 임시 파일 삭제
-        window.api.fs.deleteFile(getDraftPath(activeFile))
-      } else {
+      if (!res.success) {
         alert('저장 실패: ' + res.error)
+        return
+      }
+
+      setTabData(prev => ({
+        ...prev,
+        [activeFile]: { ...prev[activeFile], content: contentToSave, isDirty: false }
+      }))
+      window.api.fs.deleteFile(getDraftPath(activeFile))
+
+      // 숏컷 파일 저장 후 타입 체크: shortcuts/ 경로 에러만 필터링하여 사이드바에 표시
+      const normalizedPath = activeFile.replace(/\\/g, '/')
+      const pathParts = normalizedPath.split('/')
+      const isShortcut = pathParts.includes('shortcuts') && normalizedPath.endsWith('.ts')
+
+      if (isShortcut && projectPath) {
+        const typeCheckRes = await window.api.project.checkTypes(projectPath)
+        if (typeCheckRes.success && typeCheckRes.errorMap) {
+          // shortcuts/ 경로에 해당하는 에러만 최신화하고,
+          // 나머지 경로(scenes 등)의 기존 에러는 보존하여 merge
+          const store = useProjectStore.getState()
+          const nextErrors = { ...store.tsErrors }
+
+          // 기존 shortcuts/ 에러를 초기화한 뒤 새 결과로 교체
+          for (const key of Object.keys(nextErrors)) {
+            if (key.replace(/\\/g, '/').includes('shortcuts/')) {
+              delete nextErrors[key]
+            }
+          }
+          for (const [key, errors] of Object.entries(typeCheckRes.errorMap)) {
+            if (key.replace(/\\/g, '/').includes('shortcuts/')) {
+              nextErrors[key] = errors
+            }
+          }
+
+          store.setTsErrors(nextErrors)
+        }
       }
     } finally {
       setIsSaving(false)

@@ -14,7 +14,7 @@ declare global {
         update: (projectPath: string, overrideFiles?: string[]) => Promise<{ success: boolean; error?: string }>
         getFileSpecs: () => Promise<{ success: boolean; specs?: { relativePath: string; label: string; overwriteIfExists: boolean }[] }>
         getTypes: (projectPath: string) => Promise<{ success: boolean; types?: { path: string; content: string }[]; error?: string }>
-        checkTypes: (projectPath: string) => Promise<{ success: boolean; errorMap?: Record<string, { line: number; message: string }[]>; error?: string }>
+        checkTypes: (projectPath: string, modifiedFile?: string) => Promise<{ success: boolean; errorMap?: Record<string, { line: number; message: string }[]>; error?: string }>
         getTsFileCache: () => Promise<{ success: boolean; files?: { path: string; content: string }[]; error?: string }>
         getCommandFields: (filePath: string, interfaceName: string) => Promise<{ success: boolean; fields?: string[]; error?: string }>
         getAvailableCommands: (projectPath: string) => Promise<{ success: boolean; builtin: string[]; custom: string[]; error?: string }>

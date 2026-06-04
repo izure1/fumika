@@ -197,7 +197,6 @@ export function ShortcutFormEditor({ content, onChange, filePath }: Props) {
     return p.name || '...'
   }).join(', ')
 
-  const usageCode = `S.${exportName}(${usageArgs})`
 
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e]">
