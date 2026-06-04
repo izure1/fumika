@@ -276,8 +276,6 @@ app.whenReady().then(() => {
         return { success: false, error: '프로젝트 아이콘이 필요합니다.' }
       }
 
-
-
       const publicDir = path.join(projectPath, 'public')
       await fs.mkdir(publicDir, { recursive: true })
       
@@ -320,24 +318,9 @@ app.whenReady().then(() => {
 
   ipcMain.handle('project:checkTypes', async (_, projectPath: string, modifiedFile?: string) => {
     try {
-      await fs.writeFile(
-        'd:/My_WorkSpace/Programming/Project/fumika/ipc_debug.log',
-        `CALL: projectPath=${projectPath}, modifiedFile=${modifiedFile}\n`,
-        'utf-8'
-      )
       const errorMap = await checkProjectTypes(projectPath, modifiedFile)
-      await fs.appendFile(
-        'd:/My_WorkSpace/Programming/Project/fumika/ipc_debug.log',
-        `RESULT: ${JSON.stringify(errorMap)}\n`,
-        'utf-8'
-      )
       return { success: true, errorMap }
     } catch (error: any) {
-      await fs.appendFile(
-        'd:/My_WorkSpace/Programming/Project/fumika/ipc_debug.log',
-        `ERROR: ${error.message}\n`,
-        'utf-8'
-      )
       return { success: false, error: error.message }
     }
   })
