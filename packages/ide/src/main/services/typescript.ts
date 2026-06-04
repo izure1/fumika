@@ -1,7 +1,8 @@
-import ts from 'typescript'
+import type ts from 'typescript'
 import path from 'path'
 import { exec } from 'child_process'
 import fs from 'fs'
+import { createRequire } from 'module'
 
 export interface TsError {
   line: number
@@ -9,6 +10,39 @@ export interface TsError {
 }
 
 export type TsErrorMap = Record<string, TsError[]>
+
+// TypeScript 모듈을 동적으로 가져오는 헬퍼 함수
+export function getTsInstance(projectPath?: string): typeof ts {
+  // 1. 프로젝트 폴더의 node_modules에서 찾기 시도
+  if (projectPath) {
+    try {
+      const projectRequire = createRequire(path.join(projectPath, 'package.json'))
+      const ts = projectRequire('typescript')
+      if (ts) return ts
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // 2. IDE 자체 패키지의 typescript 시도 (개발 환경이나 모노레포용)
+  try {
+    const ts = require('typescript')
+    if (ts) return ts
+  } catch (e) {
+    // ignore
+  }
+
+  // 3. 마지막 폴백 (IDE 실행 디렉토리 기준)
+  try {
+    const parentRequire = createRequire(__dirname)
+    const ts = parentRequire('typescript')
+    if (ts) return ts
+  } catch (e) {
+    // ignore
+  }
+
+  throw new Error('TypeScript compiler (typescript) 패키지를 로드할 수 없습니다. 프로젝트에 typescript가 설치되어 있는지 확인해주세요.')
+}
 
 const parseTscOutput = (raw: string, projectPath: string): TsErrorMap => {
   const errorMap: TsErrorMap = {}
@@ -38,36 +72,79 @@ const parseTscOutput = (raw: string, projectPath: string): TsErrorMap => {
   return errorMap
 }
 
-export const checkProjectTypes = async (projectPath: string, _modifiedFile?: string): Promise<TsErrorMap> => {
+const runTscCmd = (cmd: string, projectPath: string): Promise<{ stdout: string; stderr: string }> => {
   return new Promise((resolve) => {
-    let tscPath: string
-    try {
-      tscPath = require.resolve('typescript/bin/tsc')
-    } catch {
-      tscPath = path.join(projectPath, 'node_modules/typescript/bin/tsc')
-    }
-
-    const nodePath = process.execPath
-    const cmd = `"${nodePath}" "${tscPath}" --noEmit --pretty false --skipLibCheck`
-
-    exec(cmd, { cwd: projectPath, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }, (error, stdout, stderr) => {
-      const raw = [stdout, stderr].join('\n')
-      try {
-        fs.writeFileSync(
-          path.join(projectPath, 'tsc_debug.log'),
-          `CMD: ${cmd}\nERROR: ${error ? error.message : 'none'}\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}\nRAW:\n${raw}\n`,
-          'utf-8'
-        )
-      } catch (e) {
-        // ignore
+    exec(
+      cmd,
+      {
+        cwd: projectPath,
+        maxBuffer: 1024 * 1024 * 10,
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+      },
+      (error, stdout, stderr) => {
+        const raw = [stdout, stderr].join('\n')
+        try {
+          fs.writeFileSync(
+            path.join(projectPath, 'tsc_debug.log'),
+            `CMD: ${cmd}\nERROR: ${error ? error.message : 'none'}\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}\nRAW:\n${raw}\n`,
+            'utf-8'
+          )
+        } catch (e) {
+          // ignore
+        }
+        resolve({ stdout: stdout || '', stderr: stderr || '' })
       }
-      const errorMap = parseTscOutput(raw, projectPath)
-      resolve(errorMap)
-    })
+    )
   })
 }
 
-export function parseInterfaceFieldsFromAST(content: string, interfaceName: string): string[] {
+const hasOnlyConfigErrors = (errorMap: TsErrorMap): boolean => {
+  const keys = Object.keys(errorMap)
+  return keys.length > 0 && keys.every((k) => k.endsWith('tsconfig.json'))
+}
+
+export const checkProjectTypes = async (projectPath: string, _modifiedFile?: string): Promise<TsErrorMap> => {
+  let tscPath: string
+  try {
+    const projectRequire = createRequire(path.join(projectPath, 'package.json'))
+    tscPath = projectRequire.resolve('typescript/bin/tsc')
+  } catch {
+    tscPath = path.join(projectPath, 'node_modules/typescript/bin/tsc')
+  }
+
+  const nodePath = process.execPath
+  const baseCmd = `"${nodePath}" "${tscPath}" --noEmit --pretty false --skipLibCheck`
+
+  // 1차: 기본 실행
+  const firstRun = await runTscCmd(baseCmd, projectPath)
+  const firstRaw = [firstRun.stdout, firstRun.stderr].join('\n')
+  const firstResult = parseTscOutput(firstRaw, projectPath)
+
+  // tsconfig 설정 에러로 소스 파일 검사가 차단된 경우,
+  // 문제 옵션을 CLI 플래그로 덮어써서 재시도
+  if (hasOnlyConfigErrors(firstResult)) {
+    const retryCmd = `"${nodePath}" "${tscPath}" --noEmit --pretty false --moduleResolution node --skipLibCheck`
+    const retryRun = await runTscCmd(retryCmd, projectPath)
+    const retryRaw = [retryRun.stdout, retryRun.stderr].join('\n')
+    const retryResult = parseTscOutput(retryRaw, projectPath)
+
+    // 1차 설정 에러 + 2차 소스 에러를 병합
+    const merged: TsErrorMap = { ...firstResult }
+    for (const [key, errors] of Object.entries(retryResult)) {
+      if (!merged[key]) {
+        merged[key] = errors
+      } else {
+        merged[key] = [...merged[key], ...errors]
+      }
+    }
+    return merged
+  }
+
+  return firstResult
+}
+
+export function parseInterfaceFieldsFromAST(content: string, interfaceName: string, projectPath?: string): string[] {
+  const ts = getTsInstance(projectPath)
   const sourceFile = ts.createSourceFile('temp.ts', content, ts.ScriptTarget.Latest, true)
   const fields: string[] = []
 

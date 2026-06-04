@@ -7,10 +7,10 @@
 
 import { register } from 'esbuild-register/dist/node'
 import Module from 'module'
+import type ts from 'typescript'
 import path from 'path'
 import fs from 'fs'
-import ts from 'typescript'
-import { parseInterfaceFieldsFromAST } from './typescript'
+import { parseInterfaceFieldsFromAST, getTsInstance } from './typescript'
 
 // ─── 타입 정의 ────────────────────────────────────────────────
 
@@ -126,7 +126,8 @@ export async function loadConfigModuleKeys(projectPath: string): Promise<string[
  *
  * 정규식 대신 TypeScript 파서를 사용하여 정확하게 추출합니다.
  */
-function parseBuiltinModuleMapping(content: string, isDts: boolean): BuiltinModuleMapping {
+function parseBuiltinModuleMapping(content: string, isDts: boolean, projectPath: string): BuiltinModuleMapping {
+  const ts = getTsInstance(projectPath)
   const sf = ts.createSourceFile(
     isDts ? 'defineNovelConfig.d.ts' : 'defineNovelConfig.ts',
     content,
@@ -270,7 +271,7 @@ function getBuiltinMapping(projectPath: string): BuiltinModuleMapping | null {
   try {
     const content = fs.readFileSync(defineNovelConfigPath, 'utf-8')
     const isDts = defineNovelConfigPath.endsWith('.d.ts')
-    _builtinMappingCache = parseBuiltinModuleMapping(content, isDts)
+    _builtinMappingCache = parseBuiltinModuleMapping(content, isDts, projectPath)
     _builtinMappingCacheKey = defineNovelConfigPath
     return _builtinMappingCache
   } catch (err) {
@@ -328,7 +329,7 @@ export async function resolveCommandFields(
 
       if (fs.existsSync(sourceFile)) {
         const content = fs.readFileSync(sourceFile, 'utf-8')
-        const fields = parseInterfaceFieldsFromAST(content, moduleKey)
+        const fields = parseInterfaceFieldsFromAST(content, moduleKey, projectPath)
         if (fields.length > 0) return fields
       }
     }
@@ -338,7 +339,7 @@ export async function resolveCommandFields(
   const customModulePath = path.join(projectPath, 'modules', `${moduleKey}.ts`)
   if (fs.existsSync(customModulePath)) {
     const content = fs.readFileSync(customModulePath, 'utf-8')
-    const fields = parseInterfaceFieldsFromAST(content, moduleKey)
+    const fields = parseInterfaceFieldsFromAST(content, moduleKey, projectPath)
     if (fields.length > 0) return fields
   }
 
@@ -346,7 +347,7 @@ export async function resolveCommandFields(
   const configPath = path.join(projectPath, 'novel.config.ts')
   if (fs.existsSync(configPath)) {
     const content = fs.readFileSync(configPath, 'utf-8')
-    const fields = parseInterfaceFieldsFromAST(content, moduleKey)
+    const fields = parseInterfaceFieldsFromAST(content, moduleKey, projectPath)
     if (fields.length > 0) return fields
   }
 

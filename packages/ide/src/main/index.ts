@@ -328,7 +328,19 @@ app.whenReady().then(() => {
   ipcMain.handle('project:getCommandFields', async (_, filePath: string, interfaceName: string) => {
     try {
       const content = await fs.readFile(filePath, 'utf-8')
-      const fields = parseInterfaceFieldsFromAST(content, interfaceName)
+      let projectPath: string | undefined
+      let currentDir = path.dirname(filePath)
+      while (true) {
+        const hasPkg = await fs.stat(path.join(currentDir, 'package.json')).then(() => true).catch(() => false)
+        if (hasPkg) {
+          projectPath = currentDir
+          break
+        }
+        const parent = path.dirname(currentDir)
+        if (parent === currentDir) break
+        currentDir = parent
+      }
+      const fields = parseInterfaceFieldsFromAST(content, interfaceName, projectPath)
       return { success: true, fields }
     } catch (error: any) {
       return { success: false, error: error.message }
