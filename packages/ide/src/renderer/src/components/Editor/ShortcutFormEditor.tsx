@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { getShortcutContent } from '../../../../shared/templates'
 import type { ShortcutParam, ShortcutPayloadEntry } from '../../../../shared/templates'
 import { useProjectStore } from '../../store/useProjectStore'
+import { CodeEditor } from './CodeEditor'
 
 interface Props {
   content: string
@@ -76,6 +77,8 @@ function parseShortcutCode(code: string): ParsedShortcut | null {
 
 export function ShortcutFormEditor({ content, onChange, filePath }: Props) {
   const { projectPath } = useProjectStore()
+  const [viewMode, setViewMode] = useState<'gui' | 'code'>('gui')
+  const [parseError, setParseError] = useState<string | null>(null)
   const [targetCommand, setTargetCommand] = useState('')
   const [params, setParams] = useState<ShortcutParam[]>([])
   const [payload, setPayload] = useState<ShortcutPayloadEntry[]>([])
@@ -87,15 +90,21 @@ export function ShortcutFormEditor({ content, onChange, filePath }: Props) {
 
   const exportName = filePath.replace(/\\/g, '/').split('/').pop()?.replace(/\.ts$/, '') || 'shortcut'
 
-  // 초기 파싱
+  // 초기 파싱 및 content 변경 감지
   useEffect(() => {
+    if (viewMode === 'code') return // 코드 모드일 때는 파싱을 스킵하고 리렌더링만 (코드 에디터가 content를 제어)
+
     const parsed = parseShortcutCode(content)
     if (parsed) {
       setTargetCommand(parsed.targetCommand)
       setParams(parsed.params)
       setPayload(parsed.payload)
+      setParseError(null)
+    } else {
+      setParseError('숏컷 코드를 파싱할 수 없습니다. 코드 모드를 사용해 주세요.')
+      setViewMode('code')
     }
-  }, [])
+  }, [content, viewMode])
 
   // esbuild-register 기반 커맨드 목록 동적 로딩
   useEffect(() => {
@@ -198,6 +207,54 @@ export function ShortcutFormEditor({ content, onChange, filePath }: Props) {
   }).join(', ')
 
 
+  if (viewMode === 'code') {
+    return (
+      <div className="flex flex-col h-full bg-[#1e1e1e]">
+        <div className="h-10 bg-surface-800 flex items-center px-4 shrink-0 border-b border-surface-700/50 justify-between z-10">
+          <div className="text-sm font-medium text-surface-300 flex items-center gap-2">
+            <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            {filePath.split(/[/\\]/).pop()} {parseError && <span className="text-red-400 ml-2 text-xs">({parseError})</span>}
+          </div>
+          <div className="flex bg-surface-900 rounded p-0.5">
+            <button
+              onClick={() => {
+                const parsed = parseShortcutCode(content)
+                if (parsed) {
+                  setTargetCommand(parsed.targetCommand)
+                  setParams(parsed.params)
+                  setPayload(parsed.payload)
+                  setParseError(null)
+                  setViewMode('gui')
+                } else {
+                  alert('코드를 파싱할 수 없어 GUI 모드로 전환할 수 없습니다. 형식을 확인해 주세요.')
+                }
+              }}
+              className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${viewMode === 'gui' ? 'bg-primary-600 text-white shadow' : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800'}`}
+            >
+              GUI
+            </button>
+            <button
+              onClick={() => setViewMode('code')}
+              className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${viewMode === 'code' ? 'bg-primary-600 text-white shadow' : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800'}`}
+            >
+              CODE
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 relative">
+          <CodeEditor
+            code={content}
+            onChange={(val) => onChange(val || '')}
+            language="typescript"
+            filePath={filePath}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e]">
       {/* Header */}
@@ -208,7 +265,20 @@ export function ShortcutFormEditor({ content, onChange, filePath }: Props) {
           </svg>
           {filePath.split(/[/\\]/).pop()}
         </div>
-        <span className="text-[10px] text-surface-500 uppercase tracking-wider">Shortcut Editor</span>
+        <div className="flex bg-surface-900 rounded p-0.5">
+          <button
+            onClick={() => setViewMode('gui')}
+            className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${viewMode === 'gui' ? 'bg-primary-600 text-white shadow' : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800'}`}
+          >
+            GUI
+          </button>
+          <button
+            onClick={() => setViewMode('code')}
+            className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${viewMode === 'code' ? 'bg-primary-600 text-white shadow' : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800'}`}
+          >
+            CODE
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">

@@ -502,14 +502,31 @@ function buildShortcutsDecl(files: FileEntry[]): string {
   if (tsFiles.length === 0) {
     return `export {}\n`
   }
-  const exports = tsFiles
+  const imports = tsFiles
     .map((f) => {
       const key = removeExt(f.rel).replace(/\\/g, '/')
       const importName = key.replace(/[^a-zA-Z0-9_]/g, '_')
-      return `export { default as ${importName} } from '@/shortcuts/${key}'`
+      return `import _shortcut_${importName} from '@/shortcuts/${key}'`
     })
     .join('\n')
-  return `${exports}\n`
+
+  const namedExports = tsFiles
+    .map((f) => {
+      const key = removeExt(f.rel).replace(/\\/g, '/')
+      const importName = key.replace(/[^a-zA-Z0-9_]/g, '_')
+      return `export { _shortcut_${importName} as ${importName} }`
+    })
+    .join('\n')
+
+  const defaultKeys = tsFiles
+    .map((f) => {
+      const key = removeExt(f.rel).replace(/\\/g, '/')
+      const importName = key.replace(/[^a-zA-Z0-9_]/g, '_')
+      return `  ${importName}: _shortcut_${importName},`
+    })
+    .join('\n')
+
+  return `${imports}\n\n${namedExports}\n\nexport default {\n${defaultKeys}\n}\n`
 }
 
 async function handleBlueprintChange(filePath: string): Promise<void> {
