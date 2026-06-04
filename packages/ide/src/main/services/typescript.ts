@@ -1,6 +1,7 @@
 import ts from 'typescript'
 import path from 'path'
 import { exec } from 'child_process'
+import fs from 'fs'
 
 export interface TsError {
   line: number
@@ -49,8 +50,17 @@ export const checkProjectTypes = async (projectPath: string, _modifiedFile?: str
     const nodePath = process.execPath
     const cmd = `"${nodePath}" "${tscPath}" --noEmit --pretty false --skipLibCheck`
 
-    exec(cmd, { cwd: projectPath }, (error, stdout, stderr) => {
+    exec(cmd, { cwd: projectPath, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }, (error, stdout, stderr) => {
       const raw = [stdout, stderr].join('\n')
+      try {
+        fs.writeFileSync(
+          path.join(projectPath, 'tsc_debug.log'),
+          `CMD: ${cmd}\nERROR: ${error ? error.message : 'none'}\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}\nRAW:\n${raw}\n`,
+          'utf-8'
+        )
+      } catch (e) {
+        // ignore
+      }
       const errorMap = parseTscOutput(raw, projectPath)
       resolve(errorMap)
     })
