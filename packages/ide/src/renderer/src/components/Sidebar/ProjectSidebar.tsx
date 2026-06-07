@@ -6,6 +6,25 @@ import { getFileTemplate } from '../../../../shared/templates'
 
 const WATCH_FOLDERS = ['assets', 'scenes', 'characters', 'modules', 'backgrounds', 'effects', 'fallbacks', 'initials', 'hooks', 'shortcuts']
 
+interface FolderInfo {
+  label: string
+  icon: string
+  group: 'main' | 'scene-config' | 'advanced'
+}
+
+const FOLDER_DISPLAY: Record<string, FolderInfo> = {
+  scenes: { label: '이야기', icon: '📖', group: 'main' },
+  characters: { label: '등장인물', icon: '👤', group: 'main' },
+  backgrounds: { label: '배경 · 장소', icon: '🏞️', group: 'main' },
+  assets: { label: '소재', icon: '🗂️', group: 'main' },
+  effects: { label: '연출 효과', icon: '✨', group: 'main' },
+  initials: { label: '초기 상태', icon: '🏁', group: 'scene-config' },
+  hooks: { label: '이벤트 훅', icon: '🪝', group: 'scene-config' },
+  shortcuts: { label: '대사 단축키', icon: '🎯', group: 'scene-config' },
+  modules: { label: '커스텀 시스템', icon: '⚙️', group: 'advanced' },
+  fallbacks: { label: '예외 처리', icon: '⚠️', group: 'advanced' }
+}
+
 /**
  * 해당 폴더의 기존 이름 목록을 받아, 충돌 시 _1, _2, ... 형태의 고유 이름을 반환합니다.
  * 파일의 경우 확장자 없이 비교하고, 폴더는 그대로 비교합니다.
@@ -74,6 +93,8 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     hooks: true,
     shortcuts: true,
   })
+  const [sceneConfigExpanded, setSceneConfigExpanded] = useState<boolean>(true)
+  const [advancedExpanded, setAdvancedExpanded] = useState<boolean>(false)
   const [folderFiles, setFolderFiles] = useState<Record<string, FileNode[]>>({})
   const [promptData, setPromptData] = useState<PromptData | null>(null)
   
@@ -110,8 +131,17 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
 
   const getVisibleNodes = () => {
     const nodes: string[] = []
+    if (!projectPath) return nodes
     CONFIG_FILES.forEach(file => nodes.push(`${projectPath}/${file}`))
     WATCH_FOLDERS.forEach(folder => {
+      const config = FOLDER_DISPLAY[folder]
+      const isVisible =
+        config.group === 'main' ||
+        (config.group === 'scene-config' && sceneConfigExpanded) ||
+        (config.group === 'advanced' && advancedExpanded)
+
+      if (!isVisible) return
+
       const rootPath = `${projectPath}/${folder}`
       nodes.push(rootPath)
       if (expanded[folder]) {
@@ -752,6 +782,65 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     )
   }
 
+  const renderFolder = (folder: string) => {
+    const rootPath = `${projectPath}/${folder}`
+    const isSelected = selectedFiles.has(rootPath)
+    const errorCount = getErrorCount(rootPath)
+    const info = FOLDER_DISPLAY[folder]
+
+    return (
+      <div key={folder} className="mb-2">
+        <div 
+          onDragOver={handleDragOver}
+          onDrop={(e) => handleDrop(e, rootPath, true)}
+          className={`relative flex items-center justify-between cursor-pointer py-1.5 select-none transition-colors group rounded px-2 ${
+            isSelected 
+              ? 'bg-primary-600/40 text-primary-200' 
+              : errorCount > 0
+                ? 'text-red-400 hover:bg-surface-800'
+                : 'text-surface-400 hover:bg-surface-800 hover:text-white'
+          }`}
+          onClick={(e) => handleNodeClick(e, rootPath, true, folder)}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="opacity-70 w-3 inline-block text-center text-[10px]">
+              {expanded[folder] ? '▾' : '▸'}
+            </span>
+            <span className="text-[13px]">{info.icon}</span>
+            <span className="font-semibold text-xs">{info.label}</span>
+          </div>
+          {errorCount > 0 && (
+            <div className="ml-2 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[9px] font-bold shrink-0">
+              {errorCount > 99 ? '99+' : errorCount}
+            </div>
+          )}
+          <div className="absolute -right-2 -top-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-105 bg-surface-800 shadow-xl border border-surface-700/80 rounded-md z-50 px-1 py-1 gap-1">
+            {folder !== 'effects' && (
+              <>
+                <button 
+                  onClick={(e) => handleAddFile(e, folder, false)}
+                  className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-700 hover:text-primary-400 transition-colors"
+                  title={`새 ${info.label} 리소스 추가`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                </button>
+                <button 
+                  onClick={(e) => handleAddFile(e, folder, true)}
+                  className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-700 hover:text-primary-400 transition-colors"
+                  title={`새 폴더 추가`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        
+        {expanded[folder] && renderTree(folderFiles[folder] || [], folder)}
+      </div>
+    )
+  }
+
   return (
     <aside className="border-r border-surface-800 bg-surface-900 flex flex-col shrink-0" style={{ width }}>
       <div className="border-b border-surface-800 p-4 shrink-0 flex justify-between items-center">
@@ -832,61 +921,49 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
           </div>
 
           {/* Folders */}
-          {WATCH_FOLDERS.map((folder) => {
-            const rootPath = `${projectPath}/${folder}`
-            const isSelected = selectedFiles.has(rootPath)
-            const errorCount = getErrorCount(rootPath)
-            return (
-            <div key={folder} className="mb-2">
-              <div 
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, rootPath, true)}
-                className={`relative flex items-center justify-between cursor-pointer py-1.5 select-none transition-colors group rounded px-2 ${
-                  isSelected 
-                    ? 'bg-primary-600/40 text-primary-200' 
-                    : errorCount > 0
-                      ? 'text-red-400 hover:bg-surface-800'
-                      : 'text-surface-400 hover:bg-surface-800 hover:text-white'
-                }`}
-                onClick={(e) => handleNodeClick(e, rootPath, true, folder)}
-              >
-                <div className="flex items-center">
-                  <span className="mr-1 opacity-70 w-3 inline-block text-center text-[10px]">
-                    {expanded[folder] ? '▾' : '▸'}
-                  </span>
-                  <span className="font-semibold capitalize">{folder}</span>
-                </div>
-                {errorCount > 0 && (
-                  <div className="ml-2 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[9px] font-bold shrink-0">
-                    {errorCount > 99 ? '99+' : errorCount}
-                  </div>
-                )}
-                <div className="absolute -right-2 -top-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-105 bg-surface-800 shadow-xl border border-surface-700/80 rounded-md z-50 px-1 py-1 gap-1">
-                  {folder !== 'effects' && (
-                    <>
-                      <button 
-                        onClick={(e) => handleAddFile(e, folder, false)}
-                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-700 hover:text-primary-400 transition-colors"
-                        title={`새 ${folder} 리소스 추가`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                      </button>
-                      <button 
-                        onClick={(e) => handleAddFile(e, folder, true)}
-                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-700 hover:text-primary-400 transition-colors"
-                        title={`새 폴더 추가`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
-                      </button>
-                    </>
-                  )}
-                </div>
+          <div className="space-y-1">
+            {WATCH_FOLDERS.filter(f => FOLDER_DISPLAY[f].group === 'main').map(renderFolder)}
+          </div>
+
+          {/* Collapsible: Scene Config */}
+          <div className="mt-6 border-t border-surface-800 pt-4">
+            <div 
+              onClick={() => setSceneConfigExpanded(!sceneConfigExpanded)}
+              className="flex items-center justify-between py-1.5 px-2 text-surface-400 hover:text-surface-200 cursor-pointer select-none rounded hover:bg-surface-800/50 transition-colors mb-2"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="opacity-70 text-[10px] w-3 text-center">
+                  {sceneConfigExpanded ? '▾' : '▸'}
+                </span>
+                <span className="font-semibold text-xs tracking-wider">📋 씬 설정</span>
               </div>
-              
-              {expanded[folder] && renderTree(folderFiles[folder] || [], folder)}
             </div>
-            )
-          })}
+            {sceneConfigExpanded && (
+              <div className="pl-1 space-y-1">
+                {WATCH_FOLDERS.filter(f => FOLDER_DISPLAY[f].group === 'scene-config').map(renderFolder)}
+              </div>
+            )}
+          </div>
+
+          {/* Collapsible: Advanced Config */}
+          <div className="mt-6 border-t border-surface-800 pt-4">
+            <div 
+              onClick={() => setAdvancedExpanded(!advancedExpanded)}
+              className="flex items-center justify-between py-1.5 px-2 text-surface-400 hover:text-surface-200 cursor-pointer select-none rounded hover:bg-surface-800/50 transition-colors mb-2"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="opacity-70 text-[10px] w-3 text-center">
+                  {advancedExpanded ? '▾' : '▸'}
+                </span>
+                <span className="font-semibold text-xs tracking-wider">⚙️ 고급 기능</span>
+              </div>
+            </div>
+            {advancedExpanded && (
+              <div className="pl-1 space-y-1">
+                {WATCH_FOLDERS.filter(f => FOLDER_DISPLAY[f].group === 'advanced').map(renderFolder)}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
