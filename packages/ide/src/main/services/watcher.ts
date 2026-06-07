@@ -252,6 +252,16 @@ export class ProjectWatcher {
         return
       }
 
+      // ── shortcuts 전용: Named Export 형태 선언 파일 ────────────
+      if (folder === 'shortcuts') {
+        const shortcutsContent = buildShortcutsDecl(files)
+        await fs.mkdir(path.dirname(declPath), { recursive: true })
+        await fs.writeFile(declPath, shortcutsContent, 'utf-8')
+        console.log(`[IDE] Generated declaration: ${declPath}`)
+        this.notifyFileChanged(declPath, shortcutsContent)
+        return
+      }
+
       // ── 그 외 폴더 (scenes, characters): 기본 export 객체 ───────
       const content2 = buildDefaultDecl(folder, files)
       await fs.mkdir(path.dirname(declPath), { recursive: true })
@@ -266,15 +276,6 @@ export class ProjectWatcher {
         await fs.writeFile(keysPath, keysContent, 'utf-8')
         console.log(`[IDE] Generated declaration: ${keysPath}`)
         this.notifyFileChanged(keysPath, keysContent)
-      }
-
-      // shortcuts 생성 시 Named Export 형태의 선언 파일 갱신
-      if (folder === 'shortcuts') {
-        const shortcutsContent = buildShortcutsDecl(files)
-        await fs.mkdir(path.dirname(declPath), { recursive: true })
-        await fs.writeFile(declPath, shortcutsContent, 'utf-8')
-        console.log(`[IDE] Generated declaration: ${declPath}`)
-        this.notifyFileChanged(declPath, shortcutsContent)
       }
     } catch (e) {
       console.error(`[IDE] Failed to generate declaration for ${folder}:`, e)
