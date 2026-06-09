@@ -427,7 +427,7 @@ characterModule.defineCommand(function* (cmd, ctx, state, setState) {
           requestAnimationFrame(checkSize)
           yield false
         }
-        const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, 'inherit', focusDuration, showCmd.ease)
+        const cmds = _calcFocusCommands(ctx, showCmd.name, charObj, def, focusType, 'inherit', focusDuration, showCmd.ease)
         for (const c of cmds) {
           const res = ctx.execute(c)
           if (res && typeof (res as Generator).next === 'function') {
@@ -449,6 +449,7 @@ export default characterModule
 // ─── character-focus 모듈 ────────────────────────────────────
 
 function _calcFocusCommands(
+  ctx: SceneContext,
   name: string,
   target: CharacterRenderObj | undefined | null,
   def: CharDef,
@@ -462,16 +463,43 @@ function _calcFocusCommands(
   const baseDef = def.bases[activeBaseKey]
   const fp = (focusType && baseDef?.points) ? baseDef.points[focusType] : { x: 0.5, y: 0.5 }
 
-  const targetX = target.transform?.position?.x ?? 0
-  const charW = target.style?.width ?? 500
+  const targetX = Number(target.transform?.position?.x ?? 0)
+  const charW = Number(target.style?.width ?? 500)
   const rendH = target.__renderedSize?.h
-  const charH = baseDef?.height ?? ((rendH && rendH > 0) ? rendH : charW * 2)
+  const charH = Number(baseDef?.height ?? ((rendH && Number(rendH) > 0) ? Number(rendH) : charW * 2))
 
   const panX = targetX + charW * (fp.x - 0.5)
   const panY = charH * (0.5 - fp.y)
 
+  const cam = ctx.renderer.world.camera as any
+  const zPos = 2000
+  const baseW = ctx.renderer.width
+  const baseH = ctx.renderer.height
+  const maxPanX = baseW * 0.08
+  const maxPanY = baseH * 0.08
+  const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(zPos, 1) : 1
+
+  const maxCamX = ratio > 0 && !isNaN(ratio) ? (maxPanX * ratio) : maxPanX
+  const maxCamY = ratio > 0 && !isNaN(ratio) ? (maxPanY * ratio) : maxPanY
+
+  let ratioX = 0.5
+  let ratioY = 0.5
+
+  if (maxCamX > 0 && !isNaN(maxCamX)) {
+    ratioX = (panX / (2 * maxCamX)) + 0.5
+  }
+  if (maxCamY > 0 && !isNaN(maxCamY)) {
+    ratioY = 0.5 - (panY / (2 * maxCamY))
+  }
+
+  if (isNaN(ratioX)) ratioX = 0.5
+  if (isNaN(ratioY)) ratioY = 0.5
+
+  const clampedX = Math.max(0, Math.min(1, ratioX))
+  const clampedY = Math.max(0, Math.min(1, ratioY))
+
   return [
-    { type: 'camera-pan', position: 'center', duration, ease, x: panX, y: panY },
+    { type: 'camera-pan', duration, ease, x: clampedX, y: clampedY },
     { type: 'camera-zoom', preset: fit, duration, ease }
   ]
 }
@@ -506,7 +534,7 @@ characterFocusModule.defineCommand(function* (cmd, ctx) {
     requestAnimationFrame(checkSize)
     yield false
   }
-  const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800, cmd.ease)
+  const cmds = _calcFocusCommands(ctx, cmd.name, charObj, def, cmd.point, cmd.zoom ?? 'inherit', cmd.duration ?? 800, cmd.ease)
   for (const c of cmds) {
     const res = ctx.execute(c)
     if (res && typeof (res as Generator).next === 'function') {

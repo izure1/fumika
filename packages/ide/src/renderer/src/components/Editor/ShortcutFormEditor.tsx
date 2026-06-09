@@ -201,12 +201,6 @@ export function ShortcutFormEditor({ content, onChange, filePath }: Props) {
 
   // ─── 사용법 미리보기 ──────────────────────────────────
 
-  const usageArgs = params.map(p => {
-    if (p.defaultValue) return p.defaultValue
-    return p.name || '...'
-  }).join(', ')
-
-
   if (viewMode === 'code') {
     return (
       <div className="flex flex-col h-full bg-[#1e1e1e]">

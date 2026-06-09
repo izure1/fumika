@@ -4,7 +4,6 @@ import type { EasingType } from 'leviar'
 import { playMotionEffect, type MotionEffectPreset } from '../core/motion'
 
 export type ZoomPreset = 'close-up' | 'medium' | 'wide' | 'reset' | 'inherit'
-export type PanPreset = 'left' | 'right' | 'up' | 'down' | 'center' | 'inherit' | (string & {})
 export type CameraEffectPreset = MotionEffectPreset
 
 /** 카메라를 줌한다 */
@@ -19,13 +18,11 @@ export interface CameraZoomCmd {
 
 /** 카메라를 패닝한다 */
 export interface CameraPanCmd {
-  /** 패닝 위치 프리셋입니다. ('inherit'일 경우 이전 상태 유지) */
-  position: PanPreset
   /** 애니메이션의 지속 시간(ms)입니다. */
   duration?: number
-  /** 커스텀 X 좌표입니다. */
+  /** X 좌표 (0~1)입니다. */
   x?: number
-  /** 커스텀 Y 좌표입니다. */
+  /** Y 좌표 (0~1)입니다. */
   y?: number
   /** 애니메이션의 이징 함수 이름입니다. */
   ease?: EasingType
@@ -57,14 +54,6 @@ const ZOOM_PRESETS: Record<Exclude<ZoomPreset, 'inherit'>, { scale: number; dura
   'reset': { scale: 1.0, duration: 600 },
 }
 
-const PAN_PRESETS: Record<Exclude<PanPreset, 'inherit'>, { x: number; y: number; duration: number }> = {
-  left: { x: -200, y: 0, duration: 1000 },
-  right: { x: 200, y: 0, duration: 1000 },
-  up: { x: 0, y: 200, duration: 1000 },
-  down: { x: 0, y: -200, duration: 1000 },
-  center: { x: 0, y: 0, duration: 1000 },
-}
-
 export { MOTION_EFFECT_PRESETS as CAMERA_EFFECT_PRESETS } from '../core/motion'
 
 // ─── 공유 헬퍼 ───────────────────────────────────────────────
@@ -84,32 +73,27 @@ export function zoomCamera(ctx: SceneContext, preset: ZoomPreset, duration?: num
   }
 }
 
-export function panCamera(ctx: SceneContext, position: PanPreset, duration?: number, customX?: number, customY?: number, ease: EasingType = 'easeInOutQuad') {
-  if (position === 'inherit') return
+export function panCamera(ctx: SceneContext, duration?: number, customX?: number, customY?: number, ease: EasingType = 'easeInOutQuad') {
+  const cam = ctx.renderer.world.camera as any
+  const zPos = 2000
+  const baseW = ctx.renderer.width
+  const baseH = ctx.renderer.height
+  const maxPanX = baseW * 0.08
+  const maxPanY = baseH * 0.08
+  const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(zPos, 1) : 1
 
-  const resolvedPreset = position
-  ctx.renderer.state.set('_lastPanPreset', resolvedPreset)
-  const cfg = PAN_PRESETS[resolvedPreset as Exclude<PanPreset, 'inherit'>]
+  const maxCamX = maxPanX * ratio
+  const maxCamY = maxPanY * ratio
 
-  let targetX = customX ?? 0
-  let targetY = customY ?? 0
-  let finalDur = duration ?? 1000
+  const currentX = ctx.renderer.camBaseObj?.transform?.position?.x ?? 0
+  const currentY = ctx.renderer.camBaseObj?.transform?.position?.y ?? 0
 
-  if (cfg && customX === undefined && customY === undefined) {
-    targetX = cfg.x
-    targetY = cfg.y
-    if (duration === undefined) finalDur = cfg.duration
-  } else if (typeof resolvedPreset === 'string' && customX === undefined) {
-    let ratio = 0.5
-    const m = resolvedPreset.match(/^(\d+)\/(\d+)$/)
-    if (m) {
-      const n = parseInt(m[1], 10)
-      const d = parseInt(m[2], 10)
-      if (d > 0) ratio = n / (d + 1)
-    }
-    targetX = ctx.renderer.width * (ratio - 0.5)
-    targetY = 0
-  }
+  const hasX = customX !== undefined && customX !== null && !isNaN(Number(customX))
+  const hasY = customY !== undefined && customY !== null && !isNaN(Number(customY))
+
+  const targetX = hasX ? (Math.max(0, Math.min(1, Number(customX))) - 0.5) * 2 * maxCamX : currentX
+  const targetY = hasY ? (0.5 - Math.max(0, Math.min(1, Number(customY)))) * 2 * maxCamY : currentY
+  const finalDur = duration ?? 1000
 
   if (ctx.renderer.camBaseObj) {
     const dur = ctx.renderer.dur(finalDur)
@@ -162,16 +146,21 @@ export { cameraZoomModule }
 
 // ─── camera-pan 모듈 ────────────────────────────────────────
 
-export interface CameraPanSchema { _lastPreset: string }
+export interface CameraPanSchema { _lastX: number; _lastY: number }
 
-const cameraPanModule = define<CameraPanCmd, CameraPanSchema>({ _lastPreset: 'center' })
+const cameraPanModule = define<CameraPanCmd, CameraPanSchema>({ _lastX: 0.5, _lastY: 0.5 })
 
 cameraPanModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { }, onCleanup: () => { } }))
 
 cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
-  const resolved = cmd.position === 'inherit' ? state._lastPreset : cmd.position
-  setState({ _lastPreset: resolved as string })
-  panCamera(ctx, resolved as PanPreset, cmd.duration, cmd.x, cmd.y, cmd.ease)
+  const hasX = cmd.x !== undefined && cmd.x !== null && !isNaN(Number(cmd.x))
+  const hasY = cmd.y !== undefined && cmd.y !== null && !isNaN(Number(cmd.y))
+
+  const targetX = hasX ? Number(cmd.x) : state._lastX
+  const targetY = hasY ? Number(cmd.y) : state._lastY
+
+  setState({ _lastX: targetX, _lastY: targetY })
+  panCamera(ctx, cmd.duration, targetX, targetY, cmd.ease)
   return true
 })
 

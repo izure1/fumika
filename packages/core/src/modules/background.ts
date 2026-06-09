@@ -72,7 +72,7 @@ backgroundModule.defineView((ctx, data, setState) => {
 
     const src = def.src ?? key
     const cam = ctx.renderer.world.camera as any
-    const zPos = 2000 // 기존 ctx.renderer.depth(500) * 4
+    const zPos = 2000
     const baseW = ctx.renderer.width
     const baseH = ctx.renderer.height
     const maxPanX = baseW * 0.08
