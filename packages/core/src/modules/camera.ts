@@ -20,10 +20,10 @@ export interface CameraZoomCmd {
 export interface CameraPanCmd {
   /** 애니메이션의 지속 시간(ms)입니다. */
   duration?: number
-  /** X 좌표 (0~1)입니다. */
-  x?: number
-  /** Y 좌표 (0~1)입니다. */
-  y?: number
+  /** X 좌표 (0~1) 또는 '1/5' 등의 비율 표현식입니다. */
+  x?: number | string
+  /** Y 좌표 (0~1) 또는 '1/5' 등의 비율 표현식입니다. */
+  y?: number | string
   /** 애니메이션의 이징 함수 이름입니다. */
   ease?: EasingType
 }
@@ -73,7 +73,31 @@ export function zoomCamera(ctx: SceneContext, preset: ZoomPreset, duration?: num
   }
 }
 
-export function panCamera(ctx: SceneContext, duration?: number, customX?: number, customY?: number, ease: EasingType = 'easeInOutQuad') {
+function parseRatioExpression(val: unknown, fallback: number): number {
+  if (val === undefined || val === null || val === '') return fallback
+  if (typeof val === 'number') return isNaN(val) ? fallback : val
+  if (typeof val === 'string') {
+    const trimmed = val.trim()
+    const num = Number(trimmed)
+    if (!isNaN(num)) return num
+
+    const m = trimmed.match(/^(\d+)\/(\d+)$/)
+    if (m) {
+      const n = parseInt(m[1], 10)
+      const d = parseInt(m[2], 10)
+      if (d > 0) return n / (d + 1)
+    }
+  }
+  return fallback
+}
+
+export function panCamera(
+  ctx: SceneContext,
+  duration?: number,
+  customX?: number | string,
+  customY?: number | string,
+  ease: EasingType = 'easeInOutQuad'
+) {
   const cam = ctx.renderer.world.camera as any
   const zPos = 2000
   const baseW = ctx.renderer.width
@@ -82,17 +106,32 @@ export function panCamera(ctx: SceneContext, duration?: number, customX?: number
   const maxPanY = baseH * 0.08
   const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(zPos, 1) : 1
 
-  const maxCamX = maxPanX * ratio
-  const maxCamY = maxPanY * ratio
+  const maxCamX = ratio > 0 && !isNaN(ratio) ? (maxPanX * ratio) : maxPanX
+  const maxCamY = ratio > 0 && !isNaN(ratio) ? (maxPanY * ratio) : maxPanY
 
   const currentX = ctx.renderer.camBaseObj?.transform?.position?.x ?? 0
   const currentY = ctx.renderer.camBaseObj?.transform?.position?.y ?? 0
 
-  const hasX = customX !== undefined && customX !== null && !isNaN(Number(customX))
-  const hasY = customY !== undefined && customY !== null && !isNaN(Number(customY))
+  const hasX = customX !== undefined && customX !== null && customX !== ''
+  const hasY = customY !== undefined && customY !== null && customY !== ''
 
-  const targetX = hasX ? (Math.max(0, Math.min(1, Number(customX))) - 0.5) * 2 * maxCamX : currentX
-  const targetY = hasY ? (0.5 - Math.max(0, Math.min(1, Number(customY)))) * 2 * maxCamY : currentY
+  let targetX = currentX
+  if (hasX) {
+    const valX = parseRatioExpression(customX, 0.5)
+    const clampedX = Math.max(0, Math.min(1, valX))
+    targetX = (clampedX - 0.5) * 2 * maxCamX
+  }
+
+  let targetY = currentY
+  if (hasY) {
+    const valY = parseRatioExpression(customY, 0.5)
+    const clampedY = Math.max(0, Math.min(1, valY))
+    targetY = (0.5 - clampedY) * 2 * maxCamY
+  }
+
+  if (isNaN(targetX)) targetX = currentX
+  if (isNaN(targetY)) targetY = currentY
+
   const finalDur = duration ?? 1000
 
   if (ctx.renderer.camBaseObj) {
@@ -153,11 +192,11 @@ const cameraPanModule = define<CameraPanCmd, CameraPanSchema>({ _lastX: 0.5, _la
 cameraPanModule.defineView((_ctx, _data, _setState) => ({ show: () => { }, hide: () => { }, onCleanup: () => { } }))
 
 cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
-  const hasX = cmd.x !== undefined && cmd.x !== null && !isNaN(Number(cmd.x))
-  const hasY = cmd.y !== undefined && cmd.y !== null && !isNaN(Number(cmd.y))
+  const hasX = cmd.x !== undefined && cmd.x !== null && cmd.x !== ''
+  const hasY = cmd.y !== undefined && cmd.y !== null && cmd.y !== ''
 
-  const targetX = hasX ? Number(cmd.x) : state._lastX
-  const targetY = hasY ? Number(cmd.y) : state._lastY
+  const targetX = hasX ? parseRatioExpression(cmd.x, 0.5) : state._lastX
+  const targetY = hasY ? parseRatioExpression(cmd.y, 0.5) : state._lastY
 
   setState({ _lastX: targetX, _lastY: targetY })
   panCamera(ctx, cmd.duration, targetX, targetY, cmd.ease)
