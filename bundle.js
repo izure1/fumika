@@ -1887,7 +1887,7 @@
             requestAnimationFrame(checkSize);
             yield false;
           }
-          const cmds = _calcFocusCommands(showCmd.name, charObj, def, focusType, "inherit", focusDuration, showCmd.ease);
+          const cmds = _calcFocusCommands(ctx, showCmd.name, charObj, def, focusType, "inherit", focusDuration, showCmd.ease);
           for (const c of cmds) {
             const res = ctx.execute(c);
             if (res && typeof res.next === "function") {
@@ -1903,19 +1903,40 @@
     return true;
   });
   var character_default = characterModule;
-  function _calcFocusCommands(name, target, def, focusType, fit = "inherit", duration = 800, ease) {
+  function _calcFocusCommands(ctx, name, target, def, focusType, fit = "inherit", duration = 800, ease) {
     if (!target) return [];
     const activeBaseKey = target._currentBaseKey ?? Object.keys(def.bases)[0];
     const baseDef = def.bases[activeBaseKey];
     const fp = focusType && baseDef?.points ? baseDef.points[focusType] : { x: 0.5, y: 0.5 };
-    const targetX = target.transform?.position?.x ?? 0;
-    const charW = target.style?.width ?? 500;
+    const targetX = Number(target.transform?.position?.x ?? 0);
+    const charW = Number(target.style?.width ?? 500);
     const rendH = target.__renderedSize?.h;
-    const charH = baseDef?.height ?? (rendH && rendH > 0 ? rendH : charW * 2);
+    const charH = Number(baseDef?.height ?? (rendH && Number(rendH) > 0 ? Number(rendH) : charW * 2));
     const panX = targetX + charW * (fp.x - 0.5);
     const panY = charH * (0.5 - fp.y);
+    const cam = ctx.renderer.world.camera;
+    const zPos = 2e3;
+    const baseW = ctx.renderer.width;
+    const baseH = ctx.renderer.height;
+    const maxPanX = baseW * 0.08;
+    const maxPanY = baseH * 0.08;
+    const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(zPos, 1) : 1;
+    const maxCamX = ratio > 0 && !isNaN(ratio) ? maxPanX * ratio : maxPanX;
+    const maxCamY = ratio > 0 && !isNaN(ratio) ? maxPanY * ratio : maxPanY;
+    let ratioX = 0.5;
+    let ratioY = 0.5;
+    if (maxCamX > 0 && !isNaN(maxCamX)) {
+      ratioX = panX / (2 * maxCamX) + 0.5;
+    }
+    if (maxCamY > 0 && !isNaN(maxCamY)) {
+      ratioY = 0.5 - panY / (2 * maxCamY);
+    }
+    if (isNaN(ratioX)) ratioX = 0.5;
+    if (isNaN(ratioY)) ratioY = 0.5;
+    const clampedX = Math.max(0, Math.min(1, ratioX));
+    const clampedY = Math.max(0, Math.min(1, ratioY));
     return [
-      { type: "camera-pan", position: "center", duration, ease, x: panX, y: panY },
+      { type: "camera-pan", duration, ease, x: clampedX, y: clampedY },
       { type: "camera-zoom", preset: fit, duration, ease }
     ];
   }
@@ -1946,7 +1967,7 @@
       requestAnimationFrame(checkSize);
       yield false;
     }
-    const cmds = _calcFocusCommands(cmd.name, charObj, def, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800, cmd.ease);
+    const cmds = _calcFocusCommands(ctx, cmd.name, charObj, def, cmd.point, cmd.zoom ?? "inherit", cmd.duration ?? 800, cmd.ease);
     for (const c of cmds) {
       const res = ctx.execute(c);
       if (res && typeof res.next === "function") {
@@ -2923,13 +2944,6 @@
     "wide": { scale: 0.92, duration: 800 },
     "reset": { scale: 1, duration: 600 }
   };
-  var PAN_PRESETS = {
-    left: { x: -200, y: 0, duration: 1e3 },
-    right: { x: 200, y: 0, duration: 1e3 },
-    up: { x: 0, y: 200, duration: 1e3 },
-    down: { x: 0, y: -200, duration: 1e3 },
-    center: { x: 0, y: 0, duration: 1e3 }
-  };
   function zoomCamera(ctx, preset, duration, ease = "easeInOutQuad") {
     const resolvedPreset = preset === "inherit" ? ctx.renderer.state.get("_lastZoomPreset") ?? "reset" : preset;
     ctx.renderer.state.set("_lastZoomPreset", resolvedPreset);
@@ -2942,29 +2956,51 @@
       ctx.renderer.animate(ctx.renderer.camBaseObj, { transform: { position: { z: targetZ } } }, dur, ease);
     }
   }
-  function panCamera(ctx, position, duration, customX, customY, ease = "easeInOutQuad") {
-    if (position === "inherit") return;
-    const resolvedPreset = position;
-    ctx.renderer.state.set("_lastPanPreset", resolvedPreset);
-    const cfg = PAN_PRESETS[resolvedPreset];
-    let targetX = customX ?? 0;
-    let targetY = customY ?? 0;
-    let finalDur = duration ?? 1e3;
-    if (cfg && customX === void 0 && customY === void 0) {
-      targetX = cfg.x;
-      targetY = cfg.y;
-      if (duration === void 0) finalDur = cfg.duration;
-    } else if (typeof resolvedPreset === "string" && customX === void 0) {
-      let ratio = 0.5;
-      const m = resolvedPreset.match(/^(\d+)\/(\d+)$/);
+  function parseRatioExpression(val, fallback2) {
+    if (val === void 0 || val === null || val === "") return fallback2;
+    if (typeof val === "number") return isNaN(val) ? fallback2 : val;
+    if (typeof val === "string") {
+      const trimmed = val.trim();
+      const num = Number(trimmed);
+      if (!isNaN(num)) return num;
+      const m = trimmed.match(/^(\d+)\/(\d+)$/);
       if (m) {
         const n = parseInt(m[1], 10);
         const d3 = parseInt(m[2], 10);
-        if (d3 > 0) ratio = n / (d3 + 1);
+        if (d3 > 0) return n / (d3 + 1);
       }
-      targetX = ctx.renderer.width * (ratio - 0.5);
-      targetY = 0;
     }
+    return fallback2;
+  }
+  function panCamera(ctx, duration, customX, customY, ease = "easeInOutQuad") {
+    const cam = ctx.renderer.world.camera;
+    const zPos = 2e3;
+    const baseW = ctx.renderer.width;
+    const baseH = ctx.renderer.height;
+    const maxPanX = baseW * 0.08;
+    const maxPanY = baseH * 0.08;
+    const ratio = cam && typeof cam.calcDepthRatio === "function" ? cam.calcDepthRatio(zPos, 1) : 1;
+    const maxCamX = ratio > 0 && !isNaN(ratio) ? maxPanX * ratio : maxPanX;
+    const maxCamY = ratio > 0 && !isNaN(ratio) ? maxPanY * ratio : maxPanY;
+    const currentX = ctx.renderer.camBaseObj?.transform?.position?.x ?? 0;
+    const currentY = ctx.renderer.camBaseObj?.transform?.position?.y ?? 0;
+    const hasX = customX !== void 0 && customX !== null && customX !== "";
+    const hasY = customY !== void 0 && customY !== null && customY !== "";
+    let targetX = currentX;
+    if (hasX) {
+      const valX = parseRatioExpression(customX, 0.5);
+      const clampedX = Math.max(0, Math.min(1, valX));
+      targetX = (clampedX - 0.5) * 2 * maxCamX;
+    }
+    let targetY = currentY;
+    if (hasY) {
+      const valY = parseRatioExpression(customY, 0.5);
+      const clampedY = Math.max(0, Math.min(1, valY));
+      targetY = (0.5 - clampedY) * 2 * maxCamY;
+    }
+    if (isNaN(targetX)) targetX = currentX;
+    if (isNaN(targetY)) targetY = currentY;
+    const finalDur = duration ?? 1e3;
     if (ctx.renderer.camBaseObj) {
       const dur = ctx.renderer.dur(finalDur);
       ctx.renderer.animate(ctx.renderer.camBaseObj, {
@@ -2997,15 +3033,18 @@
     zoomCamera(ctx, resolved, cmd.duration, cmd.ease);
     return true;
   });
-  var cameraPanModule = define2({ _lastPreset: "center" });
+  var cameraPanModule = define2({ _lastX: 0.5, _lastY: 0.5 });
   cameraPanModule.defineView((_ctx, _data, _setState) => ({ show: () => {
   }, hide: () => {
   }, onCleanup: () => {
   } }));
   cameraPanModule.defineCommand(function* (cmd, ctx, state, setState) {
-    const resolved = cmd.position === "inherit" ? state._lastPreset : cmd.position;
-    setState({ _lastPreset: resolved });
-    panCamera(ctx, resolved, cmd.duration, cmd.x, cmd.y, cmd.ease);
+    const hasX = cmd.x !== void 0 && cmd.x !== null && cmd.x !== "";
+    const hasY = cmd.y !== void 0 && cmd.y !== null && cmd.y !== "";
+    const targetX = hasX ? parseRatioExpression(cmd.x, 0.5) : state._lastX;
+    const targetY = hasY ? parseRatioExpression(cmd.y, 0.5) : state._lastY;
+    setState({ _lastX: targetX, _lastY: targetY });
+    panCamera(ctx, cmd.duration, targetX, targetY, cmd.ease);
     return true;
   });
   var cameraEffectModule = define2({
