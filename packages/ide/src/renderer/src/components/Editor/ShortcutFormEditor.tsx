@@ -231,13 +231,13 @@ export function ShortcutFormEditor({ content, onChange, filePath }: Props) {
                   alert('코드를 파싱할 수 없어 GUI 모드로 전환할 수 없습니다. 형식을 확인해 주세요.')
                 }
               }}
-              className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${viewMode === 'gui' ? 'bg-primary-600 text-white shadow' : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800'}`}
+              className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors text-surface-400 hover:text-surface-200 hover:bg-surface-800`}
             >
               GUI
             </button>
             <button
               onClick={() => setViewMode('code')}
-              className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${viewMode === 'code' ? 'bg-primary-600 text-white shadow' : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800'}`}
+              className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors bg-primary-600 text-white shadow`}
             >
               CODE
             </button>
@@ -268,13 +268,13 @@ export function ShortcutFormEditor({ content, onChange, filePath }: Props) {
         <div className="flex bg-surface-900 rounded p-0.5">
           <button
             onClick={() => setViewMode('gui')}
-            className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${viewMode === 'gui' ? 'bg-primary-600 text-white shadow' : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800'}`}
+            className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors bg-primary-600 text-white shadow`}
           >
             GUI
           </button>
           <button
             onClick={() => setViewMode('code')}
-            className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${viewMode === 'code' ? 'bg-primary-600 text-white shadow' : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800'}`}
+            className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors text-surface-400 hover:text-surface-200 hover:bg-surface-800`}
           >
             CODE
           </button>
@@ -337,7 +337,7 @@ export function ShortcutFormEditor({ content, onChange, filePath }: Props) {
                   <div key={idx} className="flex flex-col gap-2 p-2 bg-surface-900/30 rounded border border-surface-700/50 group">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-surface-600 w-4 shrink-0 text-right">{idx + 1}</span>
-                      
+
                       {/* Name Selector */}
                       <select
                         value={selectValue}
@@ -495,10 +495,10 @@ export function ShortcutFormEditor({ content, onChange, filePath }: Props) {
               </div>
               <div className="p-4 font-mono text-sm">
                 <div className="text-surface-500">
-                  <span className="text-purple-400">import</span> * <span className="text-purple-400">as</span> <span className="text-blue-300">S</span> <span className="text-purple-400">from</span> <span className="text-amber-300">'@/declarations/shortcuts'</span>
+                  <span className="text-purple-400">import</span> <span className="text-blue-300">Shortcuts</span> <span className="text-purple-400">from</span> <span className="text-amber-300">'@/declarations/shortcuts'</span>
                 </div>
-                <div className="mt-4 text-surface-300">
-                  <span className="text-blue-300">S</span>.<span className="text-yellow-300">{exportName}</span>({usageArgs ? <span className="text-emerald-300">{usageArgs}</span> : ''})
+                <div className="mt-2 text-surface-300">
+                  <span className="text-purple-400">const</span> {'{'} <span className="text-blue-300">{exportName}</span> {'}'} = <span className="text-blue-300">Shortcuts</span>
                 </div>
               </div>
             </div>
