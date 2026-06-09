@@ -471,35 +471,17 @@ function _calcFocusCommands(
   const panX = targetX + charW * (fp.x - 0.5)
   const panY = charH * (0.5 - fp.y)
 
-  const cam = ctx.renderer.world.camera as any
-  const zPos = 2000
   const baseW = ctx.renderer.width
   const baseH = ctx.renderer.height
-  const maxPanX = baseW * 0.08
-  const maxPanY = baseH * 0.08
-  const ratio = cam && typeof cam.calcDepthRatio === 'function' ? cam.calcDepthRatio(zPos, 1) : 1
 
-  const maxCamX = ratio > 0 && !isNaN(ratio) ? (maxPanX * ratio) : maxPanX
-  const maxCamY = ratio > 0 && !isNaN(ratio) ? (maxPanY * ratio) : maxPanY
-
-  let ratioX = 0.5
-  let ratioY = 0.5
-
-  if (maxCamX > 0 && !isNaN(maxCamX)) {
-    ratioX = (panX / (2 * maxCamX)) + 0.5
-  }
-  if (maxCamY > 0 && !isNaN(maxCamY)) {
-    ratioY = 0.5 - (panY / (2 * maxCamY))
-  }
+  let ratioX = panX / baseW + 0.5
+  let ratioY = 0.5 - panY / baseH
 
   if (isNaN(ratioX)) ratioX = 0.5
   if (isNaN(ratioY)) ratioY = 0.5
 
-  const clampedX = Math.max(0, Math.min(1, ratioX))
-  const clampedY = Math.max(0, Math.min(1, ratioY))
-
   return [
-    { type: 'camera-pan', duration, ease, x: clampedX, y: clampedY },
+    { type: 'camera-pan', duration, ease, x: ratioX, y: ratioY },
     { type: 'camera-zoom', preset: fit, duration, ease }
   ]
 }

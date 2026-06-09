@@ -118,15 +118,15 @@ export function panCamera(
   let targetX = currentX
   if (hasX) {
     const valX = parseRatioExpression(customX, 0.5)
-    const clampedX = Math.max(0, Math.min(1, valX))
-    targetX = (clampedX - 0.5) * 2 * maxCamX
+    const worldX = baseW * (valX - 0.5)
+    targetX = Math.max(-maxCamX, Math.min(maxCamX, worldX))
   }
 
   let targetY = currentY
   if (hasY) {
     const valY = parseRatioExpression(customY, 0.5)
-    const clampedY = Math.max(0, Math.min(1, valY))
-    targetY = (0.5 - clampedY) * 2 * maxCamY
+    const worldY = baseH * (0.5 - valY)
+    targetY = Math.max(-maxCamY, Math.min(maxCamY, worldY))
   }
 
   if (isNaN(targetX)) targetX = currentX
