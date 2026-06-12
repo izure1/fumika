@@ -19,6 +19,11 @@ declare global {
         getCommandFields: (filePath: string, interfaceName: string) => Promise<{ success: boolean; fields?: string[]; error?: string }>
         getAvailableCommands: (projectPath: string) => Promise<{ success: boolean; builtin: string[]; custom: string[]; error?: string }>
         resolveCommandFields: (projectPath: string, moduleKey: string) => Promise<{ success: boolean; fields?: string[]; error?: string }>
+        downloadZip: (projectPath: string, url: string) => Promise<{ success: boolean; tempZipPath?: string; error?: string }>
+        getZipConflicts: (projectPath: string, zipPath: string) => Promise<{ success: boolean; conflicts?: string[]; error?: string }>
+        importZip: (projectPath: string, zipPath: string, options: { overwriteAll?: boolean; selectedFiles?: string[] }) => Promise<{ success: boolean; error?: string }>
+        deleteTempFile: (filePath: string) => Promise<{ success: boolean; error?: string }>
+        exportZip: (projectPath: string) => Promise<{ success: boolean; error?: string }>
         build: (projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean, devTools?: boolean }) => Promise<{ success: boolean; error?: string }>
         selectIcon: (projectPath: string) => Promise<{ success: boolean; error?: string }>
         parseScenes: (filePaths: string[], projectPath?: string) => Promise<{

@@ -21,6 +21,11 @@ const api = {
     getCommandFields: (filePath: string, interfaceName: string) => ipcRenderer.invoke('project:getCommandFields', filePath, interfaceName),
     getAvailableCommands: (projectPath: string) => ipcRenderer.invoke('project:getAvailableCommands', projectPath),
     resolveCommandFields: (projectPath: string, moduleKey: string) => ipcRenderer.invoke('project:resolveCommandFields', projectPath, moduleKey),
+    downloadZip: (projectPath: string, url: string) => ipcRenderer.invoke('project:downloadZip', projectPath, url),
+    getZipConflicts: (projectPath: string, zipPath: string) => ipcRenderer.invoke('project:getZipConflicts', projectPath, zipPath),
+    importZip: (projectPath: string, zipPath: string, options: { overwriteAll?: boolean; selectedFiles?: string[] }) => ipcRenderer.invoke('project:importZip', projectPath, zipPath, options),
+    deleteTempFile: (filePath: string) => ipcRenderer.invoke('project:deleteTempFile', filePath),
+    exportZip: (projectPath: string) => ipcRenderer.invoke('project:exportZip', projectPath),
   },
   preview: {
     start: (projectPath: string, targetScene?: string) => ipcRenderer.invoke('preview:start', projectPath, targetScene),

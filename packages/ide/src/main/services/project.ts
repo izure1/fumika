@@ -2,6 +2,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { execFile, spawn } from 'child_process'
 import prettier from 'prettier'
+import AdmZip from 'adm-zip'
 import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent, RUNTIME_CONTENT, getSaveManagerContent, BLUEPRINT_RUNTIME_CODE, getDeclarationTemplate } from '../../shared/templates'
 
 async function runCommandLive(
@@ -653,6 +654,149 @@ export async function buildProject(targetDir: string, options?: { target: string
     }).catch(err => {
       log(`[IDE] Build failed: ${err.message}`)
       reject(err)
+    })
+  })
+}
+
+export async function downloadZip(projectPath: string, url: string): Promise<string> {
+  const tempDir = path.join(projectPath, '.fumika-tmp')
+  await fs.mkdir(tempDir, { recursive: true })
+  
+  const tempZipPath = path.join(tempDir, `addon-${Date.now()}.zip`)
+  
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to download zip: ${response.statusText}`)
+  }
+  
+  const buffer = Buffer.from(await response.arrayBuffer())
+  await fs.writeFile(tempZipPath, buffer)
+  return tempZipPath
+}
+
+function isProtectedPath(entryName: string): boolean {
+  const normalized = entryName.replace(/\\/g, '/').toLowerCase()
+  const protectedFiles = [
+    'package.json',
+    'main.ts',
+    'novel.config.ts',
+    'tsconfig.json',
+    'vite.config.ts',
+    'tsconfig.node.json',
+    'tsconfig.web.json'
+  ]
+  if (protectedFiles.includes(normalized)) return true
+  if (normalized.startsWith('declarations/')) return true
+  if (normalized.startsWith('node_modules/')) return true
+  if (normalized.startsWith('dist/')) return true
+  if (normalized.startsWith('.git/')) return true
+  if (normalized.startsWith('.fumika-tmp/')) return true
+  return false
+}
+
+export async function getZipConflicts(projectPath: string, zipPath: string): Promise<string[]> {
+  const zip = new AdmZip(zipPath)
+  const zipEntries = zip.getEntries()
+  const conflicts: string[] = []
+  
+  for (const entry of zipEntries) {
+    if (entry.isDirectory) continue
+    if (isProtectedPath(entry.entryName)) continue
+    
+    const targetPath = path.join(projectPath, entry.entryName)
+    try {
+      await fs.access(targetPath)
+      conflicts.push(entry.entryName)
+    } catch {
+      // Does not exist
+    }
+  }
+  
+  return conflicts
+}
+
+export async function importZip(
+  projectPath: string,
+  zipPath: string,
+  options: { overwriteAll?: boolean; selectedFiles?: string[] }
+): Promise<void> {
+  const zip = new AdmZip(zipPath)
+  const zipEntries = zip.getEntries()
+  const overwriteSet = new Set(options.selectedFiles || [])
+  
+  for (const entry of zipEntries) {
+    if (entry.isDirectory) continue
+    if (isProtectedPath(entry.entryName)) continue
+    
+    const targetPath = path.join(projectPath, entry.entryName)
+    let exists = false
+    try {
+      await fs.access(targetPath)
+      exists = true
+    } catch {}
+    
+    let shouldWrite = false
+    if (!exists) {
+      shouldWrite = true
+    } else if (options.overwriteAll) {
+      shouldWrite = true
+    } else if (overwriteSet.has(entry.entryName)) {
+      shouldWrite = true
+    }
+    
+    if (shouldWrite) {
+      const data = entry.getData()
+      await fs.mkdir(path.dirname(targetPath), { recursive: true })
+      await fs.writeFile(targetPath, data)
+    }
+  }
+}
+
+export async function deleteTempFile(filePath: string): Promise<void> {
+  try {
+    await fs.unlink(filePath)
+    const parentDir = path.dirname(filePath)
+    if (path.basename(parentDir) === '.fumika-tmp') {
+      const files = await fs.readdir(parentDir)
+      if (files.length === 0) {
+        await fs.rmdir(parentDir)
+      }
+    }
+  } catch (error) {
+    console.warn('[IDE] Failed to delete temporary file:', error)
+  }
+}
+
+const EXPORTABLE_FOLDERS = [
+  'assets',
+  'scenes',
+  'characters',
+  'modules',
+  'backgrounds',
+  'effects',
+  'fallbacks',
+  'initials',
+  'hooks',
+  'shortcuts'
+]
+
+export async function exportProjectAsZip(projectPath: string, destZipPath: string): Promise<void> {
+  const zip = new AdmZip()
+  
+  for (const folder of EXPORTABLE_FOLDERS) {
+    const folderPath = path.join(projectPath, folder)
+    try {
+      await fs.access(folderPath)
+      zip.addLocalFolder(folderPath, folder)
+    } catch {
+      // Ignore if folder does not exist
+    }
+  }
+  
+  await new Promise<void>((resolve, reject) => {
+    zip.writeZip(destZipPath, (err) => {
+      if (err) reject(err)
+      else resolve()
     })
   })
 }

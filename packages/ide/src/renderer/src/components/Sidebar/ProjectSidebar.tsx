@@ -121,6 +121,17 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
   }
   const [updateDialog, setUpdateDialog] = useState<UpdateDialogState | null>(null)
 
+  // ─── 애드온 가져오기 & 충돌 해결 다이얼로그 상태 ───────────────────
+  const [addonModalOpen, setAddonModalOpen] = useState(false)
+  const [addonUrl, setAddonUrl] = useState('')
+  const [addonLoading, setAddonLoading] = useState(false)
+  const [conflictResolver, setConflictResolver] = useState<{
+    isOpen: boolean
+    zipPath: string
+    conflicts: string[]
+    checked: Set<string>
+  } | null>(null)
+
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
   const [lastSelected, setLastSelected] = useState<string | null>(null)
 
@@ -342,6 +353,22 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
     return () => clearInterval(interval)
   }, [projectPath])
 
+  useEffect(() => {
+    const handleTriggerImport = () => {
+      setAddonModalOpen(true)
+    }
+    const handleTriggerExport = () => {
+      handleExportProjectZip()
+    }
+    
+    window.addEventListener('trigger-addon-import', handleTriggerImport)
+    window.addEventListener('trigger-addon-export', handleTriggerExport)
+    return () => {
+      window.removeEventListener('trigger-addon-import', handleTriggerImport)
+      window.removeEventListener('trigger-addon-export', handleTriggerExport)
+    }
+  }, [projectPath])
+
   // ==============================
   // 핸들러
   // ==============================
@@ -377,6 +404,140 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
       showCancel: false,
       onConfirm: () => setConfirmState(null)
     })
+  }
+
+  const handleImportLocalZip = async () => {
+    if (!projectPath) return
+    try {
+      const paths = await window.api.dialog.openFile({
+        title: '애드온 ZIP 파일 선택',
+        filters: [{ name: 'ZIP Files', extensions: ['zip'] }]
+      })
+      if (!paths || paths.length === 0) return
+      
+      const zipPath = paths[0]
+      setAddonModalOpen(false)
+      await checkAndImportZip(zipPath)
+    } catch (err: any) {
+      alert('ZIP 파일을 분석하는 동안 오류가 발생했습니다: ' + err.message)
+    }
+  }
+
+  const handleDownloadAndImportZip = async () => {
+    if (!projectPath || !addonUrl.trim()) return
+    setAddonLoading(true)
+    try {
+      const res = await window.api.project.downloadZip(projectPath, addonUrl.trim())
+      if (!res.success || !res.tempZipPath) {
+        throw new Error(res.error || '다운로드에 실패했습니다.')
+      }
+      setAddonModalOpen(false)
+      setAddonUrl('')
+      await checkAndImportZip(res.tempZipPath, true)
+    } catch (err: any) {
+      alert('다운로드 중 오류가 발생했습니다: ' + err.message)
+    } finally {
+      setAddonLoading(false)
+    }
+  }
+
+  const checkAndImportZip = async (zipPath: string, isTemp = false) => {
+    if (!projectPath) return
+    setGlobalLoading(true)
+    try {
+      const res = await window.api.project.getZipConflicts(projectPath, zipPath)
+      if (!res.success || !res.conflicts) {
+        throw new Error(res.error || '충돌을 검사할 수 없습니다.')
+      }
+      
+      if (res.conflicts.length > 0) {
+        setConflictResolver({
+          isOpen: true,
+          zipPath,
+          conflicts: res.conflicts,
+          checked: new Set(res.conflicts)
+        })
+      } else {
+        const importRes = await window.api.project.importZip(projectPath, zipPath, { overwriteAll: true })
+        if (!importRes.success) throw new Error(importRes.error)
+        
+        alert('애드온이 성공적으로 설치되었습니다!')
+        if (isTemp) {
+          await window.api.project.deleteTempFile(zipPath)
+        }
+        fetchFiles()
+      }
+    } catch (err: any) {
+      alert('애드온 설치 실패: ' + err.message)
+      if (isTemp) {
+        await window.api.project.deleteTempFile(zipPath)
+      }
+    } finally {
+      setGlobalLoading(false)
+    }
+  }
+
+  const handleConflictConfirm = async (overwriteMode: 'all' | 'none' | 'selected') => {
+    if (!projectPath || !conflictResolver) return
+    const { zipPath, checked } = conflictResolver
+    const isTemp = zipPath.includes('.fumika-tmp')
+    
+    setConflictResolver(null)
+    setGlobalLoading(true)
+    try {
+      let options: { overwriteAll?: boolean; selectedFiles?: string[] } = {}
+      if (overwriteMode === 'all') {
+        options = { overwriteAll: true }
+      } else if (overwriteMode === 'none') {
+        options = { overwriteAll: false, selectedFiles: [] }
+      } else {
+        options = { overwriteAll: false, selectedFiles: Array.from(checked) }
+      }
+      
+      const res = await window.api.project.importZip(projectPath, zipPath, options)
+      if (!res.success) throw new Error(res.error)
+      
+      alert('애드온이 성공적으로 적용되었습니다!')
+      if (isTemp) {
+        await window.api.project.deleteTempFile(zipPath)
+      }
+      fetchFiles()
+    } catch (err: any) {
+      alert('애드온 적용 실패: ' + err.message)
+      if (isTemp) {
+        await window.api.project.deleteTempFile(zipPath)
+      }
+    } finally {
+      setGlobalLoading(false)
+    }
+  }
+
+  const handleConflictCancel = async () => {
+    if (!conflictResolver) return
+    const { zipPath } = conflictResolver
+    const isTemp = zipPath.includes('.fumika-tmp')
+    setConflictResolver(null)
+    if (isTemp) {
+      await window.api.project.deleteTempFile(zipPath)
+    }
+  }
+
+  const handleExportProjectZip = async () => {
+    if (!projectPath) return
+    try {
+      setAddonModalOpen(false)
+      setGlobalLoading(true)
+      const res = await window.api.project.exportZip(projectPath)
+      if (res.success) {
+        alert('프로젝트가 애드온 ZIP 파일로 성공적으로 내보내졌습니다!')
+      } else if (res.error && res.error !== '저장이 취소되었습니다.') {
+        alert('내보내기 실패: ' + res.error)
+      }
+    } catch (err: any) {
+      alert('내보내기 중 오류가 발생했습니다: ' + err.message)
+    } finally {
+      setGlobalLoading(false)
+    }
   }
 
   const handleAddFile = async (e: React.MouseEvent, folderPath: string, isFolder: boolean = false) => {
@@ -1068,6 +1229,168 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                   className="px-4 py-2 text-xs rounded-lg bg-primary-600 text-white hover:bg-primary-500 transition-colors font-medium"
                 >
                   업데이트 시작
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 애드온 가져오기 모달 */}
+      {addonModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-900 border border-surface-700 rounded-xl shadow-2xl w-[480px] flex flex-col animate-fade-scale">
+            {/* 헤더 */}
+            <div className="px-6 py-4 border-b border-surface-700 flex justify-between items-center">
+              <div>
+                <h3 className="text-base font-semibold text-surface-100">애드온 가져오기</h3>
+                <p className="mt-1 text-xs text-surface-400 leading-relaxed">
+                  로컬 zip 파일 또는 외부 zip 다운로드 URL을 통해 프로젝트에 애드온을 추가합니다.
+                </p>
+              </div>
+              <button 
+                onClick={() => setAddonModalOpen(false)}
+                className="text-surface-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* 바디 */}
+            <div className="px-6 py-6 space-y-6">
+              {/* 로컬 가져오기 */}
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-surface-300 block">방법 1. 로컬 압축 파일 (.zip)</span>
+                <button
+                  onClick={handleImportLocalZip}
+                  className="w-full py-3 rounded-lg border border-dashed border-surface-600 hover:border-primary-500 hover:bg-primary-600/5 transition-all text-xs text-surface-300 hover:text-primary-300 font-medium cursor-pointer"
+                >
+                  📂 애드온 ZIP 파일 선택하기
+                </button>
+              </div>
+
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-surface-800"></div>
+                <span className="flex-shrink mx-4 text-[10px] text-surface-500 uppercase font-mono">Or</span>
+                <div className="flex-grow border-t border-surface-800"></div>
+              </div>
+
+              {/* URL 가져오기 */}
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-surface-300 block">방법 2. 외부 URL 다운로드</span>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="https://example.com/addon.zip"
+                    value={addonUrl}
+                    onChange={(e) => setAddonUrl(e.target.value)}
+                    className="flex-1 bg-surface-950 border border-surface-700 text-xs text-white px-3 py-2 rounded-lg focus:outline-none focus:border-primary-500"
+                  />
+                  <button
+                    onClick={handleDownloadAndImportZip}
+                    disabled={addonLoading || !addonUrl.trim()}
+                    className="px-4 py-2 text-xs font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
+                  >
+                    {addonLoading ? '다운로드 중...' : '다운로드'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-surface-800"></div>
+                <span className="flex-shrink mx-4 text-[10px] text-surface-500 uppercase font-mono">Or</span>
+                <div className="flex-grow border-t border-surface-800"></div>
+              </div>
+
+              {/* 애드온 내보내기 */}
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-surface-300 block">애드온 내보내기 (Export Addon)</span>
+                <button
+                  onClick={handleExportProjectZip}
+                  className="w-full py-3 rounded-lg border border-dashed border-surface-600 hover:border-emerald-500 hover:bg-emerald-600/5 transition-all text-xs text-surface-300 hover:text-emerald-300 font-medium cursor-pointer"
+                >
+                  📤 현재 프로젝트를 ZIP 애드온으로 내보내기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 충돌 해결 다이얼로그 모달 */}
+      {conflictResolver?.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-900 border border-surface-700 rounded-xl shadow-2xl w-[480px] max-h-[80vh] flex flex-col animate-fade-scale">
+            {/* 헤더 */}
+            <div className="px-6 py-4 border-b border-surface-700">
+              <h3 className="text-base font-semibold text-surface-100 text-yellow-400">⚠️ 파일 중복 충돌 감지</h3>
+              <p className="mt-1 text-xs text-surface-400 leading-relaxed">
+                프로젝트에 이미 존재하는 파일이 있습니다. 처리 방식을 선택하십시오.
+              </p>
+            </div>
+
+            {/* 중복 파일 목록 */}
+            <div className="flex-1 overflow-y-auto px-6 py-3 custom-scrollbar space-y-1">
+              {conflictResolver.conflicts.map(file => {
+                const isChecked = conflictResolver.checked.has(file)
+                return (
+                  <label
+                    key={file}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none ${
+                      isChecked ? 'bg-primary-600/10' : 'hover:bg-surface-800'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 accent-primary-500 shrink-0"
+                      checked={isChecked}
+                      onChange={() => {
+                        setConflictResolver(prev => {
+                          if (!prev) return prev
+                          const next = new Set(prev.checked)
+                          if (next.has(file)) next.delete(file)
+                          else next.add(file)
+                          return { ...prev, checked: next }
+                        })
+                      }}
+                    />
+                    <span className="flex-1 min-w-0 block">
+                      <span className="text-xs font-mono text-surface-200 truncate">{file}</span>
+                    </span>
+                    <span className="shrink-0 text-[10px] text-yellow-500 font-medium">덮어쓰기 예정</span>
+                  </label>
+                )
+              })}
+            </div>
+
+            {/* 푸터 */}
+            <div className="px-6 py-4 border-t border-surface-700 flex flex-col gap-3">
+              <div className="flex justify-between items-center gap-2">
+                <button
+                  onClick={() => handleConflictConfirm('none')}
+                  className="flex-1 py-2 text-xs rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 transition-colors cursor-pointer"
+                >
+                  기존 파일 유지 (건너뛰기)
+                </button>
+                <button
+                  onClick={() => handleConflictConfirm('all')}
+                  className="flex-1 py-2 text-xs rounded-lg bg-red-600/20 border border-red-500/30 text-red-300 hover:bg-red-600/40 transition-colors cursor-pointer"
+                >
+                  모두 덮어쓰기
+                </button>
+              </div>
+              <div className="flex justify-end gap-2 border-t border-surface-700 pt-3">
+                <button
+                  onClick={handleConflictCancel}
+                  className="px-4 py-2 text-xs rounded-lg bg-surface-700 text-surface-300 hover:bg-surface-600 transition-colors cursor-pointer"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={() => handleConflictConfirm('selected')}
+                  className="px-4 py-2 text-xs rounded-lg bg-primary-600 text-white hover:bg-primary-500 transition-colors font-medium cursor-pointer"
+                >
+                  선택한 파일만 덮어쓰기 ({conflictResolver.checked.size}개)
                 </button>
               </div>
             </div>

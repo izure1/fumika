@@ -8,7 +8,7 @@ import sharp from 'sharp'
 import prettier from 'prettier'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { scaffoldProject, updateProject, ensureEffectsFiles, buildProject, getProjectFileSpecs } from './services/project'
+import { scaffoldProject, updateProject, ensureEffectsFiles, buildProject, getProjectFileSpecs, downloadZip, getZipConflicts, importZip, deleteTempFile, exportProjectAsZip } from './services/project'
 import { ProjectWatcher } from './services/watcher'
 import { PreviewService } from './services/preview'
 import { settingsService } from './services/settings'
@@ -226,6 +226,65 @@ app.whenReady().then(() => {
 
   ipcMain.handle('project:getFileSpecs', async () => {
     return { success: true, specs: getProjectFileSpecs() }
+  })
+
+  ipcMain.handle('project:downloadZip', async (_, projectPath: string, url: string) => {
+    try {
+      const tempZipPath = await downloadZip(projectPath, url)
+      return { success: true, tempZipPath }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('project:getZipConflicts', async (_, projectPath: string, zipPath: string) => {
+    try {
+      const conflicts = await getZipConflicts(projectPath, zipPath)
+      return { success: true, conflicts }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('project:importZip', async (_, projectPath: string, zipPath: string, options: { overwriteAll?: boolean; selectedFiles?: string[] }) => {
+    try {
+      await importZip(projectPath, zipPath, options)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('project:deleteTempFile', async (_, filePath: string) => {
+    try {
+      await deleteTempFile(filePath)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('project:exportZip', async (_, projectPath: string) => {
+    try {
+      const options: Electron.SaveDialogOptions = {
+        title: '프로젝트 애드온 ZIP 내보내기',
+        defaultPath: path.join(app.getPath('downloads'), `${path.basename(projectPath)}-addon.zip`),
+        filters: [{ name: 'ZIP Files', extensions: ['zip'] }]
+      }
+      
+      const { canceled, filePath } = mainWindow
+        ? await dialog.showSaveDialog(mainWindow, options)
+        : await dialog.showSaveDialog(options)
+        
+      if (canceled || !filePath) {
+        return { success: false, error: '저장이 취소되었습니다.' }
+      }
+      
+      await exportProjectAsZip(projectPath, filePath)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
   })
 
   ipcMain.handle('project:selectIcon', async (_, projectPath: string) => {

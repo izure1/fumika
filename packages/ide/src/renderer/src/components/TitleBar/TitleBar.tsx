@@ -9,11 +9,13 @@ export function TitleBar() {
   const { isPanelOpen, togglePanel } = useOutputStore()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false)
+  const [isAddonMenuOpen, setIsAddonMenuOpen] = useState(false)
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false)
   const [helpDialogTab, setHelpDialogTab] = useState<'info' | 'license'>('info')
 
   const menuRef = useRef<HTMLDivElement>(null)
   const helpMenuRef = useRef<HTMLDivElement>(null)
+  const addonMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -22,6 +24,9 @@ export function TitleBar() {
       }
       if (helpMenuRef.current && !helpMenuRef.current.contains(e.target as Node)) {
         setIsHelpMenuOpen(false)
+      }
+      if (addonMenuRef.current && !addonMenuRef.current.contains(e.target as Node)) {
+        setIsAddonMenuOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -57,6 +62,7 @@ export function TitleBar() {
                     onClick={() => {
                       setIsMenuOpen(!isMenuOpen)
                       setIsHelpMenuOpen(false)
+                      setIsAddonMenuOpen(false)
                     }}
                   >
                     보기
@@ -82,6 +88,7 @@ export function TitleBar() {
                     onClick={() => {
                       setIsHelpMenuOpen(!isHelpMenuOpen)
                       setIsMenuOpen(false)
+                      setIsAddonMenuOpen(false)
                     }}
                   >
                     도움말
@@ -99,6 +106,40 @@ export function TitleBar() {
                         onClick={() => openHelpDialog('info')}
                       >
                         정보
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="relative" ref={addonMenuRef} style={{ WebkitAppRegion: 'no-drag' } as any}>
+                  <button 
+                    className={`px-2 py-0.5 text-xs rounded transition-colors ${isAddonMenuOpen ? 'bg-surface-800 text-surface-200' : 'hover:bg-surface-800 hover:text-surface-200'}`}
+                    onClick={() => {
+                      setIsAddonMenuOpen(!isAddonMenuOpen)
+                      setIsMenuOpen(false)
+                      setIsHelpMenuOpen(false)
+                    }}
+                  >
+                    애드온
+                  </button>
+                  {isAddonMenuOpen && (
+                    <div className="absolute left-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-md shadow-xl py-1 z-50">
+                      <button 
+                        className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('trigger-addon-import'))
+                          setIsAddonMenuOpen(false)
+                        }}
+                      >
+                        가져오기 (.zip)
+                      </button>
+                      <button 
+                        className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('trigger-addon-export'))
+                          setIsAddonMenuOpen(false)
+                        }}
+                      >
+                        내보내기 (.zip)
                       </button>
                     </div>
                   )}
