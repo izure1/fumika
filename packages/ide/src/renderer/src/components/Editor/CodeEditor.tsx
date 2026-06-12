@@ -31,13 +31,19 @@ function toFileUri(absPath: string): string {
 
 export function CodeEditor({ code, onChange, language = 'typescript', filePath }: Props) {
   const monacoInstance = useMonaco()
-  const { projectPath, pendingLine, setPendingLine } = useProjectStore()
+  const { projectPath, pendingLine, setPendingLine, autoComma } = useProjectStore()
   // 마지막으로 주입한 projectPath (동일 프로젝트 중복 주입 방지)
   const injectedProjectRef = useRef<string | null>(null)
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
 
   const isTypingRef = useRef(false)
   const typingTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const changeListenerRef = useRef<monaco.IDisposable | null>(null)
+
+  const autoCommaRef = useRef(autoComma)
+  useEffect(() => {
+    autoCommaRef.current = autoComma
+  }, [autoComma])
 
   const handleEditorMount: OnMount = useCallback((editor) => {
     editorRef.current = editor
@@ -51,6 +57,52 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
         const currentVal = editor.getValue()
         if (codeRef.current !== currentVal) {
           editor.setValue(codeRef.current)
+        }
+      }
+    })
+
+    if (changeListenerRef.current) {
+      changeListenerRef.current.dispose()
+    }
+
+    changeListenerRef.current = editor.onDidChangeModelContent((event) => {
+      if (event.isUndoing || event.isRedoing) return
+      if (!autoCommaRef.current) return
+
+      for (const change of event.changes) {
+        if (change.text.includes('\n')) {
+          const model = editor.getModel()
+          if (!model) continue
+
+          const startLineNumber = change.range.startLineNumber
+          const lineContent = model.getLineContent(startLineNumber)
+          
+          if (shouldAppendComma(lineContent, model, startLineNumber)) {
+            const endColumn = lineContent.length + 1
+            
+            setTimeout(() => {
+              if (model.isDisposed()) return
+              const currentLineContent = model.getLineContent(startLineNumber)
+              const trimmed = currentLineContent.trim()
+              
+              if (trimmed.endsWith(',') || 
+                  trimmed.endsWith('{') || 
+                  trimmed.endsWith('[') || 
+                  trimmed.endsWith('(') || 
+                  trimmed.endsWith(';') || 
+                  trimmed.endsWith(':')) {
+                return
+              }
+              
+              editor.executeEdits('auto-comma', [
+                {
+                  range: new monaco.Range(startLineNumber, endColumn, startLineNumber, endColumn),
+                  text: ',',
+                  forceMoveMarkers: true
+                }
+              ])
+            }, 0)
+          }
         }
       }
     })
@@ -239,11 +291,14 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
   const codeRef = useRef(code)
   useEffect(() => { codeRef.current = code }, [code])
 
-  // 타이머 정리
+  // 타이머 및 리스너 정리
   useEffect(() => {
     return () => {
       if (typingTimerRef.current) {
         clearTimeout(typingTimerRef.current)
+      }
+      if (changeListenerRef.current) {
+        changeListenerRef.current.dispose()
       }
     }
   }, [])
@@ -337,4 +392,92 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
       />
     </div>
   )
+}
+
+function getClosestOpenBracket(model: monaco.editor.ITextModel, lineNumber: number): string | null {
+  const stack: string[] = []
+  const maxSearchLines = 100
+  const startSearch = Math.max(1, lineNumber - maxSearchLines)
+  
+  for (let l = lineNumber; l >= startSearch; l--) {
+    const text = model.getLineContent(l)
+    
+    const cleaned = text
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*/g, '')
+      .replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '')
+      .replace(/`[\s\S]*?`/g, '')
+      
+    for (let i = cleaned.length - 1; i >= 0; i--) {
+      const char = cleaned[i]
+      if (char === '}' || char === ']') {
+        stack.push(char)
+      } else if (char === '{') {
+        if (stack.length > 0 && stack[stack.length - 1] === '}') {
+          stack.pop()
+        } else if (stack.length === 0) {
+          return '{'
+        }
+      } else if (char === '[') {
+        if (stack.length > 0 && stack[stack.length - 1] === ']') {
+          stack.pop()
+        } else if (stack.length === 0) {
+          return '['
+        }
+      }
+    }
+  }
+  return null
+}
+
+function shouldAppendComma(lineContent: string, model: monaco.editor.ITextModel, lineNumber: number): boolean {
+  const trimmed = lineContent.trim()
+  if (trimmed === '') return false
+  
+  if (trimmed.endsWith(',') || 
+      trimmed.endsWith('{') || 
+      trimmed.endsWith('[') || 
+      trimmed.endsWith('(') || 
+      trimmed.endsWith(';') || 
+      trimmed.endsWith(':')) {
+    return false
+  }
+  
+  if (trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
+    return false
+  }
+  
+  if (/^(import|export|const|let|var|function|class|if|for|while|return|switch|throw|break|continue)\b/.test(trimmed)) {
+    return false
+  }
+
+  const openBracket = getClosestOpenBracket(model, lineNumber)
+  
+  if (openBracket === '[') {
+    return true
+  }
+  
+  if (openBracket === '{') {
+    if (trimmed.includes(':') && !trimmed.includes('?') && !/^(case|default)\b/.test(trimmed)) {
+      return true
+    }
+    
+    if (trimmed.startsWith('...')) {
+      return true
+    }
+    
+    if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(trimmed)) {
+      return true
+    }
+    
+    if (/^(["'])(?:(?=(\\?))\2.)*?\1$/.test(trimmed)) {
+      return true
+    }
+    
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      return true
+    }
+  }
+  
+  return false
 }

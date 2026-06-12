@@ -7,13 +7,15 @@ export interface IdeSettings {
   themeBg: 'slate' | 'zinc' | 'neutral' | 'stone' | 'gray'
   formatOnSave?: boolean
   autoUpdate?: boolean
+  autoComma?: boolean
 }
 
 const DEFAULT_SETTINGS: IdeSettings = {
   themeColor: 'amber',
   themeBg: 'neutral',
   formatOnSave: true,
-  autoUpdate: true
+  autoUpdate: true,
+  autoComma: true
 }
 
 export class SettingsService {
