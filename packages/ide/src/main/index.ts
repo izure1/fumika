@@ -8,7 +8,7 @@ import sharp from 'sharp'
 import prettier from 'prettier'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { scaffoldProject, updateProject, ensureEffectsFiles, buildProject, getProjectFileSpecs, downloadZip, getZipConflicts, importZip, deleteTempFile, exportProjectAsZip } from './services/project'
+import { scaffoldProject, updateProject, ensureEffectsFiles, buildProject, getProjectFileSpecs, downloadZip, getZipConflicts, importZip, deleteTempFile, exportProjectAsZip, validateAddonZip } from './services/project'
 import { ProjectWatcher } from './services/watcher'
 import { PreviewService } from './services/preview'
 import { settingsService } from './services/settings'
@@ -232,6 +232,15 @@ app.whenReady().then(() => {
     try {
       const tempZipPath = await downloadZip(projectPath, url)
       return { success: true, tempZipPath }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('project:validateAddonZip', async (_, zipPath: string) => {
+    try {
+      const result = validateAddonZip(zipPath)
+      return { success: true, ...result }
     } catch (error: any) {
       return { success: false, error: error.message }
     }

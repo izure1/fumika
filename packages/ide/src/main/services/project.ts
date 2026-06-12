@@ -1,9 +1,34 @@
 import { promises as fs } from 'fs'
+import { createRequire } from 'module'
 import path from 'path'
 import { execFile, spawn } from 'child_process'
 import prettier from 'prettier'
 import AdmZip from 'adm-zip'
 import { getNovelConfigContent, MAIN_TS_CONTENT, getIndexHtmlContent, EFFECT_TYPES, getInitialEffectContent, getViteConfigContent, getElectronMainContent, getAppPackageJsonContent, getElectronBuilderConfigContent, RUNTIME_CONTENT, getSaveManagerContent, BLUEPRINT_RUNTIME_CODE, getDeclarationTemplate } from '../../shared/templates'
+
+// ─── 애드온 매니페스트 ────────────────────────────────────────────
+
+const ADDON_MANIFEST_FILENAME = 'fumika-addon.json'
+
+export interface AddonManifest {
+  /** 파일 타입 식별자 — 반드시 'fumika-addon' 이어야 유효한 애드온 */
+  type: 'fumika-addon'
+  /** 내보낸 IDE 버전 */
+  ideVersion: string
+  /** 내보낸 시각 (ISO 8601) */
+  exportedAt: string
+}
+
+/** IDE 패키지 버전을 동기적으로 읽습니다. */
+function getIdeVersion(): string {
+  try {
+    const require = createRequire(import.meta.url)
+    const pkg = require('../../../package.json') as { version: string }
+    return pkg.version
+  } catch {
+    return 'unknown'
+  }
+}
 
 async function runCommandLive(
   cmd: string,
@@ -694,6 +719,60 @@ function isProtectedPath(entryName: string): boolean {
   return false
 }
 
+/**
+ * 애드온 ZIP 파일이 올바른 형식인지 검증합니다.
+ *
+ * 검증 전략:
+ * 1. ZIP이 정상적으로 열릴 수 있는지 확인
+ * 2. `fumika-addon.json` 매니페스트 기반 검증 (필수)
+ *
+ * @returns `{ valid: true, manifest? }` 또는 `{ valid: false, reason: string }`
+ */
+export function validateAddonZip(zipPath: string): {
+  valid: boolean
+  reason?: string
+  manifest?: AddonManifest
+} {
+  let zip: AdmZip
+  try {
+    zip = new AdmZip(zipPath)
+  } catch {
+    return { valid: false, reason: '손상되었거나 올바른 ZIP 파일이 아닙니다.' }
+  }
+
+  const entries = zip.getEntries()
+  if (entries.length === 0) {
+    return { valid: false, reason: 'ZIP 파일이 비어 있습니다.' }
+  }
+
+  const manifestEntry = entries.find(
+    (e) => !e.isDirectory && e.entryName.replace(/\\/g, '/') === ADDON_MANIFEST_FILENAME
+  )
+
+  if (!manifestEntry) {
+    return {
+      valid: false,
+      reason: `유효한 애드온 파일이 아닙니다. 매니페스트 파일(${ADDON_MANIFEST_FILENAME})이 누락되었습니다.`
+    }
+  }
+
+  let manifest: AddonManifest
+  try {
+    manifest = JSON.parse(manifestEntry.getData().toString('utf-8')) as AddonManifest
+  } catch {
+    return { valid: false, reason: `${ADDON_MANIFEST_FILENAME} 파일이 손상되어 읽을 수 없습니다.` }
+  }
+
+  if (manifest.type !== 'fumika-addon') {
+    return {
+      valid: false,
+      reason: `매니페스트의 type이 올바르지 않습니다. (받은 값: '${manifest.type}', 예상: 'fumika-addon')`
+    }
+  }
+
+  return { valid: true, manifest }
+}
+
 export async function getZipConflicts(projectPath: string, zipPath: string): Promise<string[]> {
   const zip = new AdmZip(zipPath)
   const zipEntries = zip.getEntries()
@@ -782,17 +861,29 @@ const EXPORTABLE_FOLDERS = [
 
 export async function exportProjectAsZip(projectPath: string, destZipPath: string): Promise<void> {
   const zip = new AdmZip()
-  
+
+  // ── 애드온 매니페스트 삽입 ────────────────────────────────────
+  const manifest: AddonManifest = {
+    type: 'fumika-addon',
+    ideVersion: getIdeVersion(),
+    exportedAt: new Date().toISOString()
+  }
+  zip.addFile(
+    ADDON_MANIFEST_FILENAME,
+    Buffer.from(JSON.stringify(manifest, null, 2), 'utf-8')
+  )
+
+  // ── 프로젝트 리소스 폴더 압축 ────────────────────────────────
   for (const folder of EXPORTABLE_FOLDERS) {
     const folderPath = path.join(projectPath, folder)
     try {
       await fs.access(folderPath)
       zip.addLocalFolder(folderPath, folder)
     } catch {
-      // Ignore if folder does not exist
+      // 폴더가 없으면 무시
     }
   }
-  
+
   await new Promise<void>((resolve, reject) => {
     zip.writeZip(destZipPath, (err) => {
       if (err) reject(err)

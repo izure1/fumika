@@ -24,6 +24,17 @@ declare global {
         importZip: (projectPath: string, zipPath: string, options: { overwriteAll?: boolean; selectedFiles?: string[] }) => Promise<{ success: boolean; error?: string }>
         deleteTempFile: (filePath: string) => Promise<{ success: boolean; error?: string }>
         exportZip: (projectPath: string) => Promise<{ success: boolean; error?: string }>
+        validateAddonZip: (zipPath: string) => Promise<{
+          success: boolean
+          valid: boolean
+          reason?: string
+          manifest?: {
+            type: 'fumika-addon'
+            ideVersion: string
+            exportedAt: string
+          }
+          error?: string
+        }>
         build: (projectPath: string, options?: { target: string, resizable?: boolean, installer?: boolean, devTools?: boolean }) => Promise<{ success: boolean; error?: string }>
         selectIcon: (projectPath: string) => Promise<{ success: boolean; error?: string }>
         parseScenes: (filePaths: string[], projectPath?: string) => Promise<{

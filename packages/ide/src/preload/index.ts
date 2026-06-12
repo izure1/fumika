@@ -26,6 +26,7 @@ const api = {
     importZip: (projectPath: string, zipPath: string, options: { overwriteAll?: boolean; selectedFiles?: string[] }) => ipcRenderer.invoke('project:importZip', projectPath, zipPath, options),
     deleteTempFile: (filePath: string) => ipcRenderer.invoke('project:deleteTempFile', filePath),
     exportZip: (projectPath: string) => ipcRenderer.invoke('project:exportZip', projectPath),
+    validateAddonZip: (zipPath: string) => ipcRenderer.invoke('project:validateAddonZip', zipPath)
   },
   preview: {
     start: (projectPath: string, targetScene?: string) => ipcRenderer.invoke('preview:start', projectPath, targetScene),
