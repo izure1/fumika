@@ -419,7 +419,14 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
       setAddonModalOpen(false)
       await checkAndImportZip(zipPath)
     } catch (err: any) {
-      alert('ZIP 파일을 분석하는 동안 오류가 발생했습니다: ' + err.message)
+      setConfirmState({
+        isOpen: true,
+        title: 'ZIP 분석 실패',
+        message: 'ZIP 파일을 분석하는 동안 오류가 발생했습니다:\n' + err.message,
+        type: 'danger',
+        showCancel: false,
+        onConfirm: () => setConfirmState(null)
+      })
     }
   }
 
@@ -435,7 +442,14 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
       setAddonUrl('')
       await checkAndImportZip(res.tempZipPath, true)
     } catch (err: any) {
-      alert('다운로드 중 오류가 발생했습니다: ' + err.message)
+      setConfirmState({
+        isOpen: true,
+        title: '다운로드 실패',
+        message: '다운로드 중 오류가 발생했습니다:\n' + err.message,
+        type: 'danger',
+        showCancel: false,
+        onConfirm: () => setConfirmState(null)
+      })
     } finally {
       setAddonLoading(false)
     }
@@ -461,14 +475,28 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
         const importRes = await window.api.project.importZip(projectPath, zipPath, { overwriteAll: true })
         if (!importRes.success) throw new Error(importRes.error)
         
-        alert('애드온이 성공적으로 설치되었습니다!')
+        setConfirmState({
+          isOpen: true,
+          title: '설치 완료',
+          message: '애드온이 성공적으로 설치되었습니다!',
+          type: 'info',
+          showCancel: false,
+          onConfirm: () => setConfirmState(null)
+        })
         if (isTemp) {
           await window.api.project.deleteTempFile(zipPath)
         }
         fetchFiles()
       }
     } catch (err: any) {
-      alert('애드온 설치 실패: ' + err.message)
+      setConfirmState({
+        isOpen: true,
+        title: '설치 실패',
+        message: '애드온 설치에 실패했습니다:\n' + err.message,
+        type: 'danger',
+        showCancel: false,
+        onConfirm: () => setConfirmState(null)
+      })
       if (isTemp) {
         await window.api.project.deleteTempFile(zipPath)
       }
@@ -497,13 +525,27 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
       const res = await window.api.project.importZip(projectPath, zipPath, options)
       if (!res.success) throw new Error(res.error)
       
-      alert('애드온이 성공적으로 적용되었습니다!')
+      setConfirmState({
+        isOpen: true,
+        title: '적용 완료',
+        message: '애드온이 성공적으로 적용되었습니다!',
+        type: 'info',
+        showCancel: false,
+        onConfirm: () => setConfirmState(null)
+      })
       if (isTemp) {
         await window.api.project.deleteTempFile(zipPath)
       }
       fetchFiles()
     } catch (err: any) {
-      alert('애드온 적용 실패: ' + err.message)
+      setConfirmState({
+        isOpen: true,
+        title: '적용 실패',
+        message: '애드온 적용에 실패했습니다:\n' + err.message,
+        type: 'danger',
+        showCancel: false,
+        onConfirm: () => setConfirmState(null)
+      })
       if (isTemp) {
         await window.api.project.deleteTempFile(zipPath)
       }
@@ -529,12 +571,33 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
       setGlobalLoading(true)
       const res = await window.api.project.exportZip(projectPath)
       if (res.success) {
-        alert('프로젝트가 애드온 ZIP 파일로 성공적으로 내보내졌습니다!')
+        setConfirmState({
+          isOpen: true,
+          title: '내보내기 완료',
+          message: '프로젝트가 애드온 ZIP 파일로 성공적으로 내보내졌습니다!',
+          type: 'info',
+          showCancel: false,
+          onConfirm: () => setConfirmState(null)
+        })
       } else if (res.error && res.error !== '저장이 취소되었습니다.') {
-        alert('내보내기 실패: ' + res.error)
+        setConfirmState({
+          isOpen: true,
+          title: '내보내기 실패',
+          message: '내보내기에 실패했습니다:\n' + res.error,
+          type: 'danger',
+          showCancel: false,
+          onConfirm: () => setConfirmState(null)
+        })
       }
     } catch (err: any) {
-      alert('내보내기 중 오류가 발생했습니다: ' + err.message)
+      setConfirmState({
+        isOpen: true,
+        title: '내보내기 오류',
+        message: '내보내기 중 오류가 발생했습니다:\n' + err.message,
+        type: 'danger',
+        showCancel: false,
+        onConfirm: () => setConfirmState(null)
+      })
     } finally {
       setGlobalLoading(false)
     }
@@ -1296,22 +1359,7 @@ export function ProjectSidebar({ width = 256 }: { width?: number }) {
                 </div>
               </div>
 
-              <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-surface-800"></div>
-                <span className="flex-shrink mx-4 text-[10px] text-surface-500 uppercase font-mono">Or</span>
-                <div className="flex-grow border-t border-surface-800"></div>
-              </div>
 
-              {/* 애드온 내보내기 */}
-              <div className="space-y-2">
-                <span className="text-xs font-semibold text-surface-300 block">애드온 내보내기 (Export Addon)</span>
-                <button
-                  onClick={handleExportProjectZip}
-                  className="w-full py-3 rounded-lg border border-dashed border-surface-600 hover:border-emerald-500 hover:bg-emerald-600/5 transition-all text-xs text-surface-300 hover:text-emerald-300 font-medium cursor-pointer"
-                >
-                  📤 현재 프로젝트를 ZIP 애드온으로 내보내기
-                </button>
-              </div>
             </div>
           </div>
         </div>
