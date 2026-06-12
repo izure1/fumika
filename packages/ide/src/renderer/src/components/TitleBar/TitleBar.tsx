@@ -38,14 +38,14 @@ export function TitleBar() {
     setIsHelpDialogOpen(true)
     setIsHelpMenuOpen(false)
   }
-  
+
   // VS Code 스타일의 타이틀 표시. 프로젝트가 열려있으면 프로젝트 경로 표시.
   const projectName = projectPath ? projectPath.split(/[/\\]/).pop() : ''
   const title = projectName ? `${projectName} - Fumika Engine` : 'Fumika Engine'
 
   return (
     <>
-      <div 
+      <div
         className="relative flex h-8 shrink-0 items-center justify-between bg-surface-900 border-b border-surface-800 select-none z-50"
         style={{ WebkitAppRegion: 'drag' } as any}
       >
@@ -57,7 +57,7 @@ export function TitleBar() {
             {projectPath && (
               <>
                 <div className="relative" ref={menuRef} style={{ WebkitAppRegion: 'no-drag' } as any}>
-                  <button 
+                  <button
                     className={`px-2 py-0.5 text-xs rounded transition-colors ${isMenuOpen ? 'bg-surface-800 text-surface-200' : 'hover:bg-surface-800 hover:text-surface-200'}`}
                     onClick={() => {
                       setIsMenuOpen(!isMenuOpen)
@@ -69,7 +69,7 @@ export function TitleBar() {
                   </button>
                   {isMenuOpen && (
                     <div className="absolute left-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-md shadow-xl py-1 z-50">
-                      <button 
+                      <button
                         className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors flex items-center justify-between"
                         onClick={() => {
                           togglePanel()
@@ -82,36 +82,8 @@ export function TitleBar() {
                     </div>
                   )}
                 </div>
-                <div className="relative" ref={helpMenuRef} style={{ WebkitAppRegion: 'no-drag' } as any}>
-                  <button 
-                    className={`px-2 py-0.5 text-xs rounded transition-colors ${isHelpMenuOpen ? 'bg-surface-800 text-surface-200' : 'hover:bg-surface-800 hover:text-surface-200'}`}
-                    onClick={() => {
-                      setIsHelpMenuOpen(!isHelpMenuOpen)
-                      setIsMenuOpen(false)
-                      setIsAddonMenuOpen(false)
-                    }}
-                  >
-                    도움말
-                  </button>
-                  {isHelpMenuOpen && (
-                    <div className="absolute left-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-md shadow-xl py-1 z-50">
-                      <button 
-                        className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
-                        onClick={() => openHelpDialog('license')}
-                      >
-                        라이선스
-                      </button>
-                      <button 
-                        className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
-                        onClick={() => openHelpDialog('info')}
-                      >
-                        정보
-                      </button>
-                    </div>
-                  )}
-                </div>
                 <div className="relative" ref={addonMenuRef} style={{ WebkitAppRegion: 'no-drag' } as any}>
-                  <button 
+                  <button
                     className={`px-2 py-0.5 text-xs rounded transition-colors ${isAddonMenuOpen ? 'bg-surface-800 text-surface-200' : 'hover:bg-surface-800 hover:text-surface-200'}`}
                     onClick={() => {
                       setIsAddonMenuOpen(!isAddonMenuOpen)
@@ -123,7 +95,7 @@ export function TitleBar() {
                   </button>
                   {isAddonMenuOpen && (
                     <div className="absolute left-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-md shadow-xl py-1 z-50">
-                      <button 
+                      <button
                         className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
                         onClick={() => {
                           window.dispatchEvent(new CustomEvent('trigger-addon-import'))
@@ -132,7 +104,7 @@ export function TitleBar() {
                       >
                         가져오기 (.zip)
                       </button>
-                      <button 
+                      <button
                         className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
                         onClick={() => {
                           window.dispatchEvent(new CustomEvent('trigger-addon-export'))
@@ -140,6 +112,34 @@ export function TitleBar() {
                         }}
                       >
                         내보내기 (.zip)
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="relative" ref={helpMenuRef} style={{ WebkitAppRegion: 'no-drag' } as any}>
+                  <button
+                    className={`px-2 py-0.5 text-xs rounded transition-colors ${isHelpMenuOpen ? 'bg-surface-800 text-surface-200' : 'hover:bg-surface-800 hover:text-surface-200'}`}
+                    onClick={() => {
+                      setIsHelpMenuOpen(!isHelpMenuOpen)
+                      setIsMenuOpen(false)
+                      setIsAddonMenuOpen(false)
+                    }}
+                  >
+                    도움말
+                  </button>
+                  {isHelpMenuOpen && (
+                    <div className="absolute left-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-md shadow-xl py-1 z-50">
+                      <button
+                        className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
+                        onClick={() => openHelpDialog('license')}
+                      >
+                        라이선스
+                      </button>
+                      <button
+                        className="w-full text-left px-4 py-1.5 text-xs hover:bg-primary-600 hover:text-white transition-colors"
+                        onClick={() => openHelpDialog('info')}
+                      >
+                        정보
                       </button>
                     </div>
                   )}
@@ -187,9 +187,9 @@ export function TitleBar() {
           </button>
         </div>
       </div>
-      <HelpDialog 
-        isOpen={isHelpDialogOpen} 
-        onClose={() => setIsHelpDialogOpen(false)} 
+      <HelpDialog
+        isOpen={isHelpDialogOpen}
+        onClose={() => setIsHelpDialogOpen(false)}
         mode={helpDialogTab}
       />
     </>
