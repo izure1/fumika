@@ -8,6 +8,7 @@ export interface IdeSettings {
   formatOnSave?: boolean
   autoUpdate?: boolean
   autoComma?: boolean
+  autoStringSplit?: boolean
 }
 
 const DEFAULT_SETTINGS: IdeSettings = {
@@ -15,7 +16,8 @@ const DEFAULT_SETTINGS: IdeSettings = {
   themeBg: 'neutral',
   formatOnSave: true,
   autoUpdate: true,
-  autoComma: true
+  autoComma: true,
+  autoStringSplit: true
 }
 
 export class SettingsService {

@@ -20,6 +20,7 @@ interface ProjectState {
   formatOnSave: boolean
   autoUpdate: boolean
   autoComma: boolean
+  autoStringSplit: boolean
   isSettingsOpen: boolean
   isGraphOpen: boolean
   pendingLine: number | null
@@ -37,6 +38,7 @@ interface ProjectState {
   setFormatOnSave: (format: boolean) => void
   setAutoUpdate: (enabled: boolean) => void
   setAutoComma: (enabled: boolean) => void
+  setAutoStringSplit: (enabled: boolean) => void
   setIsSettingsOpen: (open: boolean) => void
   setIsGraphOpen: (open: boolean) => void
   setPendingLine: (line: number | null) => void
@@ -58,6 +60,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   formatOnSave: true,
   autoUpdate: true,
   autoComma: true,
+  autoStringSplit: true,
   isSettingsOpen: false,
   isGraphOpen: false,
   pendingLine: null,
@@ -96,6 +99,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ autoComma: enabled })
     window.api.settings.set({ autoComma: enabled }).catch(console.error)
   },
+  setAutoStringSplit: (enabled) => {
+    set({ autoStringSplit: enabled })
+    window.api.settings.set({ autoStringSplit: enabled }).catch(console.error)
+  },
   setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
   setIsGraphOpen: (open) => set({ isGraphOpen: open }),
   setPendingLine: (line) => set({ pendingLine: line }),
@@ -111,7 +118,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           themeBg: res.settings.themeBg || 'neutral',
           formatOnSave: res.settings.formatOnSave ?? true,
           autoUpdate: res.settings.autoUpdate ?? true,
-          autoComma: res.settings.autoComma ?? true
+          autoComma: res.settings.autoComma ?? true,
+          autoStringSplit: res.settings.autoStringSplit ?? true
         })
       }
     } catch (e) {

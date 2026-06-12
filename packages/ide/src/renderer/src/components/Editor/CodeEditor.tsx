@@ -31,7 +31,7 @@ function toFileUri(absPath: string): string {
 
 export function CodeEditor({ code, onChange, language = 'typescript', filePath }: Props) {
   const monacoInstance = useMonaco()
-  const { projectPath, pendingLine, setPendingLine, autoComma } = useProjectStore()
+  const { projectPath, pendingLine, setPendingLine, autoComma, autoStringSplit } = useProjectStore()
   // 마지막으로 주입한 projectPath (동일 프로젝트 중복 주입 방지)
   const injectedProjectRef = useRef<string | null>(null)
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
@@ -44,6 +44,11 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
   useEffect(() => {
     autoCommaRef.current = autoComma
   }, [autoComma])
+
+  const autoStringSplitRef = useRef(autoStringSplit)
+  useEffect(() => {
+    autoStringSplitRef.current = autoStringSplit
+  }, [autoStringSplit])
 
   const handleEditorMount: OnMount = useCallback((editor) => {
     editorRef.current = editor
@@ -75,8 +80,48 @@ export function CodeEditor({ code, onChange, language = 'typescript', filePath }
           if (!model) continue
 
           const startLineNumber = change.range.startLineNumber
-          const lineContent = model.getLineContent(startLineNumber)
+          const L1 = startLineNumber
+          const L2 = L1 + 1
           
+          // 문자열 내부 개행 분리 처리
+          if (autoStringSplitRef.current && L2 <= model.getLineCount()) {
+            const text1 = model.getLineContent(L1)
+            const text2 = model.getLineContent(L2)
+            const quoteChar = getUnclosedQuote(text1)
+            
+            if (quoteChar) {
+              const quoteChar2 = getUnclosedQuoteReversed(text2)
+              if (quoteChar === quoteChar2) {
+                const indentLength = text2.length - text2.trimStart().length
+                
+                setTimeout(() => {
+                  if (model.isDisposed()) return
+                  const curText1 = model.getLineContent(L1)
+                  const curText2 = model.getLineContent(L2)
+                  
+                  if (getUnclosedQuote(curText1) !== quoteChar) return
+                  if (getUnclosedQuoteReversed(curText2) !== quoteChar) return
+                  
+                  editor.executeEdits('auto-comma-string-split', [
+                    {
+                      range: new monaco.Range(L1, curText1.length + 1, L1, curText1.length + 1),
+                      text: quoteChar + ',',
+                      forceMoveMarkers: true
+                    },
+                    {
+                      range: new monaco.Range(L2, indentLength + 1, L2, indentLength + 1),
+                      text: quoteChar,
+                      forceMoveMarkers: true
+                    }
+                  ])
+                }, 0)
+                continue
+              }
+            }
+          }
+
+          // 일반 쉼표 처리
+          const lineContent = model.getLineContent(startLineNumber)
           if (shouldAppendComma(lineContent, model, startLineNumber)) {
             const endColumn = lineContent.length + 1
             
@@ -433,6 +478,10 @@ function getClosestOpenBracket(model: monaco.editor.ITextModel, lineNumber: numb
 function shouldAppendComma(lineContent: string, model: monaco.editor.ITextModel, lineNumber: number): boolean {
   const trimmed = lineContent.trim()
   if (trimmed === '') return false
+
+  if (getUnclosedQuote(lineContent)) {
+    return false
+  }
   
   if (trimmed.endsWith(',') || 
       trimmed.endsWith('{') || 
@@ -480,4 +529,86 @@ function shouldAppendComma(lineContent: string, model: monaco.editor.ITextModel,
   }
   
   return false
+}
+
+function getUnclosedQuote(text: string): string | null {
+  let inSingleQuote = false
+  let inDoubleQuote = false
+  let inBacktick = false
+  let escaped = false
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    
+    if (char === '\\') {
+      escaped = true
+      continue
+    }
+    
+    if (char === "'") {
+      if (!inDoubleQuote && !inBacktick) {
+        inSingleQuote = !inSingleQuote
+      }
+    } else if (char === '"') {
+      if (!inSingleQuote && !inBacktick) {
+        inDoubleQuote = !inDoubleQuote
+      }
+    } else if (char === '`') {
+      if (!inSingleQuote && !inDoubleQuote) {
+        inBacktick = !inBacktick
+      }
+    }
+  }
+  
+  if (inSingleQuote) return "'"
+  if (inDoubleQuote) return '"'
+  if (inBacktick) return '`'
+  return null
+}
+
+function getUnclosedQuoteReversed(text: string): string | null {
+  let inSingleQuote = false
+  let inDoubleQuote = false
+  let inBacktick = false
+  
+  for (let i = text.length - 1; i >= 0; i--) {
+    const char = text[i]
+    
+    if (char === "'" || char === '"' || char === '`') {
+      let escapeCount = 0
+      for (let j = i - 1; j >= 0; j--) {
+        if (text[j] === '\\') {
+          escapeCount++
+        } else {
+          break
+        }
+      }
+      const isEscaped = (escapeCount % 2) === 1
+      if (isEscaped) continue
+      
+      if (char === "'") {
+        if (!inDoubleQuote && !inBacktick) {
+          inSingleQuote = !inSingleQuote
+        }
+      } else if (char === '"') {
+        if (!inSingleQuote && !inBacktick) {
+          inDoubleQuote = !inDoubleQuote
+        }
+      } else if (char === '`') {
+        if (!inSingleQuote && !inDoubleQuote) {
+          inBacktick = !inBacktick
+        }
+      }
+    }
+  }
+  
+  if (inSingleQuote) return "'"
+  if (inDoubleQuote) return '"'
+  if (inBacktick) return '`'
+  return null
 }

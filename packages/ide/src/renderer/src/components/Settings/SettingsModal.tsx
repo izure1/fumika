@@ -38,7 +38,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     autoUpdate,
     setAutoUpdate,
     autoComma,
-    setAutoComma
+    setAutoComma,
+    autoStringSplit,
+    setAutoStringSplit
   } = useProjectStore()
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('theme')
@@ -256,6 +258,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         >
                           <span
                             className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoComma ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-md border border-surface-700 bg-surface-800/50 p-4">
+                        <div className="flex flex-col gap-1 pr-4">
+                          <span className="text-sm font-medium text-surface-200">문자열 내 엔터 시 자동 분할</span>
+                          <span className="text-xs text-surface-500">문자열 리터럴 중간에서 줄바꿈 시 따옴표를 자동으로 닫고 열며 쉼표를 삽입합니다.</span>
+                        </div>
+                        <button
+                          onClick={() => setAutoStringSplit(!autoStringSplit)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer shrink-0 ${autoStringSplit ? 'bg-primary-500' : 'bg-surface-600'
+                            }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoStringSplit ? 'translate-x-6' : 'translate-x-1'
                               }`}
                           />
                         </button>
